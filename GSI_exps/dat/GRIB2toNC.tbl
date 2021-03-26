@@ -1,0 +1,85 @@
+#20	:	K level
+#100	:	pressure level
+#104	:	sigma level
+#105	:	hybrid level
+#107	:	K isentropic level
+#160	:	ocean depth below sea level
+
+$lev_type  100:pres:pressure level:mb:0.01
+$nlev      24
+$levs  1000 975 950 925 900 850 800 750 700 650 600 550 500
+        450 400 350 300 250 200 150 100  50  20  10
+$grads 1
+#
+# Upper air data on pressure levels, 05.2007 - 16 pressure levels
+#
+UGRD:*:U
+VGRD:*:V
+TMP:*:TEMP
+HGT:*:HGT
+SPFH:*:SPFH
+VVEL:*:ignore #Omega
+RH:*:ignore #RH:short:-2:110
+# ignore list
+CLMR:*:ignore
+ICMR:*:ignore
+RWMR:*:ignore
+SNMR:*:ignore
+GRLE:*:ignore
+DZDT:*:ignore
+ABSV:*:ignore
+O3MR:*:ignore
+#
+#but skip HGT at 100 mb, now commented - example and test
+#UGRD:*:u:ignore
+#VGRD:*:v:ignore
+#HGT:100 mb:hgtprs:ignore
+#
+# Single layer data conversion rules
+#
+PRMSL:mean sea level:PRMSL
+PRES:surface:PSFC
+HGT:surface:HGTSFC
+UGRD:10 m above ground:ignore #U10m
+VGRD:10 m above ground:ignore #V10m
+TMP:1.5 m above ground:ignore #T2m
+RH:1.5 m above ground:ignore #RH2m:short:-5:110
+CAPE:surface:CAPE
+CIN:surface:CIN
+PWAT:entire atmosphere (considered as a single layer):PWAT
+CWAT:entire atmosphere (considered as a single layer):CWAT
+#
+# Other ignore list
+#
+RH:entire atmosphere (considered as a single layer):ignore
+MSLET:*:ignore
+PRATE:surface:ignore
+VEG:  surface:ignore
+SOTYP:surface:ignore
+LFTX: surface:ignore
+
+PRES:tropopause:ignore
+TMP:tropopause:ignore
+HGT:tropopause:ignore
+UGRD:tropopause:ignore
+VGRD:tropopause:ignore
+VWSH:tropopause:ignore
+PRES:max wind:ignore
+HGT:max wind:ignore
+UGRD:max wind:ignore
+VGRD:max wind:ignore
+TMP:max wind:ignore
+
+UGRD:  20 m above ground:ignore
+VGRD:  20 m above ground:ignore
+UGRD:  30 m above ground:ignore
+VGRD:  30 m above ground:ignore
+UGRD:  40 m above ground:ignore
+VGRD:  40 m above ground:ignore
+UGRD:  50 m above ground:ignore
+VGRD:  50 m above ground:ignore
+MSLET MSLP:*:ignore
+TOZNE:*:ignore
+ICAHT:*:ignore
+# End of file
+
