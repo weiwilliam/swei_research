@@ -1,0 +1,39 @@
+&main
+ lextprofile=.false.
+ naers=_NAERS_,
+ user_emiss=_USEREMI_
+/
+ sensor_scan=
+ sensor_azimuth=
+ daytime=.false.
+
+&extprof
+ aerprof='./M2Clim_DU001_15.50N_10.00W.txt',
+ scalef=1.2,
+ lumptolvs=0,
+ puttolv=85,
+ shiftthick=0,
+ shiftlvs=-10,
+/
+&autogen
+ varname='_AERNAME_',
+ binsname='_BINSLST_',
+ binspar='_BINSPAR_',
+ genmethod=_GENMETHOD_,
+ totalconc=_TOTCONC_,
+ thicknesslvs=_THICKNS_,
+ atlv=_ATLEVEL_,
+ modelv=_MODELV_,
+ bmoderatio=_BMODERATIO_,
+ sfc_mode_ratio=_SFCMODRATIO_,
+/
+&sfcsetup
+ landcover=_LANDCOV_,
+ landtype=_LANDTYPE_,
+ lai=_LAI_,
+/
+&options
+ emiss_min=_EMIMIN_,
+ emiss_max=_EMIMAX_,
+ n_emiss=_NEMISS_,
+/

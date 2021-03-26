@@ -1,0 +1,26 @@
+&main
+ lextprofile=.false.
+ naers=1,
+/
+ sensor_scan=
+ sensor_azimuth=
+ daytime=.false.
+
+&extprof
+ aerprof='./M2Clim_DU001_15.50N_10.00W.txt',
+ scalef=1.2,
+ lumptolvs=0,
+ puttolv=85,
+ shiftthick=0,
+ shiftlvs=-10,
+/
+&autogen
+ varname='DU002',
+ genmethod=2,
+ totalconc=1.967e-03,
+ thicknesslvs=1,
+ atlv=92,
+ modelv=92,
+ extendlvs=4,
+ sfc_mode_ratio=0.5,
+/
