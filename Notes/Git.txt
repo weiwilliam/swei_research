@@ -1,0 +1,9 @@
+Git useful information
+
+1. Update my fork
+   if no upstream:
+      git remote add upstream linkoforiginalproject
+   git fetch upstream
+   git checkout master
+   git merge upstream/master
+   git push origin master

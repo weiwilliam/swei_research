@@ -1,0 +1,1 @@
+./build_all_cmake.sh PRODUCTION /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest/gsibuild

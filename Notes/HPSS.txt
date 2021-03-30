@@ -1,0 +1,3 @@
+
+NCPE archive path on HPSS
+/NCEPPROD/hpssprod/runhistory/
