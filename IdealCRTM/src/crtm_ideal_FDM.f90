@@ -282,6 +282,10 @@ IMPLICIT NONE
      atm(1)%Absorber(i,:)=0.5*(Model_Abs(i-1,:)+Model_Abs(i,:))
   ENDDO
 
+  ! Generate the relative humidity
+   
+ 
+
   ! Read in the aerosol profile and interpolate to model layers
   IF (N_AEROSOLS .NE. 0 ) THEN
      IF ( lextprofile ) THEN
@@ -369,15 +373,42 @@ IMPLICIT NONE
             write(6,*) '!!!Error!!! naers should be 5 for gocart_dust'
             stop
          end if
-         do i=1,naers
-            atm(1)%Aerosol(i)%Type = DUST_AEROSOL
-         end do
-         atm(1)%Aerosol(1)%Effective_Radius = 0.55
-         atm(1)%Aerosol(2)%Effective_Radius = 1.4
-         atm(1)%Aerosol(3)%Effective_Radius = 2.4
-         atm(1)%Aerosol(4)%Effective_Radius = 4.5
-         atm(1)%Aerosol(5)%Effective_Radius = 8.0
+         atm(1)%Aerosol(:)%Type = DUST_AEROSOL
+     CASE('gocart_oc')
+         if (naers .ne. 2) then
+            write(6,*) '!!!Error!!! naers should be 2 for gocart_oc'
+            stop
+         end if
+         atm(1)%Aerosol(:)%Type = ORGANIC_CARBON_AEROSOL
+     CASE('gocart_bc')
+         if (naers .ne. 2) then
+            write(6,*) '!!!Error!!! naers should be 2 for gocart_bc'
+            stop
+         end if
+         atm(1)%Aerosol(:)%Type = BLACK_CARBON_AEROSOL
+     CASE('gocart_seas')
+         if (naers .ne. 4) then
+            write(6,*) '!!!Error!!! naers should be 4 for gocart_seas'
+            stop
+         end if
+         atm(1)%Aerosol(1)%Type = SEASALT_SSAM_AEROSOL
+         atm(1)%Aerosol(2)%Type = SEASALT_SSCM1_AEROSOL
+         atm(1)%Aerosol(3)%Type = SEASALT_SSCM2_AEROSOL
+         atm(1)%Aerosol(4)%Type = SEASALT_SSCM3_AEROSOL
+     CASE('gocart_sulf')
+         if (naers .ne. 1) then
+            write(6,*) '!!!Error!!! naers should be 1 for gocart_bc'
+            stop
+         end if
+         atm(1)%Aerosol(:)%Type = SULFATE_AEROSOL
      END SELECT
+
+     do i=1,naers
+        do k=1,N_LAYERS
+           atm(1)%Aerosol(i)%Effective_Radius(k)= &
+                  GOCART_Aerosol_size(i,atm(1)%Aerosol(i)%Type,rh(k))
+        end do
+     end do
 
         IF (genmethod .eq. 1) THEN
            ! boxcar 
@@ -952,64 +983,100 @@ CONTAINS
 
  END SUBROUTINE nc_write_int_var1d
 
-! SUBROUTINE Get_RH()
-!   allocate(tsen(nsig))
-!   do k=1,nsig
-!      tv=tmp(k)*(1.+fv*spfh(k))
-!      tsen(k)=tv/(1.+fv*max(0.,spfh(k)))
-!   end do
+ SUBROUTINE Get_RH(tmp,q,prsl,rh,N_LAYERS)
+ IMPLICIT NONE
+ INTEGER, INTENT(in) :: N_LAYERS
+ REAL(fp), INTENT(in) :: tmp, q, prsl
+ REAL(fp), INTENT(inout) :: rh
+ REAL(fp), ALLOCATABLE, DIMENSION(:) :: tsen, spfh, qsat
+ REAL(fp) :: tv
+ REAL(fp), PARAMETER :: rv   = 4.6150e+2
+ REAL(fp), PARAMETER :: rd   = 2.8705e+2
+ REAL(fp), PARAMETER :: fv   = rv/rd-1.
+ REAL(fp), PARAMETER :: ttp  = 2.7316e+2
+ REAL(fp), PARAMETER :: psat = 6.1078e+2
+ REAL(fp), PARAMETER :: cvap = 1.8460e+3
+ REAL(fp), PARAMETER :: cliq = 4.1855e+3
+ REAL(fp), PARAMETER :: dldt = cvap-cliq
+ REAL(fp), PARAMETER :: xa   = -(dldt/rv)
+ REAL(fp), PARAMETER :: hvap = 2.5000e+6
+ REAL(fp), PARAMETER :: xb   = xa+hvap/(rv*ttp)
+ REAL(fp), PARAMETER :: tmix = ttp-20.
+ hfus   = 3.3358e+5
+ hsub   = hvap+hfus
+ xai    = -(dldti/rv)
+ xbi    = xai+hsub/(rv*ttp)
+ eps    = rd/rv
+ omeps  = 1.-eps
+ REAL(fp) :: mint,tdry, tr, estmax, w, es, esmax, es2
+ REAL(fp) :: pw
+ LOGICAL :: ice=.FALSE.
+ INTEGER :: nsig
+
+ nsig=N_LAYERS
+ allocate(tsen(nsig),spfh(nsig))
+!! Convert the water vapor mixing ratio (g/kg) to specific humidity (g/g)
+ do k=1,nsig
+    spfh(k)=1000.*q(k)/(1.+1000.*q(k))
+ end do
+ do k=1,nsig
+    tv=tmp(k)*(1.+fv*spfh(k))
+    tsen(k)=tv/(1.+fv*max(0.,spfh(k)))
+ end do
 !!
 !! Generate qsat, code comes from GSI, genqsat.f90
 !!
-!   mint=340.
-!   lmint=1
-!   do k=1,nsig
-!      if((prsl(k) < 30000.0 .and.  &
-!          prsl(k) > 2000.0) .and.  &
-!          tsen(k) < mint)then
-!          lmint=k
-!          mint=tsen(k)
-!      end if
-!   end do
+  mint=340.
+  lmint=1
+  do k=1,nsig
+     if((prsl(k) < 30000.0 .and.  &
+         prsl(k) > 2000.0) .and.  &
+         tsen(k) < mint)then
+         lmint=k
+         mint=tsen(k)
+     end if
+  end do
 !    write(6,*) lmint,mint
-!   tdry = mint
-!   tr = ttp/tdry
-!   if (tdry >= ttp .or. .not. ice) then
-!      estmax = psat * (tr**xa) * exp(xb*(1.0-tr))
-!   elseif (tdry < tmix) then
-!      estmax = psat * (tr**xai) * exp(xbi*(1.0-tr))
-!   else
-!      w  = (tdry - tmix) / (ttp - tmix)
-!      estmax =  w * psat * (tr**xa) * exp(xb*(1.0-tr)) &
-!              + (1.0-w) * psat * (tr**xai) * exp(xbi*(1.0-tr))
-!   endif
-!   allocate(qsat(nsig),rh(nsig))
-!   do k=1,nsig
-!      tdry = tsen(k)
-!      tr = ttp/tdry
-!      if (tdry >= ttp .or. .not. ice) then
-!         es = psat * (tr**xa) * exp(xb*(1.0-tr))
-!      elseif (tdry < tmix) then
-!         es = psat * (tr**xai) * exp(xbi*(1.0-tr))
-!      else
-!         !esw = psat * (tr**xa) * exp(xb*(1.0-tr))
-!         !esi = psat * (tr**xai) * exp(xbi*(1.0-tr))
-!         w  = (tdry - tmix) / (ttp - tmix)
-!         es =  w * psat * (tr**xa) * exp(xb*(1.0-tr)) &
-!                  + (1.0-w) * psat * (tr**xai) * exp(xbi*(1.0-tr))
-!      end if
-!      pw = prsl(k)
-!      esmax = es
-!      if(lmint > k )then
-!         esmax=0.1*pw
-!         esmax=min(esmax,estmax)
-!      end if
-!      es2=min(es,esmax)
-!      qsat(k) = eps * es2 / (pw - omeps * es2)
-!      rh(k)=spfh(k)/qsat(k)
-!      !write(6,*) spfh(k),qsat(k),rh(k)
-!   end do
-! END SUBROUTINE Get_RH
+  tdry = mint
+  tr = ttp/tdry
+  if (tdry >= ttp .or. .not. ice) then
+     estmax = psat * (tr**xa) * exp(xb*(1.0-tr))
+  elseif (tdry < tmix) then
+     estmax = psat * (tr**xai) * exp(xbi*(1.0-tr))
+  else
+     w  = (tdry - tmix) / (ttp - tmix)
+     estmax =  w * psat * (tr**xa) * exp(xb*(1.0-tr)) &
+             + (1.0-w) * psat * (tr**xai) * exp(xbi*(1.0-tr))
+  endif
+  allocate(qsat(nsig))
+  do k=1,nsig
+     tdry = tsen(k)
+     tr = ttp/tdry
+     if (tdry >= ttp .or. .not. ice) then
+        es = psat * (tr**xa) * exp(xb*(1.0-tr))
+     elseif (tdry < tmix) then
+        es = psat * (tr**xai) * exp(xbi*(1.0-tr))
+     else
+        !esw = psat * (tr**xa) * exp(xb*(1.0-tr))
+        !esi = psat * (tr**xai) * exp(xbi*(1.0-tr))
+        w  = (tdry - tmix) / (ttp - tmix)
+        es =  w * psat * (tr**xa) * exp(xb*(1.0-tr)) &
+                + (1.0-w) * psat * (tr**xai) * exp(xbi*(1.0-tr))
+     end if
+     pw = prsl(k)
+     esmax = es
+     if (lmint > k )then
+        esmax=0.1*pw
+        esmax=min(esmax,estmax)
+     end if
+     es2=min(es,esmax)
+     qsat(k) = eps * es2 / (pw - omeps * es2)
+     rh(k)=spfh(k)/qsat(k)
+     !write(6,*) spfh(k),qsat(k),rh(k)
+   end do
+ END SUBROUTINE Get_RH
+
+
    function GOCART_Aerosol_size( nbin, itype,  & ! Input
                                        lrh ) & ! Input in 0-1
                            result( R_eff  )   ! in micrometer
