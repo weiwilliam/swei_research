@@ -1,19 +1,13 @@
 #!/bin/sh --login
-#SBATCH --output=../logs/gsirun.out
-#SBATCH --job-name=swei_gsioneob
-##SBATCH --qos=debug
-#SBATCH --qos=batch
-#SBATCH --time=0:45:00
-#SBATCH --nodes=8 --ntasks-per-node=20 --cpus-per-task=1
-#SBATCH --account=gsd-fv3-test
+##SBATCH --output=../logs/gsirun.out
+##SBATCH --job-name=swei_gsioneob
+###SBATCH --qos=debug
+##SBATCH --qos=batch
+##SBATCH --time=0:45:00
+##SBATCH --nodes=8 --ntasks-per-node=20 --cpus-per-task=1
+##SBATCH --account=gsd-fv3-test
 
 export OMP_NUM_THREADS=1
-
-. /apps/lmod/lmod/init/sh
-module purge
-source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
-module list
-
 set -x
 
 #     Wavenumber (cm-1) |  Channel number |  Obs. err. (K2) |    Band
@@ -23,18 +17,34 @@ set -x
 # 245           1028.75              1536               2.1        O3
 # 459           1990.00              5381               1.8       H2O
 
-homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
-obsarch=$homedir/INPUTS/OBSDATA
-DMPDIR=/scratch1/NCEPDEV/global/glopara/dump
+if [ $machine == 'hera' ]; then
+   homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
+   obsarch=$homedir/INPUTS/OBSDATA
+   DMPDIR=/scratch1/NCEPDEV/global/glopara/dump
+   . /apps/lmod/lmod/init/sh
+   module purge
+   source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
+   module list
+elif [ $machine == 's4' ]; then
+   homedir=/data/users/swei/Experiments/SingleRadTest
+   obsarch=/data/prod/glopara/dump
+   DMPDIR=/scratch/users/swei/runtmp
+   module purge
+   source /data/users/swei/Git/GSI/modulefiles/modulefile.ProdGSI.s4
+   module list
+else
+   echo 'not supported machine, exit'
+   exit 1
+fi
 # Set experiment name and analysis date
-exp="test2_nch245"
+ONEOBTYPE='iasi'
+ONEOBCHAN=202
+ONEOBLAT='17.975'
+ONEOBLON='299.278'
+exp="ctl2_nch${ONEOBCHAN}"
 expid=1 # 1: no aer 2: aer
 VERBOSE='.false.'
 SINGLERADOB='.true.'
-ONEOBTYPE='iasi'
-ONEOBCHAN=245
-ONEOBLAT='17.975'
-ONEOBLON='299.278'
 
 if [[ $SINGLERADOB == ".true." ]]; then
    DIAGRADJAC='.true.'
@@ -72,8 +82,6 @@ export LATB=$((fg_res*2))  #1536
 export JCAP=$((LATB-2))
 export LEVS=64
 
-ntiles=6
-
 CDATE=2020062212
 
 # Set runtime and save directories
@@ -83,9 +91,17 @@ outdir=${homedir}/OUTPUT/$exp/$CDATE
 
 endianness="Big_Endian"
 
-gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
+if [ $machine == 'hera' ]; then
+   gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
+   fixcrtm="/scratch1/NCEPDEV/da/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
+   COMdir="/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common"
+elif [ $machine == 's4' ]; then
+   gsidir="/data/users/swei/Git/GSI"
+   fixcrtm="/data/users/swei/libs/crtm_coeff/v2.3.0"
+   NDATE="/data/prod/previous_resources/nwprod_gdas_2014/nwprod_gdas_2014/util/exec/ndate"
+   COMdir="/data/users/swei/common"
+fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}
-fixcrtm="/scratch1/NCEPDEV/da/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
 fixgsi="${gsidir}/fix"
 gsiexec=${gsidir}/exec/global_gsi.x
 CATEXEC=${gsidir}/exec/ncdiag_cat.x
@@ -133,7 +149,7 @@ sfcsuffix=nemsio
 atmsuffix=nemsio
 DIAG_SUFFIX=".nc4"
 
-aerpath=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2
+aerpath=${COMdir}/MERRA2
 aer03=${aerpath}/$m3yy/$m3mm/MERRA2_AER3D_FV3L64.${m3yy}${m3mm}${m3dd}${m3hh}.nc
 aer06=${aerpath}/$ayy/$amm/MERRA2_AER3D_FV3L64.${ayy}${amm}${add}${cyc}.nc
 aer09=${aerpath}/$p3yy/$p3mm/MERRA2_AER3D_FV3L64.${p3yy}${p3mm}${p3dd}${p3hh}.nc
@@ -404,7 +420,14 @@ done
 # Copy observational data to $tmpdir
 $ncpl $datobs/${prefix_obs}.prepbufr                ./prepbufr
 $ncpl $datobs/${prefix_obs}.prepbufr.acft_profiles  ./prepbufr_profl
-$ncpl $datobs/${prefix_obs}.nsstbufr                ./nsstbufr
+if [ $machine == 'hera' ]; then
+   $ncpl $datobs/${prefix_obs}.nsstbufr                ./nsstbufr
+elif [ $machine == 's4' ]; then
+   cat $datobs/${prefix_obs}.sfcshp.${suffix} \
+       $datobs/${prefix_obs}.tesac.$suffix \
+       $datobs/${prefix_obs}.bathy.$suffix \
+       $datobs/${prefix_obs}.trkob.$suffix > ./nsstbufr
+fi
 $ncpl $datobs/${prefix_obs}.gpsro.${suffix}         ./gpsrobufr
 $ncpl $datobs/${prefix_obs}.satwnd.${suffix}        ./satwndbufr
 $ncpl $datobs/${prefix_obs}.spssmi.${suffix}        ./ssmirrbufr

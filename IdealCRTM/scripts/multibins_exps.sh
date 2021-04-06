@@ -8,30 +8,47 @@
 #SBATCH --account=gsd-fv3-test
 #
 
-HOMEDIR=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/IdealCRTM
-USHDIR=${HOMEDIR}/ush
-WRKDIR=${HOMEDIR}/wrk
-OUTDIR=${HOMEDIR}/output #_multibins
+machine='s4'
+
+if [ $machine == 'hera' ]; then
+   HOMEDIR=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/IdealCRTM
+   WRKDIR=${HOMEDIR}/wrk
+   USHDIR=${HOMEDIR}/ush
+   OUTDIR=${HOMEDIR}/output
+   EXEC=${HOMEDIR}/bin/crtm_ideal_FDM
+   # Module load
+   . /apps/lmod/lmod/init/sh
+   module purge
+   module load intel
+   module load netcdf
+elif [ $machine == 's4' ]; then
+   SCRPDIR=/home/swei/research/IdealCRTM
+   USHDIR=${SCRPDIR}/ush
+   HOMEDIR=/data/users/swei/Experiments/IdealCRTM
+   WRKDIR=${HOMEDIR}/wrk
+   OUTDIR=${HOMEDIR}/output
+   EXEC=${HOMEDIR}/bin/crtm_ideal_FDM
+   module purge
+   module load license_intel/S4
+   module load intel
+   module load hdf hdf5
+   module load netcdf4
+fi
+module list
 INNML=${USHDIR}/idealcrtm.nml.IN
-EXEC=${HOMEDIR}/bin/crtm_ideal_FDM
 KMODFILE='kmod_inspection.nc'
 AODKFILE='aodk_inspection.nc'
 
 # Exp on/off
-BSL='N'  # No aerosols experiment
+BSL='Y'  # No aerosols experiment
 EXP1='N' # Concentration
 EXP2='N' # Thickness (only for genmethod 1)
 EXP3='N' # Altitude
-EXP4='N' # Sfc_Mode_Ratio (SMR), available for genmethod 2 only
+EXP4='N' # Sfc_Peak_Ratio (SPR), available for genmethod 2 only
 EXP5='N' # Bins Partition
 EXP6='N' # Surface type
-EXP7='Y' # Surface Emissivity
+EXP7='N' # Surface Emissivity
 
-# Module load
-. /apps/lmod/lmod/init/sh
-module purge
-module load intel
-module load netcdf
 
 # Default setting for each factor
 naers=5
@@ -39,6 +56,15 @@ useremi='.false.'
 aername="gocart_dust"
 binlist='DU001,DU002,DU003,DU004,DU005'
 binspar='0.1,0.4,0.3,0.15,0.05'
+#aername="gocart_carbon"
+#binlist='ocphobic,ocphilic,bcphobic,bcphilic'
+#binspar='0.15,0.70,0.05,0.1'
+#aername="gocart_seas"
+#binlist='SS001,SS002,SS003,SS004'
+#binspar='0.05,0.25,0.6,0.1'
+#aername="gocart_sulf"
+#binlist='sulfate'
+#binspar='1.'
 genmethod='2'
 totconc='1.967e-03'
 landcover='0.'
@@ -48,7 +74,6 @@ lai='0.17'
 #genmethod=1
 thickns='1'
 atlevel='76'
-
 thicklist="1 3 5 7 9"
 
 # genmethod=2
@@ -58,9 +83,14 @@ bmoderatio='0.8'
 
 daytime='.false.'
 
+# Dust bins partition
 binsparlst="0.1,0.4,0.3,0.15,0.05 0.15,0.45,0.35,0.05,0."
-#conclist="9.835e-04 1.967e-03 3.934e-03 5.901e-03"
-conclist="1.967e-08 1.967e-07 1.967e-06 1.967e-05 1.967e-04"
+conclist="2.45875e-04 4.9175e-04 9.835e-04 1.967e-03 3.934e-03 5.901e-03"
+# Carbon bins partition
+#binsparlst="0.15,0.7,0.05,0.1 0.05,0.9,0.,0.05"
+#conclist="2.45875e-04 4.9175e-04 9.835e-04 1.967e-03 3.934e-03 5.901e-03"
+#conclist="1.967e-03"
+#conclist="1.967e-08 1.967e-07 1.967e-06 1.967e-05 1.967e-04"
 atlvllist="76 83 88 92"
 smrlist="0.8 0.5 0.2 0"
 sfctypelst="water desert"
@@ -69,7 +99,7 @@ rm -rf $WRKDIR/*
 if [ ! -s $WRKDIR/coefficients ]; then
    mkdir -p $WRKDIR/coefficients
    cd $WRKDIR/coefficients
-   sh $USHDIR/link_crtm_coeff.sh
+   sh $USHDIR/link_crtm_coeff.sh $machine
 fi
 cd $WRKDIR
 
@@ -281,9 +311,9 @@ do
      $EXEC
      rc=$?
      if [ $rc -eq 0 ]; then
-        mkdir -p $OUTDIR/Sfc_Mode_Ratio
-        mv $KMODFILE $OUTDIR/Sfc_Mode_Ratio/SMR${smr}_kmod.nc
-        mv $AODKFILE $OUTDIR/Sfc_Mode_Ratio/SMR${smr}_aodk.nc
+        mkdir -p $OUTDIR/Sfc_Peak_Ratio
+        mv $KMODFILE $OUTDIR/Sfc_Peak_Ratio/SPR${smr}_kmod.nc
+        mv $AODKFILE $OUTDIR/Sfc_Peak_Ratio/SPR${smr}_aodk.nc
      elif [ $rc -ne 0 ]; then
         exit 1
      fi

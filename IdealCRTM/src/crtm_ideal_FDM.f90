@@ -99,7 +99,7 @@ IMPLICIT NONE
   ! Aerosol Profile
   CHARACTER(len=10) :: aername
   INTEGER :: aerlvs
-  REAL(fp), DIMENSION(:), ALLOCATABLE :: aerconc, aerpres
+  REAL(fp), DIMENSION(:), ALLOCATABLE :: aerconc, aerpres, rh
 
   ! ============================================================================
   ! STEP 3. **** DEFINE THE CRTM INTERFACE STRUCTURES ****
@@ -210,6 +210,7 @@ IMPLICIT NONE
             profidx( n_profs ), &
             ptau5 ( N_LAYERS,n_channels, n_profs ), &
             work3d( N_LAYERS,n_channels, n_profs ), &
+                rh( N_LAYERS ), &
             STAT = alloc_stat )
   IF ( alloc_stat /= 0 ) THEN
     message = 'Error allocating structure arrays'
@@ -255,10 +256,6 @@ IMPLICIT NONE
   CALL CRTM_RTSolution_Create( rts, N_LAYERS )
   CALL CRTM_RTSolution_Create( rts_K, N_LAYERS )
 
-  !DO ii=1,n_Channels
-  !   atm_K(ii,1:n_profs)=atm(1:n_profs)
-  !   sfc_K(ii,1:n_profs)=sfc(1:n_profs)
-  !ENDDO
   ! ==========================================================================
   ! STEP 6. **** ASSIGN INPUT DATA ****
   !
@@ -283,8 +280,7 @@ IMPLICIT NONE
   ENDDO
 
   ! Generate the relative humidity
-   
- 
+  CALL Get_RH(atm(1)%Temperature(:),atm(1)%Absorber(:,1),atm(1)%Pressure(:)*100.,rh(:),N_LAYERS) 
 
   ! Read in the aerosol profile and interpolate to model layers
   IF (N_AEROSOLS .NE. 0 ) THEN
@@ -401,13 +397,25 @@ IMPLICIT NONE
             stop
          end if
          atm(1)%Aerosol(:)%Type = SULFATE_AEROSOL
+     CASE('gocart_carbon')
+         if (naers .ne. 4) then
+            write(6,*) '!!!Error!!! naers should be 4 for gocart_carbon'
+            stop
+         end if
+         atm(1)%Aerosol(1:2)%Type = ORGANIC_CARBON_AEROSOL
+         atm(1)%Aerosol(3:4)%Type = BLACK_CARBON_AEROSOL
      END SELECT
 
+     ii=1
      do i=1,naers
+        if (varname=='gocart_carbon' .and. i>1) then
+           if (atm(1)%Aerosol(i)%Type .ne. atm(1)%Aerosol(i-1)%Type) ii=1
+        end if 
         do k=1,N_LAYERS
            atm(1)%Aerosol(i)%Effective_Radius(k)= &
-                  GOCART_Aerosol_size(i,atm(1)%Aerosol(i)%Type,rh(k))
+                  GOCART_Aerosol_size(ii,atm(1)%Aerosol(i)%Type,rh(k))
         end do
+        ii=ii+1
      end do
 
         IF (genmethod .eq. 1) THEN
@@ -672,6 +680,13 @@ IMPLICIT NONE
   call nc_write_real_var2d(ncid,'temp',dimid2d,work2d, &
        varlongname='Layer temperature',varunits='K')
 
+  work2d(:,:)=0.
+  do np=1,n_profs
+     work2d(:,np)=rh(:)
+  end do
+  call nc_write_real_var2d(ncid,'rh',dimid2d,work2d, &
+       varlongname='Relative humidity',varunits='%')
+
   work3d(:,:,:)=0.
   do np = 1, n_profs
      do ii = 1, n_channels
@@ -872,7 +887,7 @@ IMPLICIT NONE
 
   ! 9b. Deallocate the arrays
   ! -------------------------
-  DEALLOCATE(atm, sfc, geo, opt, rts, rts_K, sfc_k, atm_k, chlidx, ptau5, levidx, profidx, STAT = alloc_stat)
+  DEALLOCATE(atm, sfc, geo, opt, rts, rts_K, sfc_k, atm_k, chlidx, ptau5, levidx, profidx, rh, STAT = alloc_stat)
   if ( allocated(work1d) ) deallocate(work1d)
   if ( allocated(work2d) ) deallocate(work2d)
   if ( allocated(work3d) ) deallocate(work3d)
@@ -986,42 +1001,49 @@ CONTAINS
  SUBROUTINE Get_RH(tmp,q,prsl,rh,N_LAYERS)
  IMPLICIT NONE
  INTEGER, INTENT(in) :: N_LAYERS
- REAL(fp), INTENT(in) :: tmp, q, prsl
- REAL(fp), INTENT(inout) :: rh
+ REAL(fp), DIMENSION(*), INTENT(in) :: tmp, q, prsl
+ REAL(fp), DIMENSION(*), INTENT(inout) :: rh
  REAL(fp), ALLOCATABLE, DIMENSION(:) :: tsen, spfh, qsat
  REAL(fp) :: tv
- REAL(fp), PARAMETER :: rv   = 4.6150e+2
- REAL(fp), PARAMETER :: rd   = 2.8705e+2
- REAL(fp), PARAMETER :: fv   = rv/rd-1.
- REAL(fp), PARAMETER :: ttp  = 2.7316e+2
- REAL(fp), PARAMETER :: psat = 6.1078e+2
- REAL(fp), PARAMETER :: cvap = 1.8460e+3
- REAL(fp), PARAMETER :: cliq = 4.1855e+3
- REAL(fp), PARAMETER :: dldt = cvap-cliq
- REAL(fp), PARAMETER :: xa   = -(dldt/rv)
- REAL(fp), PARAMETER :: hvap = 2.5000e+6
- REAL(fp), PARAMETER :: xb   = xa+hvap/(rv*ttp)
- REAL(fp), PARAMETER :: tmix = ttp-20.
- hfus   = 3.3358e+5
- hsub   = hvap+hfus
- xai    = -(dldti/rv)
- xbi    = xai+hsub/(rv*ttp)
- eps    = rd/rv
- omeps  = 1.-eps
+ REAL(fp), PARAMETER :: rv     = 4.6150e+2
+ REAL(fp), PARAMETER :: rd     = 2.8705e+2
+ REAL(fp), PARAMETER :: fv     = rv/rd-1.
+ REAL(fp), PARAMETER :: ttp    = 2.7316e+2
+ REAL(fp), PARAMETER :: psat   = 6.1078e+2
+ REAL(fp), PARAMETER :: cvap   = 1.8460e+3
+ REAL(fp), PARAMETER :: cliq   = 4.1855e+3
+ REAL(fp), PARAMETER :: dldt   = cvap-cliq
+ REAL(fp), PARAMETER :: xa     = -(dldt/rv)
+ REAL(fp), PARAMETER :: hvap   = 2.5000e+6
+ REAL(fp), PARAMETER :: xb     = xa+hvap/(rv*ttp)
+ REAL(fp), PARAMETER :: tmix   = ttp-20.
+ REAL(fp), PARAMETER :: hfus   = 3.3358e+5
+ REAL(fp), PARAMETER :: hsub   = hvap+hfus
+ REAL(fp), PARAMETER :: csol   = 2.1060e+3
+ REAL(fp), PARAMETER :: dldti  = cvap-csol
+ REAL(fp), PARAMETER :: xai    = -(dldti/rv)
+ REAL(fp), PARAMETER :: xbi    = xai+hsub/(rv*ttp)
+ REAL(fp), PARAMETER :: eps    = rd/rv
+ REAL(fp), PARAMETER :: omeps  = 1.-eps
+ REAL(fp), PARAMETER :: zero   = 0.
  REAL(fp) :: mint,tdry, tr, estmax, w, es, esmax, es2
  REAL(fp) :: pw
  LOGICAL :: ice=.FALSE.
- INTEGER :: nsig
+ INTEGER :: nsig,lmint
 
  nsig=N_LAYERS
+! do k=1,nsig
+!    write(6,*) 'temp, mr, prsl', tmp(k), q(k), prsl(k)
+! end do
  allocate(tsen(nsig),spfh(nsig))
 !! Convert the water vapor mixing ratio (g/kg) to specific humidity (g/g)
  do k=1,nsig
-    spfh(k)=1000.*q(k)/(1.+1000.*q(k))
+    spfh(k)=0.001*q(k)/(1.+0.001*q(k))
+    !write(6,*) 'spfh, q',spfh(k),q(k)
  end do
  do k=1,nsig
     tv=tmp(k)*(1.+fv*spfh(k))
-    tsen(k)=tv/(1.+fv*max(0.,spfh(k)))
+    tsen(k)=tv/(1.+fv*max(zero,spfh(k)))
  end do
 !!
 !! Generate qsat, code comes from GSI, genqsat.f90
@@ -1072,7 +1094,7 @@ CONTAINS
      es2=min(es,esmax)
      qsat(k) = eps * es2 / (pw - omeps * es2)
      rh(k)=spfh(k)/qsat(k)
-     !write(6,*) spfh(k),qsat(k),rh(k)
+     !write(6,*) 'q, spfh, qsat, rh=', q(k),spfh(k),qsat(k),rh(k)
    end do
  END SUBROUTINE Get_RH
 
@@ -1095,7 +1117,7 @@ CONTAINS
    real(8) :: h1
    real(8) :: R_eff
 
-   errstat=CRTM_AerosolCoeff_Load("./coefficients/AerosolCoeff.bin")
+   errstat=CRTM_AerosolCoeff_Load("./coefficients/AerosolCoeff.bin",Quiet=.true.)
 
    if ( itype==DUST_AEROSOL ) then
       if (nbin==1) then

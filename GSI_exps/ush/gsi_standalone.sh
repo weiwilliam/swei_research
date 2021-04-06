@@ -1,34 +1,42 @@
 #!/bin/sh --login
-#SBATCH --output=../logs/gsirun.out
-#SBATCH --job-name=swei_gsistandalone
-##SBATCH --qos=debug
-#SBATCH --qos=batch
-#SBATCH --time=2:00:00
-#SBATCH --nodes=8 --ntasks-per-node=20 --cpus-per-task=1
-#SBATCH --account=gsd-fv3-test
+##SBATCH --output=../logs/gsirun.out
+##SBATCH --job-name=swei_gsistandalone
+###SBATCH --qos=debug
+##SBATCH --qos=batch
+##SBATCH --time=2:00:00
+##SBATCH --nodes=8 --ntasks-per-node=20 --cpus-per-task=1
+##SBATCH --account=gsd-fv3-test
 
-export OMP_NUM_THREADS=1
-
-. /apps/lmod/lmod/init/sh
-module purge
-source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
-module list
-
+#export OMP_NUM_THREADS=1
 set -x
 
-#     Wavenumber (cm-1) |  Channel number |  Obs. err. (K2) |    Band
-#--------------------------------------------------------------------
-# 134             728.5               335              0.53       CO2
-# 202            906.25              1046              2.27    Window
-# 245           1028.75              1536               2.1        O3
-# 459           1990.00              5381               1.8       H2O
-
-homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
-obsarch=/scratch1/NCEPDEV/global/glopara/dump
+machine='s4'
+if [ $machine == 'hera' ]; then
+   homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
+   scrpts_home=/home/swei/research/GSI_exps # Modify on Hera
+   aerpath=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2
+   obsarch=$homedir/INPUTS/OBSDATA
+   DMPDIR=/scratch1/NCEPDEV/global/glopara/dump
+   . /apps/lmod/lmod/init/sh
+   module purge
+   source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
+   module list
+elif [ $machine == 's4' ]; then
+   homedir=/data/users/swei/Experiments/SingleCycleGSI
+   scrpts_home=/home/swei/research/GSI_exps
+   aerpath=/data/users/swei/common/MERRA2
+   obsarch=/data/prod/glopara/dump
+   DMPDIR=/scratch/users/swei/runtmp
+   module purge
+   source /data/users/swei/Git/GSI/modulefiles/modulefile.ProdGSI.s4
+   module list
+else
+   echo 'not supported machine, exit'
+   exit 1
+fi
 #
-logsdir=$homedir/logs
 # Set experiment name and analysis date
-exp="aerorad_1"
+exp="aerorad"
 expid=2 # 1: no aer 2: aer
 VERBOSE='.false.'
 SINGLERADOB='.false.'
@@ -49,13 +57,13 @@ case $expid in
 1)
   READEXTAER='.false.'
    MERRA2AER='.false.'
-  satinfo=${homedir}/dat/controlrun_satinfo.txt
- anavinfo=${homedir}/dat/anavinfo_controlrun ;;
+  satinfo=${scrpts_home}/dat/controlrun_satinfo.txt
+ anavinfo=${scrpts_home}/dat/anavinfo_controlrun ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
-  satinfo=${homedir}/dat/fv3aerorad_satinfo.txt
- anavinfo=${homedir}/dat/anavinfo_fv3aerorad ;;
+  satinfo=${scrpts_home}/dat/fv3aerorad_satinfo.txt
+ anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad ;;
 esac
 
 # Set the JCAP resolution which you want.
@@ -79,13 +87,23 @@ CDATE=2020062212
 # Set runtime and save directories
 tmpdir=${homedir}/rundir${expid}
 outdir=${homedir}/OUTPUT/$exp/$CDATE
+logsdir=$homedir/logs
 [[ ! -d $outdir ]] && mkdir -p $outdir
+[[ ! -d $logsdir ]] && mkdir -p $logsdir
 
 endianness="Big_Endian"
 
-gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
+if [ $machine == 'hera' ]; then
+   gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
+   fixcrtm="/scratch1/NCEPDEV/da/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
+   COMdir="/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common"
+elif [ $machine == 's4' ]; then
+   gsidir="/data/users/swei/Git/GSI"
+   fixcrtm="/data/users/swei/libs/crtm_coeff/v2.3.0"
+   #NDATE="${PROD_UTIL}/bin/ndate"
+   COMdir="/data/users/swei/common"
+fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}
-fixcrtm="/scratch1/NCEPDEV/da/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
 fixgsi="${gsidir}/fix"
 gsiexec=${gsidir}/exec/global_gsi.x
 CATEXEC=${gsidir}/exec/ncdiag_cat.x
@@ -133,7 +151,6 @@ sfcsuffix=nemsio
 atmsuffix=nemsio
 DIAG_SUFFIX=".nc4"
 
-aerpath=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2
 aer03=${aerpath}/$m3yy/$m3mm/MERRA2_AER3D_FV3L64.${m3yy}${m3mm}${m3dd}${m3hh}.nc
 aer06=${aerpath}/$ayy/$amm/MERRA2_AER3D_FV3L64.${ayy}${amm}${add}${cyc}.nc
 aer09=${aerpath}/$p3yy/$p3mm/MERRA2_AER3D_FV3L64.${p3yy}${p3mm}${p3dd}${p3hh}.nc
@@ -493,7 +510,14 @@ done
 # Copy observational data to $tmpdir
 $ncpl $datobs/${prefix_obs}.prepbufr                ./prepbufr
 $ncpl $datobs/${prefix_obs}.prepbufr.acft_profiles  ./prepbufr_profl
-$ncpl $datobs/${prefix_obs}.nsstbufr                ./nsstbufr
+if [ $machine == 'hera' ]; then
+   $ncpl $datobs/${prefix_obs}.nsstbufr                ./nsstbufr
+elif [ $machine == 's4' ]; then
+   cat $datobs/${prefix_obs}.sfcshp.${suffix} \
+       $datobs/${prefix_obs}.tesac.$suffix \
+       $datobs/${prefix_obs}.bathy.$suffix \
+       $datobs/${prefix_obs}.trkob.$suffix > ./nsstbufr
+fi
 $ncpl $datobs/${prefix_obs}.gpsro.${suffix}         ./gpsrobufr
 $ncpl $datobs/${prefix_obs}.satwnd.${suffix}        ./satwndbufr
 $ncpl $datobs/${prefix_obs}.spssmi.${suffix}        ./ssmirrbufr
@@ -559,13 +583,16 @@ $ncpl $datges/${prefix_inp}.atmf009.${atmsuffix}       ./sigf09
 
 # Run GSI
 echo "run gsi now"
-eval "$APRUN ./gsi.x > stdout 2>&1"
+eval "$APRUN ./gsi.x 2>&1 | tee stdout"
 #exit
-rc=$?
+rc=$PIPESTATUS
 if [ $rc -eq 0 ]; then
    mv siganl              $outdir/${prefix_out}.atmanl.${atmsuffix}
    mv dtfanl              $outdir/${prefix_out}.dtfanl.${atmsuffix}
    mv stdout              $outdir/gsi.stdout.${CDATE}
+else
+   echo "GSI failed!!"
+   exit 1
 fi
 
 
