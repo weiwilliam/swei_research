@@ -40,33 +40,48 @@ KMODFILE='kmod_inspection.nc'
 AODKFILE='aodk_inspection.nc'
 
 # Exp on/off
-BSL='Y'  # No aerosols experiment
-EXP1='N' # Concentration
+BSL='N'  # No aerosols experiment
+EXP1='Y' # Concentration
 EXP2='N' # Thickness (only for genmethod 1)
-EXP3='N' # Altitude
-EXP4='N' # Sfc_Peak_Ratio (SPR), available for genmethod 2 only
-EXP5='N' # Bins Partition
+EXP3='Y' # Altitude
+EXP4='Y' # Sfc_Peak_Ratio (SPR), available for genmethod 2 only
+EXP5='Y' # Bins Partition
 EXP6='N' # Surface type
 EXP7='N' # Surface Emissivity
-
 
 # Default setting for each factor
 naers=5
 useremi='.false.'
 aername="gocart_dust"
-binlist='DU001,DU002,DU003,DU004,DU005'
-binspar='0.1,0.4,0.3,0.15,0.05'
-#aername="gocart_carbon"
-#binlist='ocphobic,ocphilic,bcphobic,bcphilic'
-#binspar='0.15,0.70,0.05,0.1'
-#aername="gocart_seas"
-#binlist='SS001,SS002,SS003,SS004'
-#binspar='0.05,0.25,0.6,0.1'
-#aername="gocart_sulf"
-#binlist='sulfate'
-#binspar='1.'
+case $aername in
+'gocart_dust')
+   binlist='DU001,DU002,DU003,DU004,DU005'
+   binspar='0.1,0.4,0.3,0.15,0.05'
+   totconc='1.967e-03'
+   binsparlst="0.1,0.4,0.3,0.15,0.05 0.15,0.45,0.35,0.05,0."
+   conclist="2.45875e-04 4.9175e-04 9.835e-04 1.967e-03 3.934e-03 5.901e-03"
+   ;;
+'gocart_carbon')
+   binlist='ocphobic,ocphilic,bcphobic,bcphilic'
+   binspar='0.15,0.70,0.05,0.1'
+   totconc='1.818e-04'
+   binsparlst="0.15,0.7,0.05,0.1 0.05,0.9,0.,0.05"
+   conclist='2.2725e-05 4.5450e-05 9.0900e-05 1.8180e-04 3.6360e-04 5.4540e-04'
+   ;;
+'gocart_seas')
+   binlist='SS001,SS002,SS003,SS004'
+   binspar='0.05,0.25,0.6,0.1'
+   totconc='7.176e-04'
+   conclist='8.9700e-05 1.7940e-04 3.5880e-04 7.1760e-04 1.4352e-03 2.1528e-03'
+   ;;
+'gocart_sulf')
+   binlist='sulfate'
+   binspar='1.'
+   totconc='1.2527e-04'
+   conclist='1.5659e-05 3.1318e-05 6.2635e-05 1.2527e-04 2.5054e-04 3.7581e-04'
+   ;;
+esac
 genmethod='2'
-totconc='1.967e-03'
 landcover='0.'
 landtype='10'
 lai='0.17'
@@ -83,14 +98,6 @@ bmoderatio='0.8'
 
 daytime='.false.'
 
-# Dust bins partition
-binsparlst="0.1,0.4,0.3,0.15,0.05 0.15,0.45,0.35,0.05,0."
-conclist="2.45875e-04 4.9175e-04 9.835e-04 1.967e-03 3.934e-03 5.901e-03"
-# Carbon bins partition
-#binsparlst="0.15,0.7,0.05,0.1 0.05,0.9,0.,0.05"
-#conclist="2.45875e-04 4.9175e-04 9.835e-04 1.967e-03 3.934e-03 5.901e-03"
-#conclist="1.967e-03"
-#conclist="1.967e-08 1.967e-07 1.967e-06 1.967e-05 1.967e-04"
 atlvllist="76 83 88 92"
 smrlist="0.8 0.5 0.2 0"
 sfctypelst="water desert"
@@ -151,7 +158,7 @@ do
 done
 ;;
 *)
-echo 'Skip concentration test' ;;
+echo 'Skip clear-sky test' ;;
 esac
 
 

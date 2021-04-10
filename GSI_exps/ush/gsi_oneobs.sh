@@ -7,8 +7,11 @@
 ##SBATCH --nodes=8 --ntasks-per-node=20 --cpus-per-task=1
 ##SBATCH --account=gsd-fv3-test
 
-export OMP_NUM_THREADS=1
+#export OMP_NUM_THREADS=1
 set -x
+ulimit -s unlimited
+
+machine='s4'
 
 #     Wavenumber (cm-1) |  Channel number |  Obs. err. (K2) |    Band
 #--------------------------------------------------------------------
@@ -19,6 +22,8 @@ set -x
 
 if [ $machine == 'hera' ]; then
    homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
+   scrpts_home=/home/swei/research/GSI_exps # Modify on Hera
+   aerpath=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2
    obsarch=$homedir/INPUTS/OBSDATA
    DMPDIR=/scratch1/NCEPDEV/global/glopara/dump
    . /apps/lmod/lmod/init/sh
@@ -26,7 +31,9 @@ if [ $machine == 'hera' ]; then
    source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
    module list
 elif [ $machine == 's4' ]; then
-   homedir=/data/users/swei/Experiments/SingleRadTest
+   homedir=/data/users/swei/Experiments/SingleRadObs
+   scrpts_home=/home/swei/research/GSI_exps
+   aerpath=/data/users/swei/common/MERRA2
    obsarch=/data/prod/glopara/dump
    DMPDIR=/scratch/users/swei/runtmp
    module purge
@@ -39,16 +46,17 @@ fi
 # Set experiment name and analysis date
 ONEOBTYPE='iasi'
 ONEOBCHAN=202
-ONEOBLAT='17.975'
-ONEOBLON='299.278'
-exp="ctl2_nch${ONEOBCHAN}"
-expid=1 # 1: no aer 2: aer
+ONEOBLAT='17.975'  # 17.98
+ONEOBLON='299.278' # 299.3
+exp="aer5k_nch${ONEOBCHAN}_1"
+expid=2 # 1: no aer 2: aer
 VERBOSE='.false.'
 SINGLERADOB='.true.'
+MV2GRID='.true.'
 
 if [[ $SINGLERADOB == ".true." ]]; then
    DIAGRADJAC='.true.'
-   SINGLEOB_TEST="oneob_type='${ONEOBTYPE}',maginnov=5.,oblat=${ONEOBLAT},oblon=${ONEOBLON},obchan=${ONEOBCHAN}"
+   SINGLEOB_TEST="oneob_type='${ONEOBTYPE}',maginnov=5.,oblat=${ONEOBLAT},oblon=${ONEOBLON},obchan=${ONEOBCHAN},lmv2grd=${MV2GRID}"
 else
    DIAGRADJAC='.false.'
    SINGLEOB_TEST=""
@@ -58,13 +66,13 @@ case $expid in
 1)
   READEXTAER='.false.'
    MERRA2AER='.false.'
-  satinfo=${homedir}/dat/controlrun_satinfo.txt
- anavinfo=${homedir}/dat/anavinfo_controlrun ;;
+  satinfo=${scrpts_home}/dat/controlrun_satinfo.txt
+ anavinfo=${scrpts_home}/dat/anavinfo_controlrun ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
-  satinfo=${homedir}/dat/fv3aerorad_satinfo.txt
- anavinfo=${homedir}/dat/anavinfo_fv3aerorad ;;
+  satinfo=${scrpts_home}/dat/fv3aerorad_satinfo.txt
+ anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad ;;
 esac
 
 # Set the JCAP resolution which you want.
@@ -98,7 +106,7 @@ if [ $machine == 'hera' ]; then
 elif [ $machine == 's4' ]; then
    gsidir="/data/users/swei/Git/GSI"
    fixcrtm="/data/users/swei/libs/crtm_coeff/v2.3.0"
-   NDATE="/data/prod/previous_resources/nwprod_gdas_2014/nwprod_gdas_2014/util/exec/ndate"
+   #NDATE="/data/prod/previous_resources/nwprod_gdas_2014/nwprod_gdas_2014/util/exec/ndate"
    COMdir="/data/users/swei/common"
 fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}
@@ -149,7 +157,6 @@ sfcsuffix=nemsio
 atmsuffix=nemsio
 DIAG_SUFFIX=".nc4"
 
-aerpath=${COMdir}/MERRA2
 aer03=${aerpath}/$m3yy/$m3mm/MERRA2_AER3D_FV3L64.${m3yy}${m3mm}${m3dd}${m3hh}.nc
 aer06=${aerpath}/$ayy/$amm/MERRA2_AER3D_FV3L64.${ayy}${amm}${add}${cyc}.nc
 aer09=${aerpath}/$p3yy/$p3mm/MERRA2_AER3D_FV3L64.${p3yy}${p3mm}${p3dd}${p3hh}.nc
@@ -493,16 +500,16 @@ $ncpl $datges/${prefix_inp}.atmf009.${atmsuffix}       ./sigf09
 
 # Run GSI
 echo "run gsi now"
-eval "$APRUN ./gsi.x > stdout 2>&1"
+eval "$APRUN ./gsi.x 2>&1 | tee stdout"
 #exit
-rc=$?
+rc=$PIPESTATUS
 if [ $rc -eq 0 ]; then
    mv siganl              $outdir/${prefix_out}.atmanl.${atmsuffix}
-   mv dtfanl              $outdir/${prefix_out}.dtfanl.nc
+   mv dtfanl              $outdir/${prefix_out}.dtfanl.${atmsuffix}
    mv stdout              $outdir/gsi.stdout.${CDATE}
 else
-   echo "GSI Failed"
-   exit 
+   echo "GSI failed!!"
+   exit 1
 fi
 
 # Loop over first and last outer loops to generate innovation
