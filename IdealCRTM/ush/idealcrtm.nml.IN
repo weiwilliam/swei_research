@@ -32,6 +32,10 @@
  landtype=_LANDTYPE_,
  lai=_LAI_,
 /
+&source_angle
+ s_zang=_SZANG_,
+ s_aang=_SAANG_,
+/
 &options
  emiss_min=_EMIMIN_,
  emiss_max=_EMIMAX_,

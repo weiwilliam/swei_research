@@ -13,8 +13,9 @@ elif [ $machine == 's4' ] ; then
    gsisub=/data/users/swei/Git/GSI/ush/sub_s4
    account=star
    gsirunscript=$1
+   # nprocs per node / nodes
    procs='12/12'
-   #procs='16/16' # nprocs per node / nodes
+   #procs='12/16'
    wtime='00:30:00'
    outfile=/data/users/swei/Experiments/runlogs/log.$gsirunscript
 fi

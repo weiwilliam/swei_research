@@ -46,32 +46,49 @@ fi
 # Set experiment name and analysis date
 ONEOBTYPE='iasi'
 ONEOBCHAN=202
-ONEOBLAT='17.975'  # 17.98
-ONEOBLON='299.278' # 299.3
-exp="aer5k_nch${ONEOBCHAN}_1"
+# set 1: downwind
+#ONEOBLAT='17.975'  # 17.98
+#ONEOBLON='299.278' # 299.3
+# set 2: source
+ONEOBLAT='18.7'  # 18.69801
+ONEOBLON='347.34' # 347.338623
+BTINNOV='5.'
+exp="test_ch${ONEOBCHAN}_tmp"
 expid=2 # 1: no aer 2: aer
 VERBOSE='.false.'
 SINGLERADOB='.true.'
 MV2GRID='.true.'
+NOBALANCE='.true.'
+JC_Q='.false.'
+TJACONLY='.false.'
+QJACONLY='.false.'
+RAWINNOV='.false.' 
+Q_OPT=2
 
 if [[ $SINGLERADOB == ".true." ]]; then
    DIAGRADJAC='.true.'
-   SINGLEOB_TEST="oneob_type='${ONEOBTYPE}',maginnov=5.,oblat=${ONEOBLAT},oblon=${ONEOBLON},obchan=${ONEOBCHAN},lmv2grd=${MV2GRID}"
+   SINGLEOB_TEST="oneob_type='${ONEOBTYPE}',maginnov=${BTINNOV},oblat=${ONEOBLAT},oblon=${ONEOBLON},obchan=${ONEOBCHAN},lmv2grd=${MV2GRID},tjaconly=${TJACONLY},qjaconly=${QJACONLY},lrawinnov=${RAWINNOV}"
 else
    DIAGRADJAC='.false.'
    SINGLEOB_TEST=""
+fi
+
+if [[ $JC_Q == ".true." ]]; then
+   FACTQ="factqmin=0.5,factqmax=0.005"
+else
+   FACTQ="factqmin=0.,factqmax=0."
 fi
 
 case $expid in
 1)
   READEXTAER='.false.'
    MERRA2AER='.false.'
-  satinfo=${scrpts_home}/dat/controlrun_satinfo.txt
+  satinfo=${scrpts_home}/dat/controlrun_satinfo_nobc.txt
  anavinfo=${scrpts_home}/dat/anavinfo_controlrun ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
-  satinfo=${scrpts_home}/dat/fv3aerorad_satinfo.txt
+  satinfo=${scrpts_home}/dat/fv3aerorad_satinfo_nobc.txt
  anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad ;;
 esac
 
@@ -155,6 +172,7 @@ suffix_bias=${cdump}.${gdate}
 suffix=tm00.bufr_d
 sfcsuffix=nemsio
 atmsuffix=nemsio
+dtfsuffix="nc4"
 DIAG_SUFFIX=".nc4"
 
 aer03=${aerpath}/$m3yy/$m3mm/MERRA2_AER3D_FV3L64.${m3yy}${m3mm}${m3dd}${m3hh}.nc
@@ -250,6 +268,9 @@ if [ $ICO -gt 0 ] ; then
 fi
 
 # Make gsi namelist
+   #miter=2,niter(1)=50,niter(2)=25,
+   #niter_no_qc(1)=2,niter_no_qc(2)=0,
+   #write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
 
 cat << EOF > gsiparm.anl
 
@@ -257,8 +278,8 @@ cat << EOF > gsiparm.anl
    miter=2,niter(1)=50,niter(2)=25,
    niter_no_qc(1)=2,niter_no_qc(2)=0,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
-   qoption=2,
-   gencode=82,factqmin=0.5,factqmax=0.005,deltim=1200,
+   qoption=${Q_OPT},gencode=82,deltim=1200,
+   ${FACTQ},
    iguess=-1,
    tzr_qc=1,
    oneobtest=.false.,retrieval=.false.,l_foto=.false.,
@@ -277,6 +298,7 @@ cat << EOF > gsiparm.anl
    lwrite_peakwt=.true.,
    lobsdiag_forenkf=${DIAGRADJAC},
    lsingleradob=${SINGLERADOB},
+   lnobalance=${NOBALANCE},
  /
  &GRIDOPTS
    JCAP_B=$JCAP,JCAP=$JCAP_A,NLAT=$NLAT_A,NLON=$NLON_A,nsig=$LEVS,
@@ -505,8 +527,9 @@ eval "$APRUN ./gsi.x 2>&1 | tee stdout"
 rc=$PIPESTATUS
 if [ $rc -eq 0 ]; then
    mv siganl              $outdir/${prefix_out}.atmanl.${atmsuffix}
-   mv dtfanl              $outdir/${prefix_out}.dtfanl.${atmsuffix}
+   mv dtfanl              $outdir/${prefix_out}.dtfanl.${dtfsuffix}
    mv stdout              $outdir/gsi.stdout.${CDATE}
+   mv fort.220            $outdir/gsi.costfunc.log
 else
    echo "GSI failed!!"
    exit 1

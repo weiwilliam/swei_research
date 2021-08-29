@@ -69,6 +69,8 @@ IMPLICIT NONE
   INTEGER :: n_profs,np
   REAL(fp) :: emiss_int
   REAL(fp), ALLOCATABLE :: emiss(:)
+  !
+  CHARACTER(len=5) :: time_string
 
   ! Namelist
   LOGICAL :: lextprofile
@@ -89,11 +91,13 @@ IMPLICIT NONE
   LOGICAL :: user_emiss
   REAL(fp) :: emiss_min, emiss_max
   INTEGER :: n_emiss
+  REAL(fp) :: s_zang, s_aang
   
   namelist/main/lextprofile,naers,user_emiss
   namelist/extprof/aerprof,scalef,lumptolvs,puttolv,shiftthick,shiftlvs
   namelist/autogen/varname,binsname,binspar,genmethod,totalconc,thicknesslvs,atlv,modelv,bmoderatio,sfc_mode_ratio
-  namelist/sfcsetup/landcover,landtype,lai
+  namelist/sfcsetup/ landcover,landtype,lai
+  namelist/source_angle/ s_zang, s_aang
   namelist/options/ emiss_min, emiss_max, n_emiss
 
   ! Aerosol Profile
@@ -142,9 +146,16 @@ IMPLICIT NONE
      READ(10,autogen)
   END IF
   READ(10,sfcsetup)
+  READ(10,source_angle)
   IF (user_emiss) READ(10,options)
   CLOSE(10)
 
+  ! Check daytime or nighttime
+  if ( s_zang > 89. ) then
+     time_string='Night'
+  else
+     time_string='Day  '
+  end if
   ! Define the user emissivity
   if (user_emiss) then
      n_profs=n_emiss
@@ -522,9 +533,9 @@ IMPLICIT NONE
   !  The Sensor_Scan_Angle is optional.
   CALL CRTM_Geometry_SetValue( geo, &
                                Sensor_Zenith_Angle = ZENITH_ANGLE, &
-                               Sensor_Scan_Angle   = SCAN_ANGLE )
-                              !Source_Zenith_Angle = 0.  
-                              !Source_Azimuth_Angle= 180.  
+                               Sensor_Scan_Angle   = SCAN_ANGLE, &
+                               Source_Zenith_Angle = s_zang, &  
+                               Source_Azimuth_Angle= s_aang ) 
   ! ==========================================================================
   ! STEP 7. **** INITIALIZE THE K-MATRIX ARGUMENTS ****
   !
@@ -645,6 +656,7 @@ IMPLICIT NONE
   call check_nc( nf90_put_att(ncid,NF90_GLOBAL,'Ice_Coverage',sfc(1)%Ice_Coverage) )
   call check_nc( nf90_put_att(ncid,NF90_GLOBAL,'Ice_Temperature',sfc(1)%Ice_Temperature) )
   call check_nc( nf90_put_att(ncid,NF90_GLOBAL,'Leaf_Area_Index',sfc(1)%Lai) )
+  call check_nc( nf90_put_att(ncid,NF90_GLOBAL,'Day_Night',trim(time_string)) )
 
   call check_nc( nf90_enddef(ncid) )
 
@@ -805,6 +817,24 @@ IMPLICIT NONE
   end do
   call nc_write_real_var2d(ncid,"Radiance",dimid2d,work2d, &
                     varlongname="Radiance")
+  work2d(:,:)=0.
+  do np=1,n_profs
+     work2d(:,np)=rts(:,np)%Up_Radiance
+  end do
+  call nc_write_real_var2d(ncid,"Up_Radiance",dimid2d,work2d, &
+                    varlongname="Upward Radiance")
+  work2d(:,:)=0.
+  do np=1,n_profs
+     work2d(:,np)=rts(:,np)%Down_Radiance
+  end do
+  call nc_write_real_var2d(ncid,"Down_Radiance",dimid2d,work2d, &
+                    varlongname="Downward Radiance")
+  work2d(:,:)=0.
+  do np=1,n_profs
+     work2d(:,np)=rts(:,np)%Down_Solar_Radiance
+  end do
+  call nc_write_real_var2d(ncid,"Down_Solar_Radiance",dimid2d,work2d, &
+                    varlongname="Downward Solar Radiance")
   work2d(:,:)=0.
   do np=1,n_profs
      work2d(:,np)=rts(:,np)%Brightness_Temperature
