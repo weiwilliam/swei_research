@@ -1,0 +1,4 @@
+#Endpoint UUID
+Hera='82109590-c090-11ea-bef9-0e716405a293'
+Orion='84bad22e-cb80-11ea-9a44-0255d23c44ef'
+Niagara='21467dd0-afd6-11ea-8f12-0a21f750d19b'
