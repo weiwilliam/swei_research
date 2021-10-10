@@ -1,30 +1,23 @@
 #!/bin/sh --login
-##SBATCH --output=../logs/gsirun.out
-##SBATCH --job-name=swei_gsistandalone
-###SBATCH --qos=debug
-##SBATCH --qos=batch
-##SBATCH --time=2:00:00
-##SBATCH --nodes=8 --ntasks-per-node=20 --cpus-per-task=1
-##SBATCH --account=gsd-fv3-test
-
-#export OMP_NUM_THREADS=1
 set -x
-
 #
 # Set experiment name and analysis date
-machine='s4'
+machine='hera'
 exp="aer_observer"
-expid=2 # 1: no aer 2: aer
+expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
+if_iraerdet=Yes
+if_useaerir=Yes
 
 #
 if [ $machine == 'hera' ]; then
-   homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
-   scrpts_home=/home/swei/research/GSI_exps # Modify on Hera
-   aerpath=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2
-   obsarch=$homedir/INPUTS/OBSDATA
-   DMPDIR=/scratch1/NCEPDEV/global/glopara/dump
+   homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/AeroObsStats
+   scrpts_home=/home/Shih-wei.Wei/research/GSI_exps
+   aerpath=/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2_L64
+   gesarch=/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/common/GDAS
+   obsarch=/scratch1/NCEPDEV/global/glopara/dump
+   DMPDIR=$homedir/wrktmp
    . /apps/lmod/lmod/init/sh
    module purge
    source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
@@ -53,6 +46,19 @@ else
   if_read_obs_save='.false.'
   if_read_obs_skip='.false.'
 fi
+
+OBSQC=""
+if [ ${if_iraerdet} = Yes ] ; then
+  OBSQC="${OBSQC},ir_aer_det=.ture."
+else
+  OBSQC="${OBSQC},ir_aer_det=.false."
+fi
+if [ ${if_useaerir} = Yes ] ; then
+  OBSQC="${OBSQC},luse_aerobs=.true."
+else
+  OBSQC="${OBSQC},ir_aer_det=.false."
+fi
+
 
 case $expid in
 1)
@@ -85,10 +91,14 @@ export LEVS=64
 # Set variables used in script
 #   CLEAN up $tmpdir when finished (YES=remove, NO=leave alone)
 #   ncp is cp replacement, currently keep as /bin/cp
-CDATE=2020062212
+CDATE=${CDATE}
+if [ -z "$CDATE" ]; then
+   echo "CDATE is not properly setup"
+   exit 99 
+fi
 
 # Set runtime and save directories
-tmpdir=${DMPDIR}/rundir${expid}
+tmpdir=${DMPDIR}/rundir${expid}.$CDATE
 outdir=${homedir}/OUTPUT/$exp/$CDATE
 logsdir=$homedir/logs
 [[ ! -d $outdir ]] && mkdir -p $outdir
@@ -98,13 +108,11 @@ endianness="Big_Endian"
 
 if [ $machine == 'hera' ]; then
    gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
-   fixcrtm="/scratch1/NCEPDEV/da/Michael.Lueken/CRTM_REL-2.2.3/crtm_v2.2.3/fix_update"
-   COMdir="/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common"
+   fixcrtm="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/Libs/CRTM-2.4.0/fix"
 elif [ $machine == 's4' ]; then
    gsidir="/data/users/swei/Git/GSI"
    fixcrtm="/data/users/swei/libs/crtm_coeff/v2.3.0"
    #NDATE="${PROD_UTIL}/bin/ndate"
-   COMdir="/data/users/swei/common"
 fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}
 fixgsi="${gsidir}/fix"
@@ -308,8 +316,7 @@ cat << EOF > gsiparm.anl
  &OBSQC
    dfact=0.75,dfact1=3.0,noiqc=.true.,oberrflg=.false.,c_varqc=0.04,
    use_poq7=.true.,qc_noirjaco3_pole=.true.,vqc=.true.,
-   aircraft_t_bc=.true.,biaspredt=1000.0,upd_aircraft=.true.,cleanup_tail=.true.
-
+   aircraft_t_bc=.true.,biaspredt=1000.0,upd_aircraft=.true.,cleanup_tail=.true.${OBSQC}
  /
  &OBS_INPUT
    dmesh(1)=145.0,dmesh(2)=150.0,dmesh(3)=100.0,time_window_max=3.0,
