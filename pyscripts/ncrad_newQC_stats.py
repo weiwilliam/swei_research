@@ -23,7 +23,12 @@ elif (os_name=='Windows'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-sys.path.append(rootpath+'/AlbanyWork/Utility/Python3/functions')
+elif (os_name=='Linux'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+
+sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
@@ -43,40 +48,24 @@ proj=ccrs.PlateCarree(globe=None)
 
 # Plotting setup
 sdate=2020061000
-edate=2020092118
+edate=2020061018
 aertype='All'
 hint=6
 exp='AerObserver'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
-#if loop=='anl':
-#    tlstr='OMA'
-#elif loop=='ges':
-#    tlstr='OMF'
-plthist=0 # plot 2d histogram
-plthist_mean_sd=1 # plot 2d histogram
-
-area='Glb'
-minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
-print(minlat,maxlat,minlon,maxlon,crosszero,cyclic)
-if (area=='Glb'):
-   minlon=-180. ; maxlon=180.
-cornll=[minlat,maxlat,minlon,maxlon]
-
-cbori='vertical' #vertical, horizontal
-if (cbori=='vertical'):
-   cb_frac=0.025
-   cb_pad=0.06
-elif (cbori=='horizontal'):
-   cb_frac=0.04
-   cb_pad=0.1
+binsize=0.1
 
 # Data path setup
 archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
 fixpath=rootgit+'/GSI_exps/fix'
-outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/images/'
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats'
 archdir=archpath+'/'+exp
+print(archpath)
+print(fixpath)
+print(outpath)
+print(archdir)
 savedir=outpath+'/'+exp+'_newQC/SD_LUT/'+aertype
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
@@ -206,12 +195,9 @@ for chkwvn in chkwvn_list:
     # lowbt_qc=(used_msk)&(abs(omb)<30.)
     final_qc_msk=(ori_msk)&(~((abs(omb)>3)&(abs(omb)>1.8*aereff)))&(abs(omb)<30.)
 
-    # savedir=outpath+'/'+exp+'_newqc/hist/'+aertype
-    # if ( not os.path.exists(savedir) ):
-    #     os.makedirs(savedir)
-    
-    hist_x_edge=np.arange(-0.5,50.5,1.)
-    bin_center=(hist_x_edge+0.5)[:-1]
+    halfbin=0.5*binsize
+    hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
+    bin_center=(hist_x_edge+halfbin)[:-1]
     
     omb_mean1=np.zeros_like(bin_center,dtype='float')
     omb_sd1=np.zeros_like(bin_center,dtype='float')
@@ -253,7 +239,7 @@ for chkwvn in chkwvn_list:
         df_all=pd.concat((df_all,tmpdf))
     icount+=1
 
-# df_all.to_csv(savedir+'/'+sensor+'_616_stats.csv')
+df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats.csv')
 # df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
 
 # ds_all=ds_all.assign({'obserr':(['wavenumber'],err_array)})
