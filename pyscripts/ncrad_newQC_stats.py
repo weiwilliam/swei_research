@@ -48,7 +48,7 @@ proj=ccrs.PlateCarree(globe=None)
 
 # Plotting setup
 sdate=2020061000
-edate=2020061018
+edate=2020092118
 aertype='All'
 hint=6
 exp='AerObserver'
@@ -199,24 +199,24 @@ for chkwvn in chkwvn_list:
     hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
     bin_center=(hist_x_edge+halfbin)[:-1]
     
-    omb_mean1=np.zeros_like(bin_center,dtype='float')
-    omb_sd1=np.zeros_like(bin_center,dtype='float')
-    counts1=np.zeros_like(bin_center,dtype='int')
+#    omb_mean1=np.zeros_like(bin_center,dtype='float')
+#    omb_sd1=np.zeros_like(bin_center,dtype='float')
+#    counts1=np.zeros_like(bin_center,dtype='int')
     omb_mean2=np.zeros_like(bin_center,dtype='float')
     omb_sd2=np.zeros_like(bin_center,dtype='float')
-    counts2=np.zeros_like(bin_center,dtype='int')
+#    counts2=np.zeros_like(bin_center,dtype='int')
     
-    for i in np.arange(omb_mean1.size):
+    for i in np.arange(omb_mean2.size):
         lb_aereff=hist_x_edge[i]
         ub_aereff=hist_x_edge[i+1]
-        tmpmsk1=(ori_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-        omb_mean1[i]=omb[tmpmsk1==1].mean()
-        omb_sd1[i]=omb[tmpmsk1==1].std()
-        counts1[i]=np.count_nonzero(tmpmsk1)
+#        tmpmsk1=(ori_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
+#        omb_mean1[i]=omb[tmpmsk1==1].mean()
+#        omb_sd1[i]=omb[tmpmsk1==1].std()
+#        counts1[i]=np.count_nonzero(tmpmsk1)
         tmpmsk2=(final_qc_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
         omb_mean2[i]=omb[tmpmsk2==1].mean()
         omb_sd2[i]=omb[tmpmsk2==1].std()
-        counts2[i]=np.count_nonzero(tmpmsk2)
+#        counts2[i]=np.count_nonzero(tmpmsk2)
 
     tmpsd2=xa.where(np.isnan(omb_sd2),-999,omb_sd2)
     gtmask=(tmpsd2>obserr)

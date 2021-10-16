@@ -23,7 +23,11 @@ elif (os_name=='Windows'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-sys.path.append(rootpath+'/AlbanyWork/Utility/Python3/functions')
+elif (os_name=='Linux'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
@@ -54,8 +58,9 @@ loop='ges' #ges,anl
 #    tlstr='OMA'
 #elif loop=='ges':
 #    tlstr='OMF'
-plthist=0 # plot 2d histogram
+plthist=0 # plot pdf of normalized OMB
 plthist_mean_sd=1 # plot 2d histogram
+lutfmt='csv'
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -74,12 +79,9 @@ elif (cbori=='horizontal'):
 
 # Data path setup
 archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
-lutpath='F:\GoogleDrive_NCU\Albany\AlbanyWork\Prospectus\Experiments\AeroObsStats\images\AerObserver_newQC\SD_LUT\All'
+lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/AerObserver_newQC/SD_LUT/All'
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/images/'
 archdir=archpath+'/'+exp
-savedir=outpath+'/'+exp+'_newQC/pdf/'+aertype
-if ( not os.path.exists(savedir) ):
-    os.makedirs(savedir)
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -151,15 +153,18 @@ for date in dlist:
 total_obscounts=ds_all.obsloc.size
 ds_all=ds_all.assign_coords(obsloc=np.arange(total_obscounts))
 
-satinfo_excel=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.xlsx'
-lutdf=pd.read_excel(satinfo_excel)
+satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.'+lutfmt
+if (lutfmt=='xlsx'):
+   lutdf=pd.read_excel(satstats_file)
+elif (lutfmt=='csv'):
+   lutdf=pd.read_csv(satstats_file)
 
 binsize=0.1
 halfbin=0.5*binsize
 hist_x_edge=np.arange(-3,3.1,binsize)
-bin_center=(hist_x_edge+binsize*0.5)[:-1]
+bin_center=(hist_x_edge+halfbin)[:-1]
 
-normbin=np.arange(-3,3.1,0.1)
+normbin=np.arange(-3,3.1,binsize)
 normdis_mean=0.
 normdis_std=0.5
 normdis=scipy.stats.norm.pdf(normbin,normdis_mean,normdis_std)
