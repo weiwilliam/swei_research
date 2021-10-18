@@ -38,7 +38,7 @@ tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
 mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
-mpl.rc('legend',fontsize='large')
+mpl.rc('legend',fontsize='small')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=3 ; axe_h=3 ; quality=300
 
@@ -161,11 +161,16 @@ elif (lutfmt=='csv'):
 
 binsize=0.1
 halfbin=0.5*binsize
-hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
+hist_x_edge=np.arange(-3,3.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
-# for chkwvn in [962.5]:
-for chkwvn in chkwvn_list.values:
+normbin=hist_x_edge
+normdis_mean=0.
+normdis_std=0.5
+normdis=scipy.stats.norm.pdf(normbin,normdis_mean,normdis_std)
+
+for chkwvn in [962.5]:
+# for chkwvn in chkwvn_list.values:
     ds_chk=ds_all.sel(wavenumber=chkwvn)
     tb_sim=ds_chk.tb_sim
     tb_clr=ds_chk.tb_clr
@@ -183,12 +188,7 @@ for chkwvn in chkwvn_list.values:
     ae1=tmpdf.Aeff_1.values[0]
     ae2=tmpdf.Aeff_2.values[0]
     obserr=tmpdf.SD_o.values[0]
-    aedepsd=np.zeros_like(bin_center,dtype='float')
-    aedepsd[:]=obserr
-    aedepsd=np.where(bin_center>=ae2,sdmax,aedepsd)
-    for idx in np.where((bin_center<ae2)&(bin_center>ae1))[0]:
-        aedepsd[idx]=sdmin+(sdmax-sdmin)/(ae2-ae1)*(bin_center[idx]-ae1)
-        
+    
     qc0_msk=(ds_chk.qcflag==0.)
     # qc7_msk=(ds_chk.qcflag==7.)
     qc13_msk=(ds_chk.qcflag==13.)
@@ -198,34 +198,40 @@ for chkwvn in chkwvn_list.values:
     # lowbt_qc=(used_msk)&(abs(omb)<30.)
     final_qc_msk=(ori_msk)&(~((abs(omb)>3)&(abs(omb)>1.8*aereff)))&(abs(omb)<30.)
 
-    if (plthist_mean_sd):
-        savedir=outpath+'/'+exp+'_newQC/hist/'+aertype
+    obs_sd1=xa.zeros_like(omb,dtype='float')
+    obs_sd2=xa.zeros_like(omb,dtype='float')
+    obs_sd1[:]=omb[ori_msk==1].std()
+    le_ae1_msk=(aereff<=ae1)
+    betweenmsk=((aereff>ae1)&(aereff<ae2))
+    ge_ae2_msk=(aereff>=ae2)
+    obs_sd2[le_ae1_msk]=obserr
+    obs_sd2[ge_ae2_msk]=sdmax
+    for obsidx in ds_chk.obsloc[betweenmsk].values:
+        obs_sd2[obsidx]=sdmin+(sdmax-sdmin)/(ae2-ae1)*(aereff[obsidx].values-ae1)
+
+    if (plthist):
+        savedir=outpath+'/'+exp+'_newQC/pdf/'+aertype
         if ( not os.path.exists(savedir) ):
             os.makedirs(savedir)
+            
+        # pltda_x1=omb[ori_msk==1]*varinv[ori_msk==1]
+        # pltda_x2=omb[final_qc_msk==1]*varinv[final_qc_msk==1]
+        # pltda_x1=omb[ori_msk==1]/obs_sd1[ori_msk==1]
+        pltda_x1=omb[ori_msk==1]/obserr
+        pltda_x2=omb[ori_msk==1]/omb[ori_msk==1].std()
+        pltda_x3=omb[final_qc_msk==1]/omb[final_qc_msk==1].std()
+        pltda_x4=omb[final_qc_msk==1]/obs_sd2[final_qc_msk==1]
+        x_label='Normalized OMB'
+        hdata1, tmpbins=np.histogram(pltda_x1, bins=hist_x_edge, density=1)
+        hdata2, tmpbins=np.histogram(pltda_x2, bins=hist_x_edge, density=1)
+        hdata3, tmpbins=np.histogram(pltda_x3, bins=hist_x_edge, density=1)
+        hdata4, tmpbins=np.histogram(pltda_x4, bins=hist_x_edge, density=1)
+        lglst=['Pre_SD','Hazy_SD','HazyQC_SD','Ae_dep_SD']
+    
+        omb_mean=np.zeros_like(bin_center,dtype='float')
+        omb_sd=np.zeros_like(bin_center,dtype='float')
+        # counts=np.zeros_like(bin_center,dtype='int')
         
-        pltda_x1=aereff[ori_msk==1]
-        pltda_x2=aereff[final_qc_msk==1]
-        x_label='Aerosol effect [K]'
-        
-        omb_mean1=np.zeros_like(bin_center,dtype='float')
-        omb_sd1=np.zeros_like(bin_center,dtype='float')
-        counts1=np.zeros_like(bin_center,dtype='int')
-        omb_mean2=np.zeros_like(bin_center,dtype='float')
-        omb_sd2=np.zeros_like(bin_center,dtype='float')
-        counts2=np.zeros_like(bin_center,dtype='int')
-        
-        for i in np.arange(omb_mean1.size):
-            lb_aereff=hist_x_edge[i]
-            ub_aereff=hist_x_edge[i+1]
-            tmpmsk1=(ori_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-            omb_mean1[i]=omb[tmpmsk1==1].mean()
-            omb_sd1[i]=omb[tmpmsk1==1].std()
-            counts1[i]=np.count_nonzero(tmpmsk1)
-            tmpmsk2=(final_qc_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-            omb_mean2[i]=omb[tmpmsk2==1].mean()
-            omb_sd2[i]=omb[tmpmsk2==1].std()
-            counts2[i]=np.count_nonzero(tmpmsk2)
-
         tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
         
         fig=plt.figure()
@@ -233,25 +239,19 @@ for chkwvn in chkwvn_list.values:
         set_size(axe_w,axe_h,l=0.15,r=0.85)
         ax.set_title(tistr,loc='left')
         ax.set_xlabel(x_label)
-        hdata, bins, patches=ax.hist(pltda_x1,hist_x_edge,color='grey',
-                                      density=0,alpha=0.3)
-        hdata, bins, patches=ax.hist(pltda_x2,hist_x_edge,color='grey',
-                                      density=0,alpha=0.7)
+        ax.plot(bin_center,hdata1*binsize,'tab:blue')
+        ax.plot(bin_center,hdata2*binsize,'tab:red')
+        ax.plot(bin_center,hdata3*binsize,'tab:green')
+        ax.plot(bin_center,hdata4*binsize,'tab:orange')
+        ax.plot(normbin,normdis,'k--')
         ax.set_yscale("log")
-        ax.set_ylabel("Counts")
-        ax2=ax.twinx()
-        ax2.plot(bin_center,omb_mean1,'tab:blue',linewidth=0.7)
-        ax2.plot(bin_center,omb_sd1,'tab:red',linewidth=0.7)
-        ax2.plot(bin_center,omb_mean2,'tab:blue')
-        ax2.plot(bin_center,omb_sd2,'tab:red')
-        ax2.plot(bin_center,aedepsd,'k',linewidth=1.)
-        ax2.set_ylim(-40,10)
-        ax2.set_ylabel('SD and Mean of O-B [K]')
-        ax2.hlines(obserr,0,1,transform=ax2.get_yaxis_transform(),colors='k',linestyle='dashed',linewidth=0.7)
-        ax2.hlines(0.,0,1,transform=ax2.get_yaxis_transform(),colors='grey',linewidth=0.4)
+        ax.set_ylabel("PDF")
+        ax.set_ylim(1e-4,1.4e0)
+        ax.vlines(0.,0,1,transform=ax.get_xaxis_transform(),colors='grey',linestyle='dashed',linewidth=0.7)
+        ax.legend(lglst,loc=2)
         
         if (fsave):
-            fname=('PDF_MeanSD_%s_%s_%.2f.%s'
+            fname=('PDF_NormOMB_%s_%s_%.2f.%s'
                     %(area,sensor,chkwvn,ffmt))
             fig.savefig(savedir+'/'+fname,dpi=quality)
             plt.close()
