@@ -205,7 +205,9 @@ for chkwvn in chkwvn_list:
     omb_mean2=np.zeros_like(bin_center,dtype='float')
     omb_sd2=np.zeros_like(bin_center,dtype='float')
 #    counts2=np.zeros_like(bin_center,dtype='int')
-    
+    sd_noqc=omb[ori_msk==1].std()
+    sd_qc=omb[final_qc_msk==1].std()    
+
     for i in np.arange(omb_mean2.size):
         lb_aereff=hist_x_edge[i]
         ub_aereff=hist_x_edge[i+1]
@@ -230,8 +232,8 @@ for chkwvn in chkwvn_list:
     sd_min=omb_sd2[Aeff_1_idx]
     sd_max=omb_sd2[Aeff_2_idx]
 
-    tmpdf=pd.DataFrame(np.array([[chkwvn,nuchrad,iuserad,obserr,aereff_1,aereff_2,sd_min,sd_max]]),
-                       columns=['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max'])
+    tmpdf=pd.DataFrame(np.array([[chkwvn,nuchrad,iuserad,obserr,aereff_1,aereff_2,sd_min,sd_max,sd_noqc,sd_qc]]),
+                       columns=['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc'])
 
     if (icount==0):
         df_all=tmpdf

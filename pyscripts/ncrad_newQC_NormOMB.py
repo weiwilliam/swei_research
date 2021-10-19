@@ -58,8 +58,7 @@ loop='ges' #ges,anl
 #    tlstr='OMA'
 #elif loop=='ges':
 #    tlstr='OMF'
-plthist=0 # plot pdf of normalized OMB
-plthist_mean_sd=1 # plot 2d histogram
+plthist=1 # plot pdf of normalized OMB
 lutfmt='csv'
 
 area='Glb'
@@ -169,8 +168,8 @@ normdis_mean=0.
 normdis_std=0.5
 normdis=scipy.stats.norm.pdf(normbin,normdis_mean,normdis_std)
 
-for chkwvn in [962.5]:
-# for chkwvn in chkwvn_list.values:
+# for chkwvn in [962.5]:
+for chkwvn in chkwvn_list.values:
     ds_chk=ds_all.sel(wavenumber=chkwvn)
     tb_sim=ds_chk.tb_sim
     tb_clr=ds_chk.tb_clr
