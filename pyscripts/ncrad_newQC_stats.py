@@ -186,39 +186,34 @@ for chkwvn in chkwvn_list:
     aereff_obs=tb_obs-tb_clr
     aereff=0.5*abs(aereff_fg)+0.5*abs(aereff_obs)
     
-    qc0_msk=(ds_chk.qcflag==0.)
-    # qc7_msk=(ds_chk.qcflag==7.)
-    qc13_msk=(ds_chk.qcflag==13.)
+    good_msk=(ds_chk.qcflag==0.)
+    gross_msk=(ds_chk.qcflag==3.)
+    # cld_msk=(ds_chk.qcflag==7.)
+    tzr_msk=(ds_chk.qcflag==10.)
+    aer_msk=(ds_chk.qcflag==13.)
+    sfcir_msk=(ds_chk.qcflag==53.)
+    # bust_msk=(ds_chk.qcflag==55.)
+    bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
 
-    ori_msk=((qc0_msk)|(qc13_msk))
+    ori_msk=((good_msk)|(aer_msk)|(gross_msk)|(sfcir_msk)|(tzr_msk))
     ori_total=np.count_nonzero(ori_msk)
-    # lowbt_qc=(used_msk)&(abs(omb)<30.)
-    final_qc_msk=(ori_msk)&(~((abs(omb)>3)&(abs(omb)>1.8*aereff)))&(abs(omb)<30.)
+    final_qc_msk=(good_msk)|((aer_msk)&(~bust_msk))|(gross_msk)
 
     halfbin=0.5*binsize
     hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
     bin_center=(hist_x_edge+halfbin)[:-1]
     
-#    omb_mean1=np.zeros_like(bin_center,dtype='float')
-#    omb_sd1=np.zeros_like(bin_center,dtype='float')
-#    counts1=np.zeros_like(bin_center,dtype='int')
     omb_mean2=np.zeros_like(bin_center,dtype='float')
     omb_sd2=np.zeros_like(bin_center,dtype='float')
-#    counts2=np.zeros_like(bin_center,dtype='int')
     sd_noqc=omb[ori_msk==1].std()
     sd_qc=omb[final_qc_msk==1].std()    
 
     for i in np.arange(omb_mean2.size):
         lb_aereff=hist_x_edge[i]
         ub_aereff=hist_x_edge[i+1]
-#        tmpmsk1=(ori_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-#        omb_mean1[i]=omb[tmpmsk1==1].mean()
-#        omb_sd1[i]=omb[tmpmsk1==1].std()
-#        counts1[i]=np.count_nonzero(tmpmsk1)
         tmpmsk2=(final_qc_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
         omb_mean2[i]=omb[tmpmsk2==1].mean()
         omb_sd2[i]=omb[tmpmsk2==1].std()
-#        counts2[i]=np.count_nonzero(tmpmsk2)
 
     tmpsd2=xa.where(np.isnan(omb_sd2),-999,omb_sd2)
     gtmask=(tmpsd2>obserr)
@@ -231,9 +226,13 @@ for chkwvn in chkwvn_list:
     aereff_2=bin_center[Aeff_2_idx]
     sd_min=omb_sd2[Aeff_1_idx]
     sd_max=omb_sd2[Aeff_2_idx]
+    if (sd_max > obserr):
+        aero_sensitive=1
+    else:
+        aero_sensitive=0
 
-    tmpdf=pd.DataFrame(np.array([[chkwvn,nuchrad,iuserad,obserr,aereff_1,aereff_2,sd_min,sd_max,sd_noqc,sd_qc]]),
-                       columns=['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc'])
+    tmpdf=pd.DataFrame(np.array([[chkwvn,nuchrad,iuserad,obserr,aereff_1,aereff_2,sd_min,sd_max,sd_noqc,sd_qc,aero_sensitive]]),
+                       columns=['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc','Aer_sen'])
 
     if (icount==0):
         df_all=tmpdf
@@ -241,7 +240,7 @@ for chkwvn in chkwvn_list:
         df_all=pd.concat((df_all,tmpdf))
     icount+=1
 
-df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats.csv')
+df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new.csv')
 # df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
 
 # ds_all=ds_all.assign({'obserr':(['wavenumber'],err_array)})

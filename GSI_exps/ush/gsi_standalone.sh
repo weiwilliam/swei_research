@@ -3,7 +3,7 @@ set -x
 #
 # Set experiment name and analysis date
 machine='hera'
-exp="aer_observer"
+exp="aerqc_observer"
 expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
@@ -65,12 +65,14 @@ case $expid in
   READEXTAER='.false.'
    MERRA2AER='.false.'
   satinfo=${scrpts_home}/dat/controlrun_satinfo.txt
- anavinfo=${scrpts_home}/dat/anavinfo_controlrun ;;
+ anavinfo=${scrpts_home}/dat/anavinfo_controlrun
+ allskyinfo=$fixgsi/cloudy_radiance_info.txta ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
   satinfo=${scrpts_home}/dat/fv3aerorad_satinfo.txt
- anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad ;;
+ anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad
+ allskyinfo=${scrpts_home}/dat/all-sky_radiance_info.txt ;;
 esac
 
 # Set the JCAP resolution which you want.
@@ -473,7 +475,6 @@ aercoef=$fixcrtm/AerosolCoeff.bin
 cldcoef=$fixcrtm/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
 scaninfo=$fixgsi/global_scaninfo.txt
-cloudyinfo=$fixgsi/cloudy_radiance_info.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
 aeroinfo=$fixgsi/aeroinfo_fv3aerorad
 ozinfo=$fixgsi/global_ozinfo.txt
@@ -501,7 +502,8 @@ $ncp $cldcoef  ./crtm_coeffs/CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
 $ncp $scaninfo ./scaninfo
 $ncp $satinfo  ./satinfo
-$ncp $cloudyinfo  ./cloudy_radiance_info.txt
+$ncp $allskyinfo  ./all-sky_radiance_info.txt
+#$ncp $cloudyinfo  ./cloudy_radiance_info.txt
 $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
