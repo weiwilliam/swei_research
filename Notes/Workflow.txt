@@ -1,0 +1,3 @@
+
+<--Setup experiment-->
+1. ./setup_expt.py --pslot hazyda_ctrl --configdir /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/Git/glbwkflow_develop/parm/config --idate 2020060100 --edate 2020060100 --comrot /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/HazyDA/wrktmp --expdir /home/Shih-wei.Wei/wrk --resdet 192 --resens 96 --gfs_cyc 0 --nens 80 --icsdir /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/HazyDA/ICs --start cold
