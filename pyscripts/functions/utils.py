@@ -21,7 +21,10 @@ def setup_cmap(name,idxlst):
     if (os_name=='Darwin'):
         rootpath='/Users/weiwilliam'
     elif (os_name=='Windows'):
-        rootpath='F:\GoogleDrive_NCU\Albany'    
+        rootpath='F:\GoogleDrive_NCU\Albany'
+    elif (os_name=='Linux'):
+        if (os.path.exists('/glade')):
+            rootpath=
     import matplotlib.colors as mpcrs
     import numpy as np
     nclcmap=rootpath+'/AlbanyWork/Utility/colormaps'
