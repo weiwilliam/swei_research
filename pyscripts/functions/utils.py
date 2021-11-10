@@ -16,7 +16,7 @@ def ndate(hinc,cdate):
 # Set colormap through NCL colormap and index
 #
 def setup_cmap(name,idxlst):
-    import platform
+    import os, platform
     os_name=platform.system()
     if (os_name=='Darwin'):
         rootpath='/Users/weiwilliam'
@@ -24,10 +24,13 @@ def setup_cmap(name,idxlst):
         rootpath='F:\GoogleDrive_NCU\Albany'
     elif (os_name=='Linux'):
         if (os.path.exists('/glade')):
-            rootpath=
+            rootpath='/glade/u/home/swei/research/pyscripts'
     import matplotlib.colors as mpcrs
     import numpy as np
-    nclcmap=rootpath+'/AlbanyWork/Utility/colormaps'
+    if (os_name!='Linux'):
+        nclcmap=rootpath+'/AlbanyWork/Utility/colormaps'
+    else:
+        nclcmap=rootpath+'/colormaps'
     
     cmapname=name
     f=open(nclcmap+'/'+cmapname+'.rgb','r')
