@@ -16,12 +16,10 @@ elif (os_name=='Linux'):
         rootpath='/glade/work/swei/output/images'
         rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
         rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
     elif (os.path.exists('/cardinal')):
         rootpath='/data/users/swei/Images'
         rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
         rootgit='/home/swei/research'
-        machine='S4'
 sys.path.append(rootgit+'/pyscripts/functions')
 from utils import setup_cmap, ndate
 from plot_utils import setupax_2dmap,set_size
@@ -43,19 +41,15 @@ mpl.rc('legend',fontsize='xx-large')
 axe_w=10; axe_h=5
 quality=300
 
-if (machine=='Cheyenne'):
-   inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
-elif (machine=='S4'):
-   inputpath='/data/users/swei/common/MERRA2'
-
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap'
+inputpath=''
+outputpath=rootpath+'/Dataset/NGAC/2dmap'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020062212
-edate=2020062212
+sdate=2020082200
+edate=2020093018
 hint=6
-pltvar='carbon'
+pltvar='total'
 area='Glb'
 pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
@@ -127,18 +121,9 @@ for date in dlist:
     else:
        m2ind='400'
 # MERRA2_401.inst3_3d_aer_Nv.20200916_12Z.nc4
-    if (machine=='Cheyenne'):
-       infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
-       multi_time=0
-    if (machine=='S4'):
-       infile=inputpath+'/'+yy+'/'+mm+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'.nc4'
-       multi_time=1
-   
+    infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
     ds=xa.open_dataset(infile)
-    if (multi_time):
-       ds=ds.sel(time=dates[dates_count])
-    else:
-       ds=ds.sel(time=ds.time[0])
+    ds=ds.sel(time=ds.time[0])
    
     delp=ds.DELP
     kgkg_kgm2=delp/grav

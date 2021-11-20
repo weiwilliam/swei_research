@@ -25,6 +25,8 @@ def setup_cmap(name,idxlst):
     elif (os_name=='Linux'):
         if (os.path.exists('/glade')):
             rootpath='/glade/u/home/swei/research/pyscripts'
+        if (os.path.exists('/cardinal')):
+            rootpath='/home/swei/research/pyscripts'
     import matplotlib.colors as mpcrs
     import numpy as np
     if (os_name!='Linux'):

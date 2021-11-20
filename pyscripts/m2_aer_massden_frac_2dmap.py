@@ -60,20 +60,14 @@ area='Glb'
 pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
+species_lst=['dust','seas','carbon','sulf']
 
 # 
-clridx=[0,11,20,29,38,47,56,65,74,83,92,101,110,119,128]
+clridx=[0,11,29,38,56,74,83,92,119,128]
 cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
-cnlvs=[0      ,  2.5e-5,   5e-5, 7.5e-5,
-       1.25e-4,  1.5e-4,1.75e-4,   2e-4,
-          3e-4,    4e-4,   5e-4,   6e-4,
-          8e-4,    1e-3,   3e-3,   5e-3]
-#cnlvs=[0      ,  2.5e-6,   5e-6, 7.5e-6,
-#       1.25e-5,  1.5e-5,1.75e-5,   2e-5,
-#          3e-5,    4e-5,   5e-5,   6e-5,
-#          8e-5,    1e-4,   3e-4,   5e-4]
+cnlvs=[0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 norm = mpcrs.BoundaryNorm(cnlvs,len(cnlvs))
-cblb='Column mass density [$\mathrm{kg\cdot m^{-2}}$]'
+cblb='Fraction of column mass density'
 
 # Constant configuration
 proj=ccrs.PlateCarree()
@@ -86,19 +80,10 @@ if (area=='Glb'):
    minlon=-180. ; maxlon=180.
 cornerll=[minlat,maxlat,minlon,maxlon]
 
-if (pltvar=='dust'):
-   varlst=['DU001','DU002','DU003','DU004','DU005']
-if (pltvar=='seas'):
-   varlst=['SS001','SS002','SS003','SS004','SS005']
-elif (pltvar=='carbon'):
-   varlst=['OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC'] 
-elif (pltvar=='total'):
-   varlst=['DU001','DU002','DU003','DU004','DU005',
-           'SS001','SS002','SS003','SS004','SS005',
-           'OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC',
-           'SO4'] 
-
-nvars=len(varlst)
+dust_lst=['DU001','DU002','DU003','DU004','DU005']
+seas_lst=['SS001','SS002','SS003','SS004','SS005']
+carbon_lst=['OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC'] 
+sulf_lst=['SO4']
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -143,50 +128,46 @@ for date in dlist:
     delp=ds.DELP
     kgkg_kgm2=delp/grav
 
-    for var in varlst:
-        tmp=ds[var]*kgkg_kgm2
-
-        if (var==varlst[0]):
-           conc=tmp
-           total=tmp
+    spidx=0
+    for sp in species_lst:
+        spc_conc=0.
+        if (sp=='dust'):
+           varlst=dust_lst
+        if (sp=='seas'):
+           varlst=seas_lst
+        if (sp=='carbon'):
+           varlst=carbon_lst
+        if (sp=='sulf'):
+           varlst=sulf_lst
+        for var in varlst:
+           tmp=ds[var]*kgkg_kgm2
+           spc_conc=spc_conc+tmp
+        if (spidx==0):
+           conc=spc_conc
         else:
-           conc=xa.concat((conc,tmp),dim='bins')
-           total=total+tmp
-
-    conc=xa.concat((conc,total),dim='bins')
-
-#    if (dates_count==0):
-#       totalconc=conc
-#    else:
-#       totalconc=xa.concat((totalconc,conc),dim='bin')
-    
-#    del(conc)
-
+           conc=xa.concat((conc,spc_conc),dim='species')
+        spidx+=1
+        
 # Get the column integral
-    cmass=np.sum(conc,axis=1)
+    cmass=conc.sum(axis=1)
+    cmass_total=cmass.sum(axis=0)
     
-    if (not pltall):
-       nplotlist=[nvars]
-    else:
-       nplotlist=np.arange(nvars+1)
+    spidx=0
+    for sp in species_lst:
+        title='%s %s ' %(date,species_lst[spidx])
+        outname='%s/%s_%s_cmass_frac.%s.png'  %(outputpath,area,species_lst[spidx],date)
     
-    for n in nplotlist:
-        if (n<nvars):
-           title='%s %s column mass density' %(date,varlst[n])
-           outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
-        else:
-           title='%s %s column mass density' %(date,pltvar)
-           outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
-    
-        pltdata=cmass[n,:,:]
+        pltdata=cmass[spidx,:,:]/cmass_total
         fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
         set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
         cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=cn_cmap,norm=norm)
         ax.set_title(title)
         plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-                     format='%.2e',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()
+
+        spidx+=1
  
     dates_count+=1
