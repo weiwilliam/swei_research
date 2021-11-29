@@ -1,4 +1,4 @@
-__all__ = ['ndate','setup_cmap','cnbestF','latlon_news','gen_eqs_by_stats']
+__all__ = ['ndate','setup_cmap','cnbestF','latlon_news','lat_ns','lon_we','gen_eqs_by_stats']
 
 def ndate(hinc,cdate):
     from datetime import datetime
@@ -87,17 +87,43 @@ def cnbestF(data):
 
 def latlon_news(plat,plon):
     deg_sym=u'\u00B0'
-    if (plat >= 0.):
+    if (plat > 0.):
         ns='N'
-    else:
+    elif (plat < 0.):
         ns='S'
-    if (plon >= 0.):
-       we='E'
     else:
-       we='W'
+        ns=''
+    if (plon > 0.):
+       we='E'
+    elif (plon < 0.):
+        ns='W'
+    else:
+       we=''
     txlat='%.2f%s %s'%(abs(plat),deg_sym,ns)
     txlon='%.2f%s %s'%(abs(plon),deg_sym,we)
     return txlat,txlon
+
+def lat_ns(plat):
+    deg_sym=u'\u00B0'
+    if (plat > 0.):
+        ns='N'
+    elif (plat < 0.):
+        ns='S'
+    else:
+        ns=''
+    txlat='%.f%s %s'%(abs(plat),deg_sym,ns)
+    return txlat
+
+def lon_we(plon):
+    deg_sym=u'\u00B0'
+    if (plon > 0.):
+       we='E'
+    elif (plon < 0.):
+       we='W'
+    else:
+       we=''
+    txlon='%.f%s %s'%(abs(plon),deg_sym,we)
+    return txlon
 
 def gen_eqs_by_stats(stats_in):
     if (stats_in.intercept<0):

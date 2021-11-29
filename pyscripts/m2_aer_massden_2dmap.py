@@ -55,7 +55,7 @@ if ( not os.path.exists(outputpath) ):
 sdate=2020062212
 edate=2020062212
 hint=6
-pltvar='carbon'
+pltvar='seas'
 area='Glb'
 pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
@@ -88,15 +88,22 @@ cornerll=[minlat,maxlat,minlon,maxlon]
 
 if (pltvar=='dust'):
    varlst=['DU001','DU002','DU003','DU004','DU005']
-if (pltvar=='seas'):
+   varname='dust'
+elif (pltvar=='seas'):
    varlst=['SS001','SS002','SS003','SS004','SS005']
+   varname='sea salt'
 elif (pltvar=='carbon'):
    varlst=['OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC'] 
+   varname='carbonaceous'
+elif (pltvar=='sulf'):
+   varlst=['SO4']
+   varname='sulfate'
 elif (pltvar=='total'):
    varlst=['DU001','DU002','DU003','DU004','DU005',
            'SS001','SS002','SS003','SS004','SS005',
            'OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC',
-           'SO4'] 
+           'SO4']
+   varname='total'
 
 nvars=len(varlst)
 
@@ -175,7 +182,7 @@ for date in dlist:
            title='%s %s column mass density' %(date,varlst[n])
            outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
         else:
-           title='%s %s column mass density' %(date,pltvar)
+           title='%s %s column mass density' %(date,varname)
            outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
     
         pltdata=cmass[n,:,:]
