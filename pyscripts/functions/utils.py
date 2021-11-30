@@ -51,6 +51,8 @@ def setup_cmap(name,idxlst):
              c.append(tuple(float(y) for y in [1,1,1]))
           elif (i==1):
              c.append(tuple(float(y) for y in [0,0,0]))
+          elif (i==-1):
+             c.append(tuple(float(y) for y in [0.5,0.5,0.5]))
           else:
              c.append(tuple(float(y) for y in b[i-2].split('#',1)[0].split()))
     else:
@@ -59,6 +61,8 @@ def setup_cmap(name,idxlst):
              c.append(tuple(float(y)/255. for y in [255,255,255]))
           elif (i==1):
              c.append(tuple(float(y)/255. for y in [0,0,0]))
+          elif (i==-1):
+             c.append(tuple(float(y)/255. for y in [128,128,128]))
           else:
              c.append(tuple(float(y)/255. for y in b[i-2].split('#',1)[0].split()))
 
