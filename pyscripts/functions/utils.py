@@ -98,11 +98,11 @@ def latlon_news(plat,plon):
     else:
         ns=''
     if (plon > 0.):
-       we='E'
+        we='E'
     elif (plon < 0.):
-        ns='W'
+        we='W'
     else:
-       we=''
+        we=''
     txlat='%.2f%s %s'%(abs(plat),deg_sym,ns)
     txlon='%.2f%s %s'%(abs(plon),deg_sym,we)
     return txlat,txlon
