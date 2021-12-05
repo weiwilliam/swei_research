@@ -55,9 +55,9 @@ if ( not os.path.exists(outputpath) ):
 sdate=2020062212
 edate=2020062212
 hint=6
-pltvar='carbon'
+pltvar='seas'
 area='Glb'
-pltall=0 # 0: total only 1: sub species included
+pltall=1 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
 

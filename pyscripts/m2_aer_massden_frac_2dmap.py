@@ -48,26 +48,27 @@ if (machine=='Cheyenne'):
 elif (machine=='S4'):
    inputpath='/data/users/swei/common/MERRA2'
 
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap'
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap/CMass_frac'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
 sdate=2020062212
 edate=2020062212
 hint=6
-pltvar='carbon'
 area='Glb'
-pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
+#species_lst=['dust','seas']
 species_lst=['dust','seas','carbon','sulf']
 
 # 
-clridx=[0,11,29,38,56,74,83,92,119,128]
-cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
-cnlvs=[0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+clridx=np.array((2,8,9,10,12,14,15,16,18))
+cn_cmap=setup_cmap('precip3_16lev',clridx)
+cnlvs=np.array((0., 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0))
+#clridx=[0,11,29,38,56,74,83,92,119,128]
+#cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
+#cnlvs=[0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 norm = mpcrs.BoundaryNorm(cnlvs,len(cnlvs))
-cblb='Fraction of column mass density'
 
 # Constant configuration
 proj=ccrs.PlateCarree()
@@ -124,6 +125,8 @@ for date in dlist:
        ds=ds.sel(time=dates[dates_count])
     else:
        ds=ds.sel(time=ds.time[0])
+    if (area!='Glb'):
+       ds=ds.sel(lon=slice(minlon,maxlon),lat=slice(minlat,maxlat))
    
     delp=ds.DELP
     kgkg_kgm2=delp/grav
@@ -139,9 +142,32 @@ for date in dlist:
            varlst=carbon_lst
         if (sp=='sulf'):
            varlst=sulf_lst
+        varidx=0
         for var in varlst:
            tmp=ds[var]*kgkg_kgm2
+           if (sp=='dust'):
+              if (varidx==0):
+                 dust_conc=tmp
+              else:
+                 dust_conc=xa.concat((dust_conc,tmp),dim='bins')
+           if (sp=='seas'):
+              if (varidx==0):
+                 seas_conc=tmp
+              else:
+                 seas_conc=xa.concat((seas_conc,tmp),dim='bins')
+           if (sp=='carbon'):
+              if (varidx==0):
+                 carbon_conc=tmp
+              else:
+                 carbon_conc=xa.concat((carbon_conc,tmp),dim='bins')
+           if (sp=='sulf'):
+              if (varidx==0):
+                 sulf_conc=tmp
+              else:
+                 sulf_conc=xa.concat((sulf_conc,tmp),dim='bins')
            spc_conc=spc_conc+tmp
+           varidx+=1
+
         if (spidx==0):
            conc=spc_conc
         else:
@@ -149,12 +175,13 @@ for date in dlist:
         spidx+=1
         
 # Get the column integral
-    cmass=conc.sum(axis=1)
-    cmass_total=cmass.sum(axis=0)
+    cmass=conc.sum(dim='lev')
+    cmass_total=cmass.sum(dim='species')
     
     spidx=0
     for sp in species_lst:
-        title='%s %s ' %(date,species_lst[spidx])
+        cblb='%s Fraction of column mass density' %(sp)
+        title='%s ' %(species_lst[spidx])
         outname='%s/%s_%s_cmass_frac.%s.png'  %(outputpath,area,species_lst[spidx],date)
     
         pltdata=cmass[spidx,:,:]/cmass_total
@@ -167,6 +194,38 @@ for date in dlist:
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()
+
+        if (sp=='dust'):
+           varlst=dust_lst
+           sp_cmass=dust_conc.sum(dim='lev')
+        elif (sp=='seas'):
+           varlst=seas_lst
+           sp_cmass=seas_conc.sum(dim='lev')
+        elif (sp=='carbon'):
+           varlst=carbon_lst
+           sp_cmass=carbon_conc.sum(dim='lev')
+        elif (sp=='sulf'):
+           varlst=sulf_lst
+           sp_cmass=sulf_conc.sum(dim='lev')
+        subspidx=0
+        for subsp in varlst:
+            cblb='%s Fraction of column mass density' %(subsp)
+            title='%s ' %(subsp)
+            outname='%s/%s_%s_cmass_frac.%s.png'  %(outputpath,area,subsp,date)
+            if (sp=='sulf'):
+               pltdata=sp_cmass/cmass_total
+            else:
+               pltdata=sp_cmass[subspidx,:,:]/cmass_total
+            fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+            set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+            cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=cn_cmap,norm=norm)
+            ax.set_title(title)
+            plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
+                         format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+            print(outname)
+            fig.savefig(outname,dpi=quality)
+            plt.close()
+            subspidx+=1
 
         spidx+=1
  

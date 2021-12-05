@@ -75,8 +75,7 @@ cnlvs=[0      ,  2.5e-6,   5e-6, 7.5e-6,
        1.25e-5,  1.5e-5,1.75e-5,   2e-5,
           3e-5,    4e-5,   5e-5,   6e-5,
           8e-5,    1e-4,   3e-4,   5e-4]
-norm = mpcrs.BoundaryNorm(cnlvs,len(cnlvs))
-cblb='Column mass density [$\mathrm{kg\cdot m^{-2}}$]'
+prescnlvs=['500','600','700','800','900','1000']
 
 # Constant configuration
 proj=ccrs.PlateCarree()
@@ -91,15 +90,36 @@ cornerll=[minlat,maxlat,minlon,maxlon]
 
 if (pltvar=='dust'):
    varlst=['DU001','DU002','DU003','DU004','DU005']
-if (pltvar=='seas'):
+   varname='dust'
+   scalef=1e4
+   cnscale=1e4
+elif (pltvar=='seas'):
    varlst=['SS001','SS002','SS003','SS004','SS005']
+   varname='sea salt'
+   scalef=1e4
+   cnscale=1e4
 elif (pltvar=='carbon'):
    varlst=['OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC'] 
+   varname='carbonaceous'
+   scalef=1e5
+   cnscale=1e4
+elif (pltvar=='sulf'):
+   varlst=['SO4']
+   varname='sulfate'
+   scalef=1e5
+   cnscale=1e4
 elif (pltvar=='total'):
    varlst=['DU001','DU002','DU003','DU004','DU005',
            'SS001','SS002','SS003','SS004','SS005',
            'OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC',
            'SO4'] 
+   varname='total'
+   scalef=1e4
+   cnscale=1e4
+
+cblb='Mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
+cnlvsarr=np.array(cnlvs)*cnscale
+norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
 
 nvars=len(varlst)
 
@@ -150,7 +170,8 @@ for date in dlist:
     pres=xa.zeros_like(delp)
     for i in np.arange(ds.lev.size):
         pres[i,:,:]=ds.PS-delp[i:,:,:].sum(dim='lev')
-    domain_ave_pres=pres.mean(dim=('lon','lat'))/100.
+    pres=pres/100.
+    domain_ave_pres=pres.mean(dim=('lon','lat'))
     
     kgkg_kgm2=delp/grav
 
@@ -169,8 +190,10 @@ for date in dlist:
 # Get the zonal or meridional mean
     if (crotype=='zonal'):
        cross=conc.mean(dim='lon')
+       cross_pres=pres.mean(dim='lon')
     elif (crotype=='meridional'):
        cross=conc.mean(dim='lat')
+       cross_pres=pres.mean(dim='lat')
     
     if (not pltall):
        nplotlist=[nvars]
@@ -179,27 +202,32 @@ for date in dlist:
     
     for n in nplotlist:
         if (n<nvars):
-           title='%s %s mass density' %(date,varlst[n])
+           title='%s mass density' %(varlst[n])
            outname='%s/%s_%s_%s.%s.png'  %(outputpath,area,varlst[n],crotype,date)
         else:
-           title='%s %s mass density' %(date,pltvar)
+           title='%s mass density' %(varname)
            outname='%s/%s_%s_all_%s.%s.png' %(outputpath,area,pltvar,crotype,date)
     
         pltdata=cross[n,:,:]
         fig,ax=plt.subplots()
         set_size(axe_w,axe_h,b=0.13,l=0.10,r=0.95,t=0.95)
         if (crotype=='zonal'):
-           cn=ax.contourf(pltdata.lat,domain_ave_pres,pltdata,levels=cnlvs,cmap=cn_cmap,norm=norm)
+           cn=ax.contourf(pltdata.lat,pltdata.lev,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
+           prescn=ax.contour(pltdata.lat,pltdata.lev,cross_pres,
+                             linestyles='dashed',levels=prescnlvs,colors='k')
            x_format=ticker.FuncFormatter(lambda x, pos: "%s" %(lat_ns(x))) 
         elif (crotype=='meridional'):
-           cn=ax.contourf(pltdata.lon,domain_ave_pres,pltdata,levels=cnlvs,cmap=cn_cmap,norm=norm)
+           cn=ax.contourf(pltdata.lon,pltdata.lev,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
+           prescn=ax.contour(pltdata.lon,pltdata.lev,cross_pres,
+                             linestyles='dashed',levels=prescnlvs,colors='k')
            x_format=ticker.FuncFormatter(lambda x, pos: "%s" %(lon_we(x)))
+        ax.clabel(prescn, prescn.levels, inline=True, fmt='%.0f hPa', fontsize=10)
         ax.set_title(title)
         ax.xaxis.set_major_formatter(x_format)
         ax.invert_yaxis()
-        ax.set_ylabel('Pressure [hPa]')
-        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-                     format='%.2e',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+        ax.set_ylabel('Model level')
+        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
+                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()

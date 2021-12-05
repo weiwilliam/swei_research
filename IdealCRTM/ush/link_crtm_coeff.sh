@@ -5,7 +5,7 @@ machine=$1
 if [ $machine == 'hera' ]; then
    CRTMfix=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/IdealCRTM/REL-2.3.0/fix
 elif [ $machine == 's4' ]; then
-   CRTMfix=/data/users/swei/libs/REL-2.3.0/fix
+   CRTMfix=/data/users/swei/Libs/REL-2.3.0/fix
 fi
 
 sensorlist="iasi_metop-a v.modis_aqua"

@@ -8,7 +8,7 @@ endian_platform = little
 endian_io       = big
 
 # The file definitions.
-EXE_FILE=crtm_ideal_FDM
+EXE_FILE=crtm_ideal_test
 SRC_FILE=$(EXE_FILE).f90
 OBJ_FILE=${SRC_FILE:.f90=.o}
 
