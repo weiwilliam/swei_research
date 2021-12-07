@@ -32,13 +32,15 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
+from matplotlib.dates import (DAILY, DateFormatter,
+                              rrulewrapper, RRuleLocator)
 
 # Plotting setup
-mpl.rc('axes',titlesize=18,labelsize=16)
-mpl.rc('xtick',labelsize=16)
-mpl.rc('ytick',labelsize=16)
+mpl.rc('axes',titlesize=16,labelsize=14)
+mpl.rc('xtick',labelsize=14)
+mpl.rc('ytick',labelsize=14)
 mpl.rc('legend',fontsize='xx-large')
-axe_w=8; axe_h=3
+axe_w=6; axe_h=3
 quality=300
 tkfreq=1
 clrlst=['black','tab:red','tab:blue']
@@ -50,7 +52,7 @@ outputpath=rootpath+'/Ens_size/Timeseries'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020060106
+sdate=2020060300
 edate=2020061218
 hint=6
 pltvar='total'
@@ -77,6 +79,19 @@ if (area=='Glb'):
    minlon=-180. ; maxlon=180.
 cornerll=[minlat,maxlat,minlon,maxlon]
 
+# 
+syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
+sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
+eyy=int(str(edate)[:4]); emm=int(str(edate)[4:6])
+edd=int(str(edate)[6:8]); ehh=int(str(edate)[8:10])
+
+date1 = datetime(syy,smm,sdd,shh)
+date2 = datetime(eyy,emm,edd,ehh)
+
+rule = rrulewrapper(DAILY, byhour=6, interval=5)
+loc = RRuleLocator(rule)
+formatter = DateFormatter('%Y%h %n %d %Hz')
+
 ens_file=inputpath+'/Ens_size/rmse_spread_ratio.nc4'
 ratio=xa.open_dataset(ens_file)
 dates=ratio.time
@@ -84,17 +99,22 @@ dates=ratio.time
 for var in varlist:
     for lev in levlist:
         tmp=ratio[var].sel(pfull=lev,method='nearest')
+        tmp=tmp.sel(time=dates[8:])
         tmp_std=tmp.std(dim=['grid_xt','grid_yt'])
         tmp_mean=tmp.mean(dim=['grid_xt','grid_yt'])
 
         outname='%s/TS_%s_%s_%s.png' %(outputpath,area,lev,var)
         pltdata=tmp_mean.values.swapaxes(0,1)
+        pltdates=dates[8:]
         fig,ax=plt.subplots()
-        set_size(axe_w,axe_h)
+        set_size(axe_w,axe_h,b=0.13)
         ax.set_prop_cycle(color=clrlst,linestyle=lstylst,marker=mrkrlst)
-        ax.plot_date(dates,pltdata)
+        ax.xaxis.set_major_locator(loc)
+        ax.xaxis.set_major_formatter(formatter)
+        ax.plot_date(pltdates,pltdata,'o-')
         ax.legend(ratio.exps.values)
         ax.set_title('%s %s' %(lev,var),loc='left')
+        ax.grid()
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()
