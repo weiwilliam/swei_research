@@ -88,7 +88,7 @@ edd=int(str(edate)[6:8]); ehh=int(str(edate)[8:10])
 date1 = datetime(syy,smm,sdd,shh)
 date2 = datetime(eyy,emm,edd,ehh)
 
-rule = rrulewrapper(DAILY, byhour=6, interval=5)
+rule = rrulewrapper(DAILY, byhour=6, interval=2)
 loc = RRuleLocator(rule)
 formatter = DateFormatter('%Y%h %n %d %Hz')
 
@@ -100,6 +100,7 @@ for var in varlist:
     for lev in levlist:
         tmp=ratio[var].sel(pfull=lev,method='nearest')
         tmp=tmp.sel(time=dates[8:])
+        tmp=1./tmp
         tmp_std=tmp.std(dim=['grid_xt','grid_yt'])
         tmp_mean=tmp.mean(dim=['grid_xt','grid_yt'])
 
