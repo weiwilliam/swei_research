@@ -3,7 +3,7 @@ set -x
 #
 # Set experiment name and analysis date
 machine='hera'
-exp="aerqc_observer"
+exp="aerofrac_test"
 expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
@@ -391,13 +391,13 @@ OBS_INPUT::
 !   hirs4bufr      hirs4       metop-b     hirs4_metop-b       0.0     1     1
 !   amsuabufr      amsua       metop-b     amsua_metop-b       0.0     1     1
 !   mhsbufr        mhs         metop-b     mhs_metop-b         0.0     1     1
-   iasibufr       iasi        metop-b     iasi_metop-b        0.0     1     1
+!!   iasibufr       iasi        metop-b     iasi_metop-b        0.0     1     1
 !   gomebufr       gome        metop-b     gome_metop-b        0.0     2     0
 !   atmsbufr       atms        npp         atms_npp            0.0     1     1
 !   atmsbufr       atms        n20         atms_n20            0.0     1     1
-   crisbufr       cris        npp         cris_npp            0.0     1     0
-   crisfsbufr     cris-fsr    npp         cris-fsr_npp        0.0     1     0
-   crisfsbufr     cris-fsr    n20         cris-fsr_n20        0.0     1     0
+!!   crisbufr       cris        npp         cris_npp            0.0     1     0
+!!   crisfsbufr     cris-fsr    npp         cris-fsr_npp        0.0     1     0
+!!   crisfsbufr     cris-fsr    n20         cris-fsr_n20        0.0     1     0
 !   gsnd1bufr      sndrd1      g14         sndrD1_g14          0.0     1     0
 !   gsnd1bufr      sndrd2      g14         sndrD2_g14          0.0     1     0
 !   gsnd1bufr      sndrd3      g14         sndrD3_g14          0.0     1     0
