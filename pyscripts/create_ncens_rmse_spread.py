@@ -106,7 +106,7 @@ for i in np.arange(tnum-1):
            numens=int(exp[:2])
 
         adate=dlist[i+1]
-        print(adate)
+        #print(adate)
         a_yy=adate[:4] ; a_mm=adate[4:6] ; a_dd=adate[6:8] ; a_hh=adate[8:10]
         a_pdy=adate[:8]
         ensres_anl=inputpath+'/hazyda_'+exp+'/'+adate+'/gdas.t'+a_hh+'z.atmanl.ensres.nc'
@@ -161,6 +161,6 @@ for i in np.arange(tnum-1):
         os.makedirs(outputpath)
     
     rmse_fname=outputpath+'/rmse.'+adate+'.nc4'
-    ratio.to_netcdf(rmse_fname)
+    rmse.to_netcdf(rmse_fname)
     sprd_fname=outputpath+'/sprd.'+adate+'.nc4'
-    ratio.to_netcdf(sprd_fname)
+    sprd.to_netcdf(sprd_fname)
