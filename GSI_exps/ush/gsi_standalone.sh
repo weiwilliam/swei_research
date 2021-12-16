@@ -23,7 +23,7 @@ if [ $machine == 'hera' ]; then
    source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
    module list
 elif [ $machine == 's4' ]; then
-   homedir=/data/users/swei/Experiments/${exp}_GSI
+   homedir=/data/users/swei/Experiments/${exp}
    scrpts_home=/home/swei/research/GSI_exps
    aerpath=/data/users/swei/common/MERRA2_L64
    obsarch=/data/prod/glopara/dump
@@ -113,7 +113,7 @@ if [ $machine == 'hera' ]; then
    fixcrtm="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/Libs/CRTM-2.4.0/fix"
 elif [ $machine == 's4' ]; then
    gsidir="/data/users/swei/Git/GSI"
-   fixcrtm="/data/users/swei/libs/crtm_coeff/v2.3.0"
+   fixcrtm="/data/users/swei/Libs/CRTM-2.4.0/fix_v2.4.0"
    #NDATE="${PROD_UTIL}/bin/ndate"
 fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}

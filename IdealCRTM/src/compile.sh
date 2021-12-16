@@ -1,5 +1,6 @@
 #!/bin/ksh
-exefile=crtm_ideal_FDM
+exefile=crtm_ideal_test
+newexefile=crtm_ideal_3h2o
 machine=$1
 if [[ $machine == 'hera' ]]; then
    module purge
@@ -18,7 +19,7 @@ elif [[ $machine == 's4' ]]; then
    module load hdf hdf5
    module load netcdf4
    module list
-   BASE=/data/users/swei/libs
+   BASE=/data/users/swei/Libs
    export INCCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/include
    export LIBCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/lib
    export NETCDF=$SSEC_NETCDF4_DIR
@@ -33,7 +34,7 @@ make all
 
 if [ -s $exefile ]; then
    echo "compile succeed."
-   mv $exefile $expdir/bin 
+   mv $exefile $expdir/bin/$newexefile 
    make clean
 else
    echo "compile error!!"

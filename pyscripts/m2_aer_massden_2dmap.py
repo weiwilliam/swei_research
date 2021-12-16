@@ -55,9 +55,9 @@ if ( not os.path.exists(outputpath) ):
 sdate=2020062212
 edate=2020062212
 hint=6
-pltvar='carbon'
+pltvar='seas'
 area='Glb'
-pltall=0 # 0: total only 1: sub species included
+pltall=1 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
 
@@ -72,8 +72,6 @@ cnlvs=[0      ,  2.5e-5,   5e-5, 7.5e-5,
 #       1.25e-5,  1.5e-5,1.75e-5,   2e-5,
 #          3e-5,    4e-5,   5e-5,   6e-5,
 #          8e-5,    1e-4,   3e-4,   5e-4]
-norm = mpcrs.BoundaryNorm(cnlvs,len(cnlvs))
-cblb='Column mass density [$\mathrm{kg\cdot m^{-2}}$]'
 
 # Constant configuration
 proj=ccrs.PlateCarree()
@@ -88,15 +86,36 @@ cornerll=[minlat,maxlat,minlon,maxlon]
 
 if (pltvar=='dust'):
    varlst=['DU001','DU002','DU003','DU004','DU005']
-if (pltvar=='seas'):
+   varname='dust'
+   scalef=1e4
+   cnscale=1e4
+elif (pltvar=='seas'):
    varlst=['SS001','SS002','SS003','SS004','SS005']
+   varname='sea salt'
+   scalef=1e4
+   cnscale=1e4
 elif (pltvar=='carbon'):
    varlst=['OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC'] 
+   varname='carbonaceous'
+   scalef=1e5
+   cnscale=1e4
+elif (pltvar=='sulf'):
+   varlst=['SO4']
+   varname='sulfate'
+   scalef=1e5
+   cnscale=1e4
 elif (pltvar=='total'):
    varlst=['DU001','DU002','DU003','DU004','DU005',
            'SS001','SS002','SS003','SS004','SS005',
            'OCPHILIC','OCPHOBIC','BCPHILIC','BCPHOBIC',
-           'SO4'] 
+           'SO4']
+   varname='total'
+   scalef=1e4
+   cnscale=1e4
+
+cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
+cnlvsarr=np.array(cnlvs)*cnscale
+norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
 
 nvars=len(varlst)
 
@@ -172,19 +191,19 @@ for date in dlist:
     
     for n in nplotlist:
         if (n<nvars):
-           title='%s %s column mass density' %(date,varlst[n])
+           title='%s column mass density' %(varlst[n])
            outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
         else:
-           title='%s %s column mass density' %(date,pltvar)
+           title='%s column mass density' %(varname)
            outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
     
         pltdata=cmass[n,:,:]
         fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
         set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=cn_cmap,norm=norm)
+        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
         ax.set_title(title)
-        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-                     format='%.2e',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
+                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()

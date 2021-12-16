@@ -4,7 +4,7 @@ JOBSQUEUE="`which squeue` -u ${USER}"
 SQFORMAT="%.10i %.9P %.25j %.8u %.8T %.10M %.10L %.3D %R"
 ndatepy=$HOME/bin/ndate.py
 
-export machine='hera'
+export machine='s4'
 
 if [ $machine == 'hera' ] ; then
    gsisub=/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/ush/sub_hera

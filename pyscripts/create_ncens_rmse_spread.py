@@ -9,17 +9,21 @@ elif (os_name=='Windows'):
     rootgit='F:\GitHub\swei_research'
 elif (os_name=='Linux'):
     if (os.path.exists('/scratch1')):
+        machine='hera'
         rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
         rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
         rootgit='/home/Shih-wei.Wei/research'
     elif (os.path.exists('/glade')):
+        machine='cheyenne'
         rootpath='/glade/work/swei/output/images'
         rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
         rootgit='/glade/u/home/swei/research'
-    elif (os.path.exists('/cardinal')):
+    elif (os.path.exists('/scratch')):
+        machine='s4'
         rootpath='/data/users/swei/Images'
         rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
         rootgit='/home/swei/research'
+print('%s %s' % (os_name,machine))
 sys.path.append(rootgit+'/pyscripts/functions')
 from utils import setup_cmap, ndate
 from plot_utils import setupax_2dmap,set_size
@@ -42,17 +46,18 @@ axe_w=10; axe_h=5
 quality=300
 tkfreq=1
 
-inputpath='/scratch/users/swei/comrot'
+inputpath='/data/users/swei/archive'
+#inputpath='/scratch/users/swei/comrot'
 outputpath=rootpath+'/Ens_size/Timeseries'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020060806
-edate=2020060812
+sdate=2020060100
+edate=2020061218
 hint=6
 pltvar='total'
 area='Glb'
-explist=['ctrl'] #,'10ens','30ens']
+explist=['ctrl','10ens','30ens']
 evallist=['pressfc','dpres','tmp','spfh','ugrd','vgrd']
 
 #
@@ -91,26 +96,32 @@ while (cdate<=edate):
     tnum=tnum+1
     cdate=ndate(hint,cdate)
 
-for exp in explist:
-    if (exp=='ctrl'):
-       numens=20
-    else:
-       numens=int(exp[:2])
-    datesidx=1
-    for i in np.arange(tnum):
-        adate=dlist[datesidx]
+for i in np.arange(tnum-1):
+    print(dlist[i])
+    eidx=0
+    for exp in explist:
+        if (exp=='ctrl'):
+           numens=20
+        else:
+           numens=int(exp[:2])
+
+        adate=dlist[i+1]
+        #print(adate)
         a_yy=adate[:4] ; a_mm=adate[4:6] ; a_dd=adate[6:8] ; a_hh=adate[8:10]
         a_pdy=adate[:8]
-        ensres_anl=inputpath+'/hazyda_'+exp+'/gdas.'+a_pdy+'/'+a_hh+'/atmos/gdas.t'+a_hh+'z.atmanl.ensres.nc'
+        ensres_anl=inputpath+'/hazyda_'+exp+'/'+adate+'/gdas.t'+a_hh+'z.atmanl.ensres.nc'
+        #ensres_anl=inputpath+'/hazyda_'+exp+'/gdas.'+a_pdy+'/'+a_hh+'/atmos/gdas.t'+a_hh+'z.atmanl.ensres.nc'
         anl=xa.open_dataset(ensres_anl)
         ensanl=anl.get(evallist)
 
-        gdate=dlist[datesidx-1]
+        gdate=dlist[i]
         g_yy=gdate[:4] ; g_mm=gdate[4:6] ; g_dd=gdate[6:8] ; g_hh=gdate[8:10]
         g_pdy=gdate[:8]
+
         for nens in np.arange(1,numens+1):
             nens_str='%.3i' %(nens)
-            ens6hr=inputpath+'/hazyda_'+exp+'/enkfgdas.'+g_pdy+'/'+g_hh+'/atmos/mem'+nens_str+'/gdas.t'+g_hh+'z.atmf006.nc'
+            ens6hr=inputpath+'/hazyda_'+exp+'/'+gdate+'/enkf/mem'+nens_str+'/gdas.t'+g_hh+'z.atmf006.nc'
+            #ens6hr=inputpath+'/hazyda_'+exp+'/enkfgdas.'+g_pdy+'/'+g_hh+'/atmos/mem'+nens_str+'/gdas.t'+g_hh+'z.atmf006.nc'
             ensmem=xa.open_dataset(ens6hr)
             ensmem=ensmem.get(evallist)
             mean_err2=(ensmem-ensanl)*(ensmem-ensanl)/numens
@@ -118,30 +129,38 @@ for exp in explist:
                sum_mean_err2=mean_err2
             else:
                sum_mean_err2+=mean_err2 
-        rmse=np.sqrt(sum_mean_err2)
+        rmse_exp=np.sqrt(sum_mean_err2)
 
-        enssprd=inputpath+'/hazyda_'+exp+'/enkfgdas.'+g_pdy+'/'+g_hh+'/atmos/gdas.t'+g_hh+'z.atmf006.ensspread.nc'
-        sprd=xa.open_dataset(enssprd)
-        sprd=sprd.get(evallist)
+        enssprd=inputpath+'/hazyda_'+exp+'/'+gdate+'/enkf/gdas.t'+g_hh+'z.atmf006.ensspread.nc'
+        #enssprd=inputpath+'/hazyda_'+exp+'/enkfgdas.'+g_pdy+'/'+g_hh+'/atmos/gdas.t'+g_hh+'z.atmf006.ensspread.nc'
+        sprd_exp=xa.open_dataset(enssprd)
+        sprd_exp=sprd_exp.get(evallist)
 
-        ratio=rmse/sprd
+        #ratio_tmp=rmse/sprd
+        #ratio_tmp=sprd/rmse
+        #if (i==0):
+        #   rmse_exp=rmse
+        #   sprd_exp=sprd
+        #else:
+        #   rmse_exp=xa.concat((rmse_exp,rmse),dim='time')
+        #   sprd_exp=xa.concat((sprd_exp,sprd),dim='time')
 
-                         
-             
-#        ds=xa.open_dataset(infile)
-#        ds=ds.sel(time=ds.time[0])
+        rmse_exp=rmse_exp.assign_coords({'exps':exp})
+        sprd_exp=sprd_exp.assign_coords({'exps':exp})
+        if (eidx==0):
+           rmse=rmse_exp
+           sprd=sprd_exp
+        else:
+           rmse=xa.concat((rmse,rmse_exp),dim='exps')
+           sprd=xa.concat((sprd,sprd_exp),dim='exps')
+        eidx+=1
 
-#outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
-#    
-#pltdata=ds.AODANA
-#fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
-#set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-#cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-#ax.set_title(date,loc='left')
-#plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-#             fraction=0.045,aspect=40,pad=0.08,label=cblb)
-#print(outname)
-#fig.savefig(outname,dpi=quality)
-#plt.close()
- 
-    datesidx+=1
+    inputpath='/data/users/swei/archive'
+    outputpath=inputpath+'/Ens_size'
+    if ( not os.path.exists(outputpath) ):
+        os.makedirs(outputpath)
+    
+    rmse_fname=outputpath+'/rmse.'+adate+'.nc4'
+    rmse.to_netcdf(rmse_fname)
+    sprd_fname=outputpath+'/sprd.'+adate+'.nc4'
+    sprd.to_netcdf(sprd_fname)
