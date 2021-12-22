@@ -48,19 +48,19 @@ lstylst=['-','-','-']
 mrkrlst=[' ',' ',' ']
 
 inputpath='/data/users/swei/archive'
-outputpath=rootpath+'/Ens_size/Timeseries/RMSEvsSPRD'
-if ( not os.path.exists(outputpath) ):
-    os.makedirs(outputpath)
 
 sdate=2020060300
-edate=2020061218
+edate=2020062312
 hint=6
 pltvar='total'
 area='Glb'
-explist=['ctrl','10ens','30ens']
+explist=['ctrl'] #,'10ens','30ens']
 levlist=[850.,500.,250.]
 varlist=['tmp','spfh','ugrd','vgrd']
 
+outputpath=rootpath+'/Ens/'+explist[0]+'/Timeseries/RMSEvsSPRD'
+if ( not os.path.exists(outputpath) ):
+    os.makedirs(outputpath)
 #
 cnlvs=np.array((0., 0.05, 0.1, 0.15, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 2.5))
 clridx=np.array((0,2,4,7,8,9,10,12,14,15,16,17,18))
@@ -97,33 +97,41 @@ while (cdate<=edate):
     tnum=tnum+1
     cdate=ndate(hint,cdate)
 
-rule = rrulewrapper(DAILY, byhour=6, interval=2)
+rule = rrulewrapper(DAILY, byhour=6, interval=8)
 loc = RRuleLocator(rule)
 formatter = DateFormatter('%Y%h %n %d %Hz')
 
 for var in varlist:
     for lev in levlist:
         for date in dlist:
-            rmse_file=inputpath+'/Ens_size/rmse.'+date+'.nc4'
-            sprd_file=inputpath+'/Ens_size/sprd.'+date+'.nc4'
-            rmse=xa.open_dataset(rmse_file)
-            sprd=xa.open_dataset(sprd_file)
-
-            rmsetmp=rmse[var].sel(pfull=lev,method='nearest')
-            sprdtmp=sprd[var].sel(pfull=lev,method='nearest')
-            rmse_mean_tmp=rmsetmp.mean(dim=['grid_xt','grid_yt'])
-            sprd_mean_tmp=sprdtmp.mean(dim=['grid_xt','grid_yt'])
-
+            for expn in explist:
+                rmse_file=inputpath+'/Ens/'+expn+'/rmse.'+date+'.nc4'
+                sprd_file=inputpath+'/Ens/'+expn+'/sprd.'+date+'.nc4'
+                rmse=xa.open_dataset(rmse_file)
+                sprd=xa.open_dataset(sprd_file)
+    
+                rmsetmp=rmse[var].sel(pfull=lev,method='nearest')
+                sprdtmp=sprd[var].sel(pfull=lev,method='nearest')
+                rmse_mean_tmp=rmsetmp.mean(dim=['grid_xt','grid_yt'])
+                sprd_mean_tmp=sprdtmp.mean(dim=['grid_xt','grid_yt'])
+                
+                if (expn==explist[0]):
+                   rmse_mean_exp=rmse_mean_tmp
+                   sprd_mean_exp=sprd_mean_tmp
+                else:
+                   rmse_mean_exp=xa.concat((rmse_mean_exp,rmse_mean_tmp),dim='exps')
+                   sprd_mean_exp=xa.concat((sprd_mean_exp,sprd_mean_tmp),dim='exps')
+    
             if (date==dlist[0]):
-               rmse_mean=rmse_mean_tmp
-               sprd_mean=sprd_mean_tmp
+               rmse_mean=rmse_mean_exp
+               sprd_mean=sprd_mean_exp
             else:
-               rmse_mean=xa.concat((rmse_mean,rmse_mean_tmp),dim='time')
-               sprd_mean=xa.concat((sprd_mean,sprd_mean_tmp),dim='time')
+               rmse_mean=xa.concat((rmse_mean,rmse_mean_exp),dim='time')
+               sprd_mean=xa.concat((sprd_mean,sprd_mean_exp),dim='time')
     
         outname='%s/TS_%s_%s_%s.png' %(outputpath,area,lev,var)
-        pltrmse=rmse_mean.values.swapaxes(0,1)
-        pltsprd=sprd_mean.values.swapaxes(0,1)
+        pltrmse=rmse_mean.values #.swapaxes(0,1)
+        pltsprd=sprd_mean.values #.swapaxes(0,1)
         pltdates=rmse_mean.time
         fig,ax=plt.subplots()
         set_size(axe_w,axe_h,b=0.13)
@@ -134,7 +142,7 @@ for var in varlist:
         ax.plot_date(pltdates,pltsprd,'--')
         lglst=[]
         for val in ['rmse','sprd']:
-            for expn in rmse.exps.values:
+            for expn in explist:
                 lglst.append('%s_%s'%(expn,val))
         ax.legend(lglst)
         if (var=='spfh'):
@@ -153,7 +161,7 @@ for var in varlist:
         ax.xaxis.set_major_locator(loc)
         ax.xaxis.set_major_formatter(formatter)
         ax.plot_date(pltdates,pltdata,'o-')
-        ax.legend(rmse.exps.values)
+        ax.legend(explist)
         ax.set_ylabel('%s hPa %s' %(lev,var))
         ax.grid()
         print(outname)

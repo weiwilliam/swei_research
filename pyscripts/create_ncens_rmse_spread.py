@@ -53,11 +53,12 @@ if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
 sdate=2020060100
-edate=2020061218
+edate=2020062312
 hint=6
 pltvar='total'
 area='Glb'
-explist=['ctrl','10ens','30ens']
+explist=['ctrl']
+enumlist=[30]
 evallist=['pressfc','dpres','tmp','spfh','ugrd','vgrd']
 
 #
@@ -100,10 +101,7 @@ for i in np.arange(tnum-1):
     print(dlist[i])
     eidx=0
     for exp in explist:
-        if (exp=='ctrl'):
-           numens=20
-        else:
-           numens=int(exp[:2])
+        numens=enumlist[eidx]
 
         adate=dlist[i+1]
         #print(adate)
@@ -156,7 +154,7 @@ for i in np.arange(tnum-1):
         eidx+=1
 
     inputpath='/data/users/swei/archive'
-    outputpath=inputpath+'/Ens_size'
+    outputpath=inputpath+'/Ens/'+exp
     if ( not os.path.exists(outputpath) ):
         os.makedirs(outputpath)
     
