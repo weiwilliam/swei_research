@@ -46,9 +46,9 @@ inputpath='/data/users/swei/archive'
 outputpath='/data/users/swei/Images/CostGrad'
 
 sdate=2020060106
-edate=2020060812
+edate=2020062318
 hint=6
-explist=['hazyda_10ctrl']
+explist=['hazyda_50ctrl']
 iter1=50
 iter2=150
 itermax=iter1+iter2+2
@@ -106,6 +106,7 @@ for date in dlist:
     set_size(axe_w,axe_h,b=0.13)
     ax.plot(xaxis,grad,c='tab:blue')
     ax.legend(explist)
+    ax.set_ylim(1,1e4)
     ax.set_yscale('log')
     fig.savefig(grad_fname,dpi=quality)
     plt.close()
