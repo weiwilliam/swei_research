@@ -53,12 +53,12 @@ if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
 sdate=2020060100
-edate=2020062312
+edate=2020062318
 hint=6
 pltvar='total'
 area='Glb'
-explist=['ctrl']
-enumlist=[30]
+explist=['50ctrl']
+enumlist=[50]
 evallist=['pressfc','dpres','tmp','spfh','ugrd','vgrd']
 
 #
