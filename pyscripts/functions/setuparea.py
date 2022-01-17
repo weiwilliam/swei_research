@@ -6,7 +6,7 @@ Created on Fri Sep 14 15:10:08 2018
 @author: weiwilliam
 
 Note:
-    lontitude must setup between 0~360
+    longitude must setup between 0~360
 """
 
 def setarea(areaname):
@@ -118,6 +118,10 @@ def setarea(areaname):
         minlat=0.;maxlat=30.;minlon=330.;maxlon=10.
     elif (areaname == 'r2o10'):
         minlat=0.;maxlat=40.;minlon=330.;maxlon=20.
+    elif (areaname == 'Y20Smk1'): # 2020091112
+        minlat=40.;maxlat=50.;minlon=230.;maxlon=240.
+    elif (areaname == 'Y20Smk2'): # 2020091500
+        minlat=40.;maxlat=50.;minlon=250.;maxlon=260.
     else:
         print("Unknown area, using Glb")
         print('Available lists: '

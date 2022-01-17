@@ -52,27 +52,16 @@ outputpath=rootpath+'/Dataset/MERRA-2/2dmap'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020062212
-edate=2020062212
+sdate=2020091512
+edate=2020091512
 hint=6
 pltvar='seas'
-area='Glb'
+area='Y20Smk1'
 pltall=1 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
 
 # 
-clridx=[0,11,20,29,38,47,56,65,74,83,92,101,110,119,128]
-cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
-cnlvs=[0      ,  2.5e-5,   5e-5, 7.5e-5,
-       1.25e-4,  1.5e-4,1.75e-4,   2e-4,
-          3e-4,    4e-4,   5e-4,   6e-4,
-          8e-4,    1e-3,   3e-3,   5e-3]
-#cnlvs=[0      ,  2.5e-6,   5e-6, 7.5e-6,
-#       1.25e-5,  1.5e-5,1.75e-5,   2e-5,
-#          3e-5,    4e-5,   5e-5,   6e-5,
-#          8e-5,    1e-4,   3e-4,   5e-4]
-
 # Constant configuration
 proj=ccrs.PlateCarree()
 grav=9.80665e+0
@@ -82,6 +71,9 @@ minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero,cyclic)
 if (area=='Glb'):
    minlon=-180. ; maxlon=180.
+else:
+   minlon=(minlon+180)%360-180
+   maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
 
 if (pltvar=='dust'):
@@ -113,9 +105,9 @@ elif (pltvar=='total'):
    scalef=1e4
    cnscale=1e4
 
-cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
-cnlvsarr=np.array(cnlvs)*cnscale
-norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
+#cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
+#cnlvsarr=np.array(cnlvs)*cnscale
+#norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
 
 nvars=len(varlst)
 
@@ -158,13 +150,17 @@ for date in dlist:
        ds=ds.sel(time=dates[dates_count])
     else:
        ds=ds.sel(time=ds.time[0])
-   
+    ds=ds.sel(lon=slice(minlon,maxlon),lat=slice(minlat,maxlat))
+
     delp=ds.DELP
     kgkg_kgm2=delp/grav
+    pres=xa.zeros_like(delp)
+    for i in np.arange(ds.lev.size):
+        pres[i,:,:]=ds.PS-delp[i:,:,:].sum(dim='lev')
+    pres=pres/100.
 
     for var in varlst:
         tmp=ds[var]*kgkg_kgm2
-
         if (var==varlst[0]):
            conc=tmp
            total=tmp
@@ -174,13 +170,6 @@ for date in dlist:
 
     conc=xa.concat((conc,total),dim='bins')
 
-#    if (dates_count==0):
-#       totalconc=conc
-#    else:
-#       totalconc=xa.concat((totalconc,conc),dim='bin')
-    
-#    del(conc)
-
 # Get the column integral
     cmass=np.sum(conc,axis=1)
     
@@ -188,24 +177,29 @@ for date in dlist:
        nplotlist=[nvars]
     else:
        nplotlist=np.arange(nvars+1)
-    
+#    
     for n in nplotlist:
+        third_quantile=cmass[n].quantile(0.75)
         if (n<nvars):
-           title='%s column mass density' %(varlst[n])
+           title='%s mass density' %(varlst[n])
            outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
         else:
-           title='%s column mass density' %(varname)
+           title='%s mass density' %(varname)
            outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
-    
-        pltdata=cmass[n,:,:]
-        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
-        set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
-        ax.set_title(title)
-        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
-                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
-        print(outname)
-        fig.savefig(outname,dpi=quality)
-        plt.close()
+
+        pltmsk=(cmass[n]>third_quantile)
+        profdata=conc.sel(bins=n)
+        pltdata=profdata[pltmsk==1]
+#    
+#        pltdata=cmass[n,:,:]
+#        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+#        set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+#        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
+#        ax.set_title(title)
+#        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
+#                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+#        print(outname)
+#        fig.savefig(outname,dpi=quality)
+#        plt.close()
  
     dates_count+=1
