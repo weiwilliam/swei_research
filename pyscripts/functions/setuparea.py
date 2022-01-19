@@ -119,9 +119,9 @@ def setarea(areaname):
     elif (areaname == 'r2o10'):
         minlat=0.;maxlat=40.;minlon=330.;maxlon=20.
     elif (areaname == 'Y20Smk1'): # 2020091112
-        minlat=40.;maxlat=50.;minlon=230.;maxlon=240.
+        minlat=37.;maxlat=50.;minlon=227.;maxlon=240.
     elif (areaname == 'Y20Smk2'): # 2020091500
-        minlat=40.;maxlat=50.;minlon=250.;maxlon=260.
+        minlat=42.;maxlat=55.;minlon=254.;maxlon=267.
     elif (areaname == 'NYS'): # 2020091500
         minlat=40.;maxlat=50.;minlon=270.;maxlon=290.
     else:

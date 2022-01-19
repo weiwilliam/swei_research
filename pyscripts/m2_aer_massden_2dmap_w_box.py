@@ -42,14 +42,15 @@ mpl.rc('xtick',labelsize=txsize)
 mpl.rc('ytick',labelsize=txsize)
 mpl.rc('legend',fontsize='large')
 fsave=1; figfmt='png'; quality=300
-axe_w=3; axe_h=5
+axe_w=6; axe_h=4
+
 
 if (machine=='Cheyenne'):
    inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
 elif (machine=='S4'):
    inputpath='/data/users/swei/common/MERRA2'
 
-outputpath=rootpath+'/Dataset/MERRA-2/area_profs'
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap.wbox'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
@@ -57,12 +58,24 @@ sdate=2020091112
 edate=2020091112
 hint=6
 pltvar='carbon'
-area='Y20Smk1'
+area='NAmer'
+boxarea='Y20Smk1'
 pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
 
 # 
+clridx=[0,11,20,29,38,47,56,65,74,83,92,101,110,119,128]
+cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
+cnlvs=[0      ,  2.5e-5,   5e-5, 7.5e-5,
+       1.25e-4,  1.5e-4,1.75e-4,   2e-4,
+          3e-4,    4e-4,   5e-4,   6e-4,
+          8e-4,    1e-3,   3e-3,   5e-3]
+#cnlvs=[0      ,  2.5e-6,   5e-6, 7.5e-6,
+#       1.25e-5,  1.5e-5,1.75e-5,   2e-5,
+#          3e-5,    4e-5,   5e-5,   6e-5,
+#          8e-5,    1e-4,   3e-4,   5e-4]
+
 # Constant configuration
 proj=ccrs.PlateCarree()
 grav=9.80665e+0
@@ -76,6 +89,10 @@ else:
    minlon=(minlon+180)%360-180
    maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
+
+bminlon, bmaxlon, bminlat, bmaxlat, crosszero, cyclic=setarea.setarea(boxarea)
+bminlon=(bminlon+180)%360-180
+bmaxlon=(bmaxlon+180)%360-180
 
 if (pltvar=='dust'):
    varlst=['DU001','DU002','DU003','DU004','DU005']
@@ -106,9 +123,9 @@ elif (pltvar=='total'):
    scalef=1e4
    cnscale=1e4
 
-#cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
-#cnlvsarr=np.array(cnlvs)*cnscale
-#norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
+cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
+cnlvsarr=np.array(cnlvs)*cnscale
+norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
 
 nvars=len(varlst)
 
@@ -151,17 +168,13 @@ for date in dlist:
        ds=ds.sel(time=dates[dates_count])
     else:
        ds=ds.sel(time=ds.time[0])
-    ds=ds.sel(lon=slice(minlon,maxlon),lat=slice(minlat,maxlat))
-
+   
     delp=ds.DELP
     kgkg_kgm2=delp/grav
-    pres=xa.zeros_like(delp)
-    for i in np.arange(ds.lev.size):
-        pres[i,:,:]=ds.PS-delp[i:,:,:].sum(dim='lev')
-    pres=pres/100.
 
     for var in varlst:
         tmp=ds[var]*kgkg_kgm2
+
         if (var==varlst[0]):
            conc=tmp
            total=tmp
@@ -171,6 +184,13 @@ for date in dlist:
 
     conc=xa.concat((conc,total),dim='bins')
 
+#    if (dates_count==0):
+#       totalconc=conc
+#    else:
+#       totalconc=xa.concat((totalconc,conc),dim='bin')
+    
+#    del(conc)
+
 # Get the column integral
     cmass=np.sum(conc,axis=1)
     
@@ -178,42 +198,28 @@ for date in dlist:
        nplotlist=[nvars]
     else:
        nplotlist=np.arange(nvars+1)
-#    
-    xlb='Mass Density [$\mathrm{kg\cdot m^{-2}}$]'
-    ylb='Pressure [hPa]'
+    
     for n in nplotlist:
-        third_quantile=cmass[n].quantile(0.75)
         if (n<nvars):
-           outname='%s/%s_%s_prof.%s.%s'  %(outputpath,area,varlst[n],date,figfmt)
+           title='%s column mass density' %(varlst[n])
+           outname='%s/%s_%s_cmass.w%s.%s.%s'  %(outputpath,area,varlst[n],boxarea,date,figfmt)
         else:
-           outname='%s/%s_%s_all_prof.%s.%s' %(outputpath,area,pltvar,date,figfmt)
+           title='%s column mass density' %(varname)
+           outname='%s/%s_%s_all_cmass.w%s.%s.%s' %(outputpath,area,pltvar,boxarea,date,figfmt)
+    
+        pltdata=cmass[n,:,:]
+        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+        set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
+        ax.set_title(title)
+        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
+                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
 
-        profdata=conc.sel(bins=n)
-        msk=xa.ones_like(profdata,dtype='bool')
-        pltmsk=(msk)&(cmass[n]>third_quantile)
-        area_data=xa.where(msk,profdata,np.nan)
-        area_pres=xa.where(msk,pres,np.nan)
-        pltprof=area_data.mean(axis=(1,2),skipna=1)
-        pltpres=area_pres.mean(axis=(1,2),skipna=1)
-        pltprofs=np.reshape(area_data.values,(area_data.lev.size,area_data.lon.size*area_data.lat.size))
+        bx,by=[bminlon,bmaxlon,bmaxlon,bminlon,bminlon],[bminlat,bminlat,bmaxlat,bmaxlat,bminlat]
+        ax.plot(bx, by,color='tab:red')
 
-        fig,ax=plt.subplots()
-        set_size(axe_w,axe_h,l=0.2)
-        ax.plot(pltprofs,pltpres,'-',c='tab:red',linewidth=0.5,alpha=0.6)
-        ax.plot(pltprof,pltpres,'-',c='k',linewidth=1.5)
-        ax.set_yscale('log')
-        ax.set_xlabel(xlb)
-        ax.set_ylabel(ylb)
-        ax.set_ylim(200,1025)
-        ax.get_yaxis().set_major_formatter(mpl.ticker.ScalarFormatter())
-        ax.get_yaxis().set_minor_formatter(mpl.ticker.ScalarFormatter())
-        ax.invert_yaxis()
-        #ax.legend(lglst)
-        ax.grid(which='both')
-#    
-        if (fsave):
-           print(outname)
-           fig.savefig(outname,dpi=quality)
-           plt.close()
+        print(outname)
+        fig.savefig(outname,dpi=quality)
+        plt.close()
  
     dates_count+=1
