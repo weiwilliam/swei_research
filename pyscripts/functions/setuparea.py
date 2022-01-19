@@ -122,6 +122,8 @@ def setarea(areaname):
         minlat=40.;maxlat=50.;minlon=230.;maxlon=240.
     elif (areaname == 'Y20Smk2'): # 2020091500
         minlat=40.;maxlat=50.;minlon=250.;maxlon=260.
+    elif (areaname == 'NYS'): # 2020091500
+        minlat=40.;maxlat=50.;minlon=270.;maxlon=290.
     else:
         print("Unknown area, using Glb")
         print('Available lists: '
