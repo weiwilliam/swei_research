@@ -75,8 +75,10 @@ while (cdate<=edate):
 
 aeronet_arch='/glade/work/swei/common/AOD/AOD20/ALL_POINTS'
 #infile=aeronet_arch+'/19930101_20211106_'+station+'.lev20'
+filelist=os.listdir(aeronet_arch)
+filelist.sort()
 
-for infile in os.listdir(aeronet_arch):
+for infile in filelist:
     df=pd.read_csv(aeronet_arch+'/'+infile,skiprows=6)
     df_datetime=pd.to_datetime(df['Date(dd:mm:yyyy)']+' '+df['Time(hh:mm:ss)'],format="%d:%m:%Y %H:%M:%S")
     
@@ -89,8 +91,6 @@ for infile in os.listdir(aeronet_arch):
     if (tmpdf.shape[0]==0):
         print('%s : No available data' %(station_name))
         continue
-    else:
-        print('%s : %i available data' %(station_name,tmpdf.shape[0]))
 
     dates_idx=0
     for date in dlist:
@@ -130,16 +130,23 @@ for infile in os.listdir(aeronet_arch):
             m2_aod=xa.concat((m2_aod,tmpaod),dim='time')
     
         dates_idx+=1
+
+    if (aeronet_df.shape[0]==0):
+        print('%s : No available data within 30 minutes window of each cycle' %(station_name))
+        continue
+    else:
+        print('%s : %i available data' %(station_name,aeronet_df.shape[0]))
     
     txlat,txlon=latlon_news(stalat,stalon)
-    titlestr='%s (%s,%s)' %(station_name,txlat,txlon)
+    titlestr='%s (%s, %s)' %(station_name,txlat,txlon)
     
     fig,ax=plt.subplots()
     set_size(axe_w,axe_h)
     ax.plot_date(aeronet_df["Datetime"],aeronet_df["AOD_500nm"],c='tab:red',marker=nofill_dtriangle)
-    ax.plot_date(dates,m2_aod,c='tab:blue',ls='-',lw=0.8,marker='')
+    ax.plot_date(dates,m2_aod,c='tab:blue',ls='-',lw=1.,marker='')
     ax.legend(["AOD500nm","M2_AODANA"])
     ax.grid()
+    ax.set_ylim(0,5)
     ax.set_title(titlestr,loc='left')
     
     outname='%s/%s_AOD500nm.%s_%s.png' %(outputpath,station_name,sdate,edate)
