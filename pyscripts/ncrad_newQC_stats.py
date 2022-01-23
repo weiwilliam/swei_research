@@ -27,7 +27,6 @@ elif (os_name=='Linux'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/home/Shih-wei.Wei/research'
-
 sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
@@ -51,7 +50,7 @@ sdate=2020061000
 edate=2020092118
 aertype='All'
 hint=6
-exp='AerObserver'
+exp='aerqc_corR'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
@@ -192,8 +191,8 @@ for chkwvn in chkwvn_list:
     tzr_msk=(ds_chk.qcflag==10.)
     aer_msk=(ds_chk.qcflag==13.)
     sfcir_msk=(ds_chk.qcflag==53.)
-    # bust_msk=(ds_chk.qcflag==55.)
-    bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
+    bust_msk=(ds_chk.qcflag==55.)
+    # bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
 
     ori_msk=((good_msk)|(aer_msk)|(gross_msk)|(sfcir_msk)|(tzr_msk))
     ori_total=np.count_nonzero(ori_msk)
@@ -240,7 +239,7 @@ for chkwvn in chkwvn_list:
         df_all=pd.concat((df_all,tmpdf))
     icount+=1
 
-df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new.csv')
+df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new.v2.csv')
 # df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
 
 # ds_all=ds_all.assign({'obserr':(['wavenumber'],err_array)})

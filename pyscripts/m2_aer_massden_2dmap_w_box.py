@@ -36,28 +36,31 @@ import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 
 # Plotting setup
-mpl.rc('axes',titlesize=18,labelsize=16)
-mpl.rc('xtick',labelsize=16)
-mpl.rc('ytick',labelsize=16)
-mpl.rc('legend',fontsize='xx-large')
-axe_w=10; axe_h=5
-quality=300
+txsize=12
+mpl.rc('axes',titlesize=txsize,labelsize=txsize)
+mpl.rc('xtick',labelsize=txsize)
+mpl.rc('ytick',labelsize=txsize)
+mpl.rc('legend',fontsize='large')
+fsave=1; figfmt='png'; quality=300
+axe_w=6; axe_h=4
+
 
 if (machine=='Cheyenne'):
    inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
 elif (machine=='S4'):
    inputpath='/data/users/swei/common/MERRA2'
 
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap'
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap.wbox'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020062212
-edate=2020062212
+sdate=2020091112
+edate=2020091112
 hint=6
-pltvar='seas'
-area='Glb'
-pltall=1 # 0: total only 1: sub species included
+pltvar='carbon'
+area='NAmer'
+boxarea='Y20Smk1'
+pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
 
@@ -82,7 +85,14 @@ minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero,cyclic)
 if (area=='Glb'):
    minlon=-180. ; maxlon=180.
+else:
+   minlon=(minlon+180)%360-180
+   maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
+
+bminlon, bmaxlon, bminlat, bmaxlat, crosszero, cyclic=setarea.setarea(boxarea)
+bminlon=(bminlon+180)%360-180
+bmaxlon=(bmaxlon+180)%360-180
 
 if (pltvar=='dust'):
    varlst=['DU001','DU002','DU003','DU004','DU005']
@@ -192,18 +202,22 @@ for date in dlist:
     for n in nplotlist:
         if (n<nvars):
            title='%s column mass density' %(varlst[n])
-           outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
+           outname='%s/%s_%s_cmass.w%s.%s.%s'  %(outputpath,area,varlst[n],boxarea,date,figfmt)
         else:
            title='%s column mass density' %(varname)
-           outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
+           outname='%s/%s_%s_all_cmass.w%s.%s.%s' %(outputpath,area,pltvar,boxarea,date,figfmt)
     
         pltdata=cmass[n,:,:]
-        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
         set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
         cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
         ax.set_title(title)
         plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
                      format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+
+        bx,by=[bminlon,bmaxlon,bmaxlon,bminlon,bminlon],[bminlat,bminlat,bmaxlat,bmaxlat,bminlat]
+        ax.plot(bx, by,color='tab:red')
+
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()

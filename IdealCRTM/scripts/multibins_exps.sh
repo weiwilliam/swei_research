@@ -26,8 +26,9 @@ elif [ $machine == 's4' ]; then
    USHDIR=${SCRPDIR}/ush
    HOMEDIR=/data/users/swei/Experiments/IdealCRTM
    WRKDIR=${HOMEDIR}/wrk
-   OUTDIR=${HOMEDIR}/output
-   EXEC=${HOMEDIR}/bin/crtm_ideal_FDM
+   OUTDIR=${HOMEDIR}/output_tinv
+   EXEC=${HOMEDIR}/bin/crtm_ideal_tinv
+   #EXEC=${HOMEDIR}/bin/crtm_ideal_FDM
    module purge
    module load license_intel/S4
    module load intel
@@ -40,12 +41,12 @@ KMODFILE='kmod_inspection.nc'
 AODKFILE='aodk_inspection.nc'
 
 # Exp on/off
-BSL='N'  # No aerosols experiment
-EXP1='N' # Concentration
+BSL='Y'  # No aerosols experiment
+EXP1='Y' # Concentration
 EXP2='N' # Thickness (only for genmethod 1)
-EXP3='N' # Altitude
+EXP3='Y' # Altitude
 EXP4='N' # Sfc_Peak_Ratio (SPR), available for genmethod 2 only
-EXP5='Y' # Bins Partition
+EXP5='N' # Bins Partition
 EXP6='N' # Surface type
 EXP7='N' # Surface Emissivity
 EXP8='N' # Day and Night test
@@ -98,8 +99,8 @@ genmethod='2'
 landcover='0.'
 landtype='10'
 lai='0.17'
-default_time='day'
-if [ $default_time == 'Day' ]; then
+default_time='night'
+if [ $default_time == 'day' ]; then
    s_zang='0.'
 else
    s_zang='100.'

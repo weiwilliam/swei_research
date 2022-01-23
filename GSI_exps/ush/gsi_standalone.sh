@@ -3,7 +3,7 @@ set -x
 #
 # Set experiment name and analysis date
 machine='hera'
-exp="aerqc_observer"
+exp="aerqc_corR"
 expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
@@ -23,7 +23,7 @@ if [ $machine == 'hera' ]; then
    source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
    module list
 elif [ $machine == 's4' ]; then
-   homedir=/data/users/swei/Experiments/${exp}_GSI
+   homedir=/data/users/swei/Experiments/${exp}
    scrpts_home=/home/swei/research/GSI_exps
    aerpath=/data/users/swei/common/MERRA2_L64
    obsarch=/data/prod/glopara/dump
@@ -113,7 +113,7 @@ if [ $machine == 'hera' ]; then
    fixcrtm="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/Libs/CRTM-2.4.0/fix"
 elif [ $machine == 's4' ]; then
    gsidir="/data/users/swei/Git/GSI"
-   fixcrtm="/data/users/swei/libs/crtm_coeff/v2.3.0"
+   fixcrtm="/data/users/swei/Libs/CRTM-2.4.0/fix_v2.4.0"
    #NDATE="${PROD_UTIL}/bin/ndate"
 fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}
@@ -349,7 +349,7 @@ OBS_INPUT::
 !   hirs4bufr      hirs4       metop-a     hirs4_metop-a       0.0     1     1
 !   gimgrbufr      goes_img    g11         imgr_g11            0.0     1     0
 !   gimgrbufr      goes_img    g12         imgr_g12            0.0     1     0
-   airsbufr       airs        aqua        airs_aqua           0.0     1     1
+!   airsbufr       airs        aqua        airs_aqua           0.0     1     1
 !   amsuabufr      amsua       n15         amsua_n15           0.0     1     1
 !   amsuabufr      amsua       n18         amsua_n18           0.0     1     1
 !   amsuabufr      amsua       metop-a     amsua_metop-a       0.0     1     1
@@ -395,9 +395,9 @@ OBS_INPUT::
 !   gomebufr       gome        metop-b     gome_metop-b        0.0     2     0
 !   atmsbufr       atms        npp         atms_npp            0.0     1     1
 !   atmsbufr       atms        n20         atms_n20            0.0     1     1
-   crisbufr       cris        npp         cris_npp            0.0     1     0
-   crisfsbufr     cris-fsr    npp         cris-fsr_npp        0.0     1     0
-   crisfsbufr     cris-fsr    n20         cris-fsr_n20        0.0     1     0
+!   crisbufr       cris        npp         cris_npp            0.0     1     0
+!   crisfsbufr     cris-fsr    npp         cris-fsr_npp        0.0     1     0
+!   crisfsbufr     cris-fsr    n20         cris-fsr_n20        0.0     1     0
 !   gsnd1bufr      sndrd1      g14         sndrD1_g14          0.0     1     0
 !   gsnd1bufr      sndrd2      g14         sndrD2_g14          0.0     1     0
 !   gsnd1bufr      sndrd3      g14         sndrD3_g14          0.0     1     0

@@ -2,7 +2,7 @@ radiance_mod_instr_input::
 !obsname    obsloc    ex_obserr  ex_biascor  cld_effect  aer_effect
  amsua      sea       ex_obserr1   .true.      .true.      .false.
  atms       sea       ex_obserr1   .true.      .true.      .false.
- iasi       all       ex_obserr4   .false.     .false.     .true.
+ iasi       all       ex_obserr4   .false.     .false.     .false.
 :: 
   
 obs_amsua::

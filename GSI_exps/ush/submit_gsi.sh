@@ -26,7 +26,7 @@ elif [ $machine == 's4' ] ; then
 fi
 
 SDATE=2020082200
-EDATE=2020092118
+EDATE=2020082200
 CDATE=$SDATE
 
 until [ $CDATE -gt $EDATE ]; do

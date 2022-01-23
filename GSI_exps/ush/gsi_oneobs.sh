@@ -11,7 +11,7 @@
 set -x
 ulimit -s unlimited
 
-machine='s4'
+machine='hera'
 
 #     Wavenumber (cm-1) |  Channel number |  Obs. err. (K2) |    Band
 #--------------------------------------------------------------------
@@ -21,11 +21,12 @@ machine='s4'
 # 459           1990.00              5381               1.8       H2O
 
 if [ $machine == 'hera' ]; then
-   homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/SingleRadTest
-   scrpts_home=/home/swei/research/GSI_exps # Modify on Hera
-   aerpath=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2
-   obsarch=$homedir/INPUTS/OBSDATA
-   DMPDIR=/scratch1/NCEPDEV/global/glopara/dump
+   homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/AeroObsStats
+   scrpts_home=/home/Shih-wei.Wei/research/GSI_exps # Modify on Hera
+   aerpath=/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/common/MERRA2_L64
+   gesarch=/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/common/GDAS
+   obsarch=/scratch1/NCEPDEV/global/glopara/dump
+   DMPDIR=$homedir/wrktmp
    . /apps/lmod/lmod/init/sh
    module purge
    source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
@@ -47,13 +48,13 @@ fi
 ONEOBTYPE='iasi'
 ONEOBCHAN=202
 # set 1: downwind
-#ONEOBLAT='17.975'  # 17.98
-#ONEOBLON='299.278' # 299.3
+ONEOBLAT='17.975'  # 17.98
+ONEOBLON='299.278' # 299.3
 # set 2: source
-ONEOBLAT='18.7'  # 18.69801
-ONEOBLON='347.34' # 347.338623
+#ONEOBLAT='18.7'  # 18.69801
+#ONEOBLON='347.34' # 347.338623
 BTINNOV='5.'
-exp="test_ch${ONEOBCHAN}_tmp"
+exp="aerofrac-test"
 expid=2 # 1: no aer 2: aer
 VERBOSE='.false.'
 SINGLERADOB='.true.'
@@ -64,6 +65,9 @@ TJACONLY='.false.'
 QJACONLY='.false.'
 RAWINNOV='.false.' 
 Q_OPT=2
+if_observer=Yes
+if_iraerdet=Yes
+if_useaerir=Yes
 
 if [[ $SINGLERADOB == ".true." ]]; then
    DIAGRADJAC='.true.'
@@ -71,6 +75,28 @@ if [[ $SINGLERADOB == ".true." ]]; then
 else
    DIAGRADJAC='.false.'
    SINGLEOB_TEST=""
+fi
+
+if [ ${if_observer} = Yes ] ; then
+  nummiter=0
+  if_read_obs_save='.true.'
+  if_read_obs_skip='.false.'
+else
+  nummiter=2
+  if_read_obs_save='.false.'
+  if_read_obs_skip='.false.'
+fi
+
+OBSQC=""
+if [ ${if_iraerdet} = Yes ] ; then
+  OBSQC="${OBSQC},ir_aer_det=.ture."
+else
+  OBSQC="${OBSQC},ir_aer_det=.false."
+fi
+if [ ${if_useaerir} = Yes ] ; then
+  OBSQC="${OBSQC},luse_aerobs=.true."
+else
+  OBSQC="${OBSQC},ir_aer_det=.false."
 fi
 
 if [[ $JC_Q == ".true." ]]; then
@@ -84,12 +110,14 @@ case $expid in
   READEXTAER='.false.'
    MERRA2AER='.false.'
   satinfo=${scrpts_home}/dat/controlrun_satinfo_nobc.txt
- anavinfo=${scrpts_home}/dat/anavinfo_controlrun ;;
+ anavinfo=${scrpts_home}/dat/anavinfo_controlrun
+ allskyinfo=$fixgsi/cloudy_radiance_info.txt ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
   satinfo=${scrpts_home}/dat/fv3aerorad_satinfo_nobc.txt
- anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad ;;
+ anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad
+ allskyinfo=${scrpts_home}/dat/all-sky_radiance_info.txt ;;
 esac
 
 # Set the JCAP resolution which you want.
@@ -110,7 +138,7 @@ export LEVS=64
 CDATE=2020062212
 
 # Set runtime and save directories
-tmpdir=${homedir}/rundir${expid}
+tmpdir=${DMPDIR}/rundir${expid}.$CDATE
 outdir=${homedir}/OUTPUT/$exp/$CDATE
 [[ ! -d $outdir ]] && mkdir -p $outdir
 
@@ -181,7 +209,7 @@ aer09=${aerpath}/$p3yy/$p3mm/MERRA2_AER3D_FV3L64.${p3yy}${p3mm}${p3dd}${p3hh}.nc
 
 #datobs=${homedir}/INPUTS/OBSDATA/${cdump}.$PDY/$cyc
 datobs=${obsarch}/${cdump}.$PDY/$cyc
-datges=${homedir}/INPUTS/${cdump}.$gPDY/$gcyc
+datges=${gesarch}/${cdump}.$gPDY/$gcyc
 
 # Set up $tmpdir
 rm -rf $tmpdir
@@ -275,7 +303,7 @@ fi
 cat << EOF > gsiparm.anl
 
  &SETUP
-   miter=2,niter(1)=50,niter(2)=25,
+   miter=${nummiter},niter(1)=50,niter(2)=25,
    niter_no_qc(1)=2,niter_no_qc(2)=0,
    write_diag(1)=.true.,write_diag(2)=.false.,write_diag(3)=.true.,
    qoption=${Q_OPT},gencode=82,deltim=1200,
@@ -299,6 +327,7 @@ cat << EOF > gsiparm.anl
    lobsdiag_forenkf=${DIAGRADJAC},
    lsingleradob=${SINGLERADOB},
    lnobalance=${NOBALANCE},
+   lread_obs_save=${if_read_obs_save},lread_obs_skip=${if_read_obs_skip},
  /
  &GRIDOPTS
    JCAP_B=$JCAP,JCAP=$JCAP_A,NLAT=$NLAT_A,NLON=$NLON_A,nsig=$LEVS,
@@ -402,7 +431,7 @@ aercoef=$fixcrtm/AerosolCoeff.bin
 cldcoef=$fixcrtm/CloudCoeff.bin
 satangl=$fixgsi/global_satangbias.txt
 scaninfo=$fixgsi/global_scaninfo.txt
-cloudyinfo=$fixgsi/cloudy_radiance_info.txt
+#cloudyinfo=$fixgsi/cloudy_radiance_info.txt
 convinfo=$fixgsi/global_convinfo_reg_test.txt
 aeroinfo=$fixgsi/aeroinfo_fv3aerorad
 ozinfo=$fixgsi/global_ozinfo.txt
@@ -430,7 +459,8 @@ $ncp $cldcoef  ./crtm_coeffs/CloudCoeff.bin
 $ncp $satangl  ./satbias_angle
 $ncp $scaninfo ./scaninfo
 $ncp $satinfo  ./satinfo
-$ncp $cloudyinfo  ./cloudy_radiance_info.txt
+$ncp $allskyinfo  ./all-sky_radiance_info.txt
+#$ncp $cloudyinfo  ./cloudy_radiance_info.txt
 $ncp $pcpinfo  ./pcpinfo
 $ncp $ozinfo   ./ozinfo
 $ncp $convinfo ./convinfo
