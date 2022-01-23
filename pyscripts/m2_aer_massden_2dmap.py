@@ -82,6 +82,9 @@ minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero,cyclic)
 if (area=='Glb'):
    minlon=-180. ; maxlon=180.
+else:
+   minlon=(minlon+180)%360-180
+   maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
 
 if (pltvar=='dust'):
