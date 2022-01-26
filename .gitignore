@@ -7,3 +7,4 @@ pyscripts/functions/__pycache__/setuparea.cpython-37.pyc
 pyscripts/functions/__pycache__/setuparea.cpython-38.pyc
 pyscripts/functions/__pycache__/utils.cpython-38.pyc
 pyscripts/functions/__pycache__/utils.cpython-37.pyc
+*.pyc
