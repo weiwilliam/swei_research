@@ -36,11 +36,12 @@ import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 
 # Plotting setup
-mpl.rc('axes',titlesize=18,labelsize=16)
-mpl.rc('xtick',labelsize=16)
-mpl.rc('ytick',labelsize=16)
-mpl.rc('legend',fontsize='xx-large')
-axe_w=10; axe_h=5
+txsize=12
+mpl.rc('axes',titlesize=txsize,labelsize=txsize)
+mpl.rc('xtick',labelsize=txsize)
+mpl.rc('ytick',labelsize=txsize)
+mpl.rc('legend',fontsize='x-large')
+axe_w=5.4; axe_h=3
 quality=300
 
 if (machine=='Cheyenne'):
@@ -55,12 +56,17 @@ if ( not os.path.exists(outputpath) ):
 sdate=2020062212
 edate=2020062212
 hint=6
-pltvar='seas'
-area='Glb'
-pltall=1 # 0: total only 1: sub species included
+pltvar='dust'
+area='r2o1'
+pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
-
+plt_pts=1
+#
+if (plt_pts):
+   pts_lat=[17.98]
+   pts_lon=[-60.72]
+   ptsize=20
 # 
 clridx=[0,11,20,29,38,47,56,65,74,83,92,101,110,119,128]
 cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
@@ -116,7 +122,8 @@ elif (pltvar=='total'):
    scalef=1e4
    cnscale=1e4
 
-cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
+
+cblb='Column mass density [$\\times\mathrm{10}^{-%i}$ $\mathrm{kg\cdot m^{-2}}$]' %(int(np.log10(scalef)))
 cnlvsarr=np.array(cnlvs)*cnscale
 norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
 
@@ -201,12 +208,14 @@ for date in dlist:
            outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
     
         pltdata=cmass[n,:,:]
-        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
-        set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+        set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
         cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
-        ax.set_title(title)
+        #ax.set_title(title)
         plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
-                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+                     format='%.2f',fraction=0.04,aspect=40,pad=0.08,label=cblb)
+        if (plt_pts):
+           sc=ax.scatter(pts_lon,pts_lat,s=ptsize,c='w',marker='x')
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()
