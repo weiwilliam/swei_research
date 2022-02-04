@@ -10,3 +10,4 @@ pyscripts/functions/__pycache__/setuparea.cpython-39.pyc
 pyscripts/functions/__pycache__/utils.cpython-38.pyc
 pyscripts/functions/__pycache__/utils.cpython-37.pyc
 pyscripts/functions/__pycache__/utils.cpython-39.pyc
+*.pyc

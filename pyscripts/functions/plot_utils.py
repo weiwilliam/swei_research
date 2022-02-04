@@ -27,21 +27,25 @@ def set_size(w,h, ax=None, l=None, r=None, t=None, b=None):
     figh = float(h)/(t-b)
     ax.figure.set_size_inches(figw, figh)
 
-def pltprof(yval,ylb,xval,xlb,clrlst,lglbs,title,y_invert,ax=None,fig=None):
+def pltprof(yval,y_name,y_unit,xval,x_name,x_unit,clrlst,lglbs,title,y_invert,ax=None,fig=None):
     if not fig: fig=plt.gcf()
     if not ax: ax=plt.gca()
     if (y_invert):
        ax.invert_yaxis()
     ax.set_prop_cycle(color=clrlst)
     ax.plot(xval,yval,'o-')
+    ax.ticklabel_format(axis="x", style="sci", scilimits=(0,0), useMathText=True)
+    ax.tick_params(axis='both')
+    ax.xaxis.get_offset_text().set_visible(False)
+    fig.canvas.draw()
+    x_offtx=ax.xaxis.get_offset_text().get_text()
+    y_offtx=ax.yaxis.get_offset_text().get_text()
+    xlb=''; xlb=xlb.join([x_name,' [',x_offtx,x_unit,']'])
+    ylb=''; ylb=ylb.join([y_name,' [',y_offtx,y_unit,']'])
     ax.set_xlabel(xlb)
     ax.set_ylabel(ylb)
     if (lglbs != ''):
        ax.legend(lglbs)
-    ax.ticklabel_format(axis="x", style="sci", scilimits=(0,0))
-    ax.tick_params(axis='both')
-    tx=ax.xaxis.get_offset_text()
-    #tx.set_fontsize('large')
     ax.grid()
     ax.set_title(title,loc='left')
     return fig,ax

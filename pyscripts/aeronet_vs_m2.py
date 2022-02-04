@@ -38,7 +38,7 @@ nofill_dtriangle=mrk.MarkerStyle(marker='v',fillstyle='none')
 
 
 inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
-outputpath=rootpath+'/Dataset/M2vsAERONET/Timeseries'
+outputpath=rootpath+'/Dataset/M2vsAERONET/Timeseries2'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
@@ -73,7 +73,8 @@ while (cdate<=edate):
     tnum=tnum+1
     cdate=ndate(hint,cdate)
 
-aeronet_arch='/glade/work/swei/common/AOD/AOD20/ALL_POINTS'
+aeronet_arch='/glade/work/swei/common/AOD/AOD20/TMP'
+#aeronet_arch='/glade/work/swei/common/AOD/AOD20/ALL_POINTS'
 #infile=aeronet_arch+'/19930101_20211106_'+station+'.lev20'
 filelist=os.listdir(aeronet_arch)
 filelist.sort()
@@ -122,7 +123,9 @@ for infile in filelist:
     # MERRA2_401.inst3_3d_aer_Nv.20200916_12Z.nc4
         infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
         ds=xa.open_dataset(infile)
-        tmpaod=ds.AODANA.interp(lat=stalat,lon=stalon,method='cubic')
+        #tmpaod=ds.AODANA.interp(lat=stalat,lon=stalon,method='linear')
+        tmpaod=ds.AODANA.interp(lon=stalon,method='cubic')
+        tmpaod=tmpaod.interp(lat=stalat,method='cubic')
     
         if (dates_idx==0):
             m2_aod=tmpaod
@@ -142,8 +145,9 @@ for infile in filelist:
     
     fig,ax=plt.subplots()
     set_size(axe_w,axe_h)
-    ax.plot_date(aeronet_df["Datetime"],aeronet_df["AOD_500nm"],c='tab:red',marker=nofill_dtriangle)
-    ax.plot_date(dates,m2_aod,c='tab:blue',ls='-',lw=1.,marker='')
+    ax.plot_date(aeronet_df["Datetime"],aeronet_df["AOD_500nm"],fmt=' ',c='tab:red',marker=nofill_dtriangle)
+    ax.plot_date(dates,m2_aod,fmt='-',c='tab:blue',lw=1.)
+    #ax.plot_date(dates,m2_aod,fmt='-',c='tab:blue',ls='-',lw=1.,marker='')
     ax.legend(["AOD500nm","M2_AODANA"])
     ax.grid()
     ax.set_ylim(0,5)
