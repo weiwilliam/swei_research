@@ -1,0 +1,3 @@
+Commands:
+$METPLUS_PATH/ush/run_metplus.py -c main.conf -c SeriesAnalysis.new.conf
+
