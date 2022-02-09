@@ -50,6 +50,7 @@ sdate=2020082200
 edate=2020093018
 hint=6
 m2tag='inst3_2d_gas_Nx'
+do_mean=1
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -80,7 +81,7 @@ filelist=os.listdir(aeronet_arch)
 filelist.sort()
 
 for infile in filelist:
-    df=pd.read_csv(aeronet_arch+'/'+infile,skiprows=6)
+    df=pd.read_csv(aeronet_arch+'/'+infile,skiprows=6,encoding_errors='ignore')
     df_datetime=pd.to_datetime(df['Date(dd:mm:yyyy)']+' '+df['Time(hh:mm:ss)'],format="%d:%m:%Y %H:%M:%S")
     
     tmpdf=df[["AERONET_Site_Name","Site_Latitude(Degrees)","Site_Longitude(Degrees)","AOD_500nm"]]
@@ -107,11 +108,6 @@ for infile in filelist:
         cdate_m15m=dates[dates_idx]-delta_15m
         filter=((tmpdf["Datetime"]<=cdate_p15m)&(tmpdf["Datetime"]>=cdate_m15m))
         cdate_df=tmpdf.loc[filter,:]
-    
-        if (dates_idx==0):
-            aeronet_df=cdate_df
-        else:
-            aeronet_df=pd.concat((aeronet_df,cdate_df))
 
         if (cdate_df.shape[0]==0):
             stalat=tmpdf["Site_Latitude(Degrees)"].values[0]
@@ -119,6 +115,22 @@ for infile in filelist:
         else: 
             stalat=cdate_df["Site_Latitude(Degrees)"].values[0]
             stalon=cdate_df["Site_Longitude(Degrees)"].values[0]
+
+        if (do_mean):
+           cdate_mean_dict={"Datetime":[dates[dates_idx]],"AERONET_Site_Name":[station_name],
+                            "Site_Latitude(Degrees)":[stalat],"Site_Longitude(Degrees)":[stalon],
+                            "AOD_500nm(Mean)":[cdate_df["AOD_500nm"].mean()]}
+           cdate_mean_df=pd.DataFrame(data=cdate_mean_dict)
+           if (dates_idx==0):
+               aeronet_df=cdate_mean_df
+           else:
+               aeronet_df=pd.concat((aeronet_df,cdate_mean_df))
+        else:    
+           if (dates_idx==0):
+               aeronet_df=cdate_df
+           else:
+               aeronet_df=pd.concat((aeronet_df,cdate_df))
+
     
     # MERRA2_401.inst3_3d_aer_Nv.20200916_12Z.nc4
         infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
@@ -145,15 +157,22 @@ for infile in filelist:
     
     fig,ax=plt.subplots()
     set_size(axe_w,axe_h)
-    ax.plot_date(aeronet_df["Datetime"],aeronet_df["AOD_500nm"],fmt=' ',c='tab:red',marker=nofill_dtriangle)
+    if (do_mean):
+       ax.plot_date(aeronet_df["Datetime"],aeronet_df["AOD_500nm(Mean)"],fmt=' ',c='tab:red',marker=nofill_dtriangle)
+    else:
+       ax.plot_date(aeronet_df["Datetime"],aeronet_df["AOD_500nm"],fmt=' ',c='tab:red',marker=nofill_dtriangle)
     ax.plot_date(dates,m2_aod,fmt='-',c='tab:blue',lw=1.)
-    #ax.plot_date(dates,m2_aod,fmt='-',c='tab:blue',ls='-',lw=1.,marker='')
-    ax.legend(["AOD500nm","M2_AODANA"])
+    if (do_mean):
+       ax.legend(["AOD_500nm(Mean)","M2_AODANA"])
+       pltname="AOD_500nm(Mean)"
+    else:
+       ax.legend(["AOD_500nm","M2_AODANA"])
+       pltname="AOD_500nm"
     ax.grid()
     ax.set_ylim(0,5)
     ax.set_title(titlestr,loc='left')
     
-    outname='%s/%s_AOD500nm.%s_%s.png' %(outputpath,station_name,sdate,edate)
+    outname='%s/%s_%s.%s_%s.png' %(outputpath,station_name,pltname,sdate,edate)
     
     fig.savefig(outname,dpi=quality)
     plt.close()

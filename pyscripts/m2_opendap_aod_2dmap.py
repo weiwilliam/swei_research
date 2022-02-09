@@ -105,6 +105,7 @@ for date in dlist:
        m2ind='400'
 #/2020/09/MERRA2_401.tavg1_2d_aer_Nx.20200901.nc4'
     if (pdy!=p_pdy):
+       p_pdy=pdy 
        in_url=m2_url+'/'+yy+'/'+mm+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'.nc4'
        session = setup_session('username', 'password', check_url=in_url)
        store = xa.backends.PydapDataStore.open(in_url, session=session)
@@ -128,5 +129,5 @@ for date in dlist:
     print(outname)
     fig.savefig(outname,dpi=quality)
     plt.close()
- 
+
     dates_count+=1
