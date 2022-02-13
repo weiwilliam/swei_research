@@ -5,39 +5,68 @@ Created on Wed Jul 18 12:41:00 2018
 
 @author: weiwilliam
 """
-import os
-import sys
-sys.path.append('/Users/weiwilliam/AlbanyWork/Utility/Python3/functions')
-import setuparea as setarea
+import sys, os, platform
+import numpy as np
+import xarray as xa
+import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.colors as mpcrs
 import matplotlib.dates as mdates
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
-import numpy as np
-from datetime import datetime
-from datetime import timedelta
-import pandas as pd
-import xarray as xa
+os_name=platform.system()
+if (os_name=='Darwin'):
+    rootpath='/Users/weiwilliam'
+    rootarch='/Volumes/WD2TB/ResearchData'
+elif (os_name=='Windows'):
+    rootpath='F:\GoogleDrive_NCU\Albany'
+    rootarch='F:\ResearchData'
+    rootgit='F:\GitHub\swei_research'
+elif (os_name=='Linux'):
+    if (os.path.exists('/scratch1')):
+        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+        rootgit='/home/Shih-wei.Wei/research'
+    elif (os.path.exists('/glade')):
+        rootpath='/glade/work/swei/output/images'
+        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+        rootgit='/glade/u/home/swei/research'
+        machine='Cheyenne'
+    elif (os.path.exists('/cardinal')):
+        rootpath='/data/users/swei/Images'
+        rootarch='/scratch/users/swei/ncdiag'
+        rootgit='/home/swei/research'
+        machine='S4'
+sys.path.append(rootgit+'/pyscripts/functions')
+import setuparea as setarea
+from plot_utils import setupax_2dmap, plt_x2y, set_size
+from utils import ndate,setup_cmap
+from datetime import datetime, timedelta
+import scipy.stats
 
-mpl.rc('axes', titlesize=12,labelsize=12)
-mpl.rc('xtick',labelsize=12)
-mpl.rc('ytick',labelsize=12)
-mpl.rc('legend',fontsize='large')
+tlsize=12 ; lbsize=10
+mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
+mpl.rc('xtick',labelsize=lbsize)
+mpl.rc('ytick',labelsize=lbsize)
+mpl.rc('legend',fontsize='small')
+fsave=1 ; ffmt='png' ; ptsize=4
+axe_w=3 ; axe_h=3 ; quality=300
+diagsuffix='nc4'
 minussign=u'\u2212'
 #mpl.rc('lines',linewidth=1.2)
 
-outpath='/Users/weiwilliam/AlbanyWork/R2O_Project/images/tmp/Conventional/BiasRMS'
-path='/Volumes/WD2TB/ResearchData/2_R2O/nc_DiagFiles'
+outputpath=rootpath+'/HazyDA'
+inputpath=rootarch
 
-varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
+varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
-explist=np.array(['prctrl','praero'])
-expnlist=['CTL_cyc','AER_cyc']
+explist=np.array(['hazyda_ctrl','hazyda_aero'])
+expnlist=['CTL','AER']
 enum=explist.shape[0]
 
-sdate=2017080100
-edate=2017082818
+sdate=2020061400
+edate=2020071418
 hint=6
 
 loop='anl' #ges,anl
@@ -46,10 +75,9 @@ if (loop=='ges'):
 elif (loop=='anl'):
    lpstr='OMA'
 
-area='TRO'
+area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
-fsave=1
 
 useqc=1
 if (useqc):
@@ -59,20 +87,9 @@ else:
 
 zpltlst=[0]
 
-imgsavpath=outpath+'/'+expnlist[1]+'/'+area
+imgsavpath=outputpath+'/'+expnlist[1]+'/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
-
-def ndate(cdate,hinc):
-    yy=int(str(cdate)[:4])
-    mm=int(str(cdate)[4:6])
-    dd=int(str(cdate)[6:8])
-    hh=int(str(cdate)[8:10])
-    dstart=datetime(yy,mm,dd,hh)
-    dnew=dstart+timedelta(hours=hinc)
-    dnewint=int(str('%4.4d' % dnew.year)+str('%2.2d' % dnew.month)+
-                str('%2.2d' %dnew.day)+str('%2.2d' % dnew.hour))
-    return dnewint
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -98,7 +115,7 @@ cdate=sdate
 while (cdate<=edate):
     dlist.append(str(cdate))
     tnum=tnum+1
-    cdate=ndate(cdate,6)
+    cdate=ndate(hint,cdate)
     
 print('Total cases number is %d' % tnum )
 
@@ -115,10 +132,10 @@ for var in varlist:
         icount=np.zeros((tnum,znum,2))
     d=0
     for date in dlist:
-        cnvdfile='diag_conv_'+var+'_'+loop+'.'+date+'.nc'
+        cnvdfile='diag_conv_'+var+'_'+loop+'.'+date+'.'+diagsuffix
         print('File: %s' % cnvdfile)
-        infile1=path+'/'+explist[0]+'/'+date+'/'+cnvdfile
-        infile2=path+'/'+explist[1]+'/'+date+'/'+cnvdfile
+        infile1=inputpath+'/'+explist[0]+'/'+date+'/'+cnvdfile
+        infile2=inputpath+'/'+explist[1]+'/'+date+'/'+cnvdfile
         if (os.path.exists(infile1) and os.path.exists(infile2)):
             print('Processing Cnvfile: %s' %(cnvdfile))
             ds1=xa.open_dataset(infile1)
@@ -142,22 +159,24 @@ for var in varlist:
             d=d+1
             continue
         
-        rlat1=ds1.obsdata[2,:]
-        rlon1=ds1.obsdata[3,:]
-        rlat2=ds2.obsdata[2,:]
-        rlon2=ds2.obsdata[3,:]
+        rlat1=ds1.Latitude
+        rlon1=ds1.Longitude
+        rlat2=ds2.Latitude
+        rlon2=ds2.Longitude
         
         if (crosszero):
             rlon1[rlon1>=maxlon]=rlon1[rlon1>=maxlon]-360.
             rlon2[rlon2>=maxlon]=rlon2[rlon2>=maxlon]-360.
+      
+        if (var!='ps' or var!='sst' or var!='tcp'):
+           pres1=ds1.Pressure
+           pres2=ds2.Pressure
+
+        iuse1=ds1.Analysis_Use_Flag
+        iuse2=ds2.Analysis_Use_Flag
         
-        pres1=ds1.obsdata[5,:]
-        iuse1=ds1.obsdata[11,:]
-        pres2=ds2.obsdata[5,:]
-        iuse2=ds2.obsdata[11,:]
-        
-        mask1=(ds1.vartype==var)
-        mask2=(ds2.vartype==var)
+        mask1=(~np.isnan(ds1.nobs))
+        mask2=(~np.isnan(ds2.nobs))
         
         if (area!='Glb'):
             mask1=(mask1)&((rlon1<maxlon)&(rlon1>minlon)&(rlat1>minlat)&(rlat1<maxlat))
@@ -168,8 +187,8 @@ for var in varlist:
             mask2=(mask2)&(iuse2==1)
         
         if (var=='ps' or var=='sst' or var=='tcp'):
-            dpar1=ds1.obsdata[17,:]
-            dpar2=ds2.obsdata[17,:]
+            dpar1=ds1.Obs_Minus_Forecast_adjusted
+            dpar2=ds2.Obs_Minus_Forecast_adjusted
             
             icount[d,0]=np.count_nonzero(mask1)
             icount[d,1]=np.count_nonzero(mask2)
@@ -185,11 +204,11 @@ for var in varlist:
             
         else:
             if (var=='uv'):
-                dpar1=ds1.obsdata[17,:]
-                dpar2=ds2.obsdata[17,:]
+                dpar1=ds1.u_Obs_Minus_Forecast_adjusted
+                dpar2=ds2.u_Obs_Minus_Forecast_adjusted
             else:
-                dpar1=ds1.obsdata[17,:]
-                dpar2=ds2.obsdata[17,:]
+                dpar1=ds1.Obs_Minus_Forecast_adjusted
+                dpar2=ds2.Obs_Minus_Forecast_adjusted
                 
             for z in np.arange(znum):
                 zmask1=(mask1)&((pres1<pbot[z])&(pres1>ptop[z]))
@@ -231,25 +250,6 @@ for var in varlist:
         ax[1].legend(lglist[1,:])
         if (fsave):
             fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_BIASRMS.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg), dpi=200)
-            plt.close()
-        
-        fig,ax=plt.subplots(figsize=(9,3.8))
-        fig.subplots_adjust(hspace=0)
-        ax.set_prop_cycle(color=['red','blue'])
-        ax.grid()
-        ax.xaxis.set_major_locator(loc)
-        ax.xaxis.set_major_formatter(formatter)
-        ax.xaxis.set_tick_params(rotation=30, labelsize=10)
-        ax.set_title('%s %s' %(area,var.upper()))
-        ax.plot_date(xdates,icount,'-')
-        ax.set_ylabel('OBS number')
-        lglist=np.zeros((2),dtype='<U30')
-        for ex in np.arange(2):
-            lglist[ex]=expnlist[ex]+'(%8.4f)' %(np.nanmean(icount[:,ex]))
-        ax.legend(lglist[:])
-        if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_OBSnum.png' 
                         %(area,loop,var,explist[0],explist[1],qcflg), dpi=200)
             plt.close()
         
@@ -306,25 +306,6 @@ for var in varlist:
             
             if (fsave):
                 fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%i_%s_BIASRMS.png' 
-                            %(area,loop,var,explist[0],explist[1],pbot[z],qcflg), dpi=200)
-                plt.close()
-                
-            fig,ax=plt.subplots(figsize=(9,3.8),constrained_layout=1)
-            #fig.subplots_adjust(hspace=0)
-            ax.set_prop_cycle(color=['red','blue'])
-            ax.grid()
-            ax.xaxis.set_major_locator(loc)
-            ax.xaxis.set_major_formatter(formatter)
-            ax.xaxis.set_tick_params(rotation=30, labelsize=10)
-            ax.set_title('%s %s %.1f - %.1f' %(area,var.upper(),pbot[z],ptop[z]))
-            ax.plot_date(xdates,icount[:,z,:],'-')
-            ax.set_ylabel('OBS number')
-            lglist=np.zeros((2),dtype='<U30')
-            for ex in np.arange(2):
-                lglist[ex]=expnlist[ex]+'(%8.2f)' %(np.nanmean(icount[:,z,ex]))
-            ax.legend(lglist[:])
-            if (fsave):
-                fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_P%i_%s_OBSnum.png'
                             %(area,loop,var,explist[0],explist[1],pbot[z],qcflg), dpi=200)
                 plt.close()
                 
