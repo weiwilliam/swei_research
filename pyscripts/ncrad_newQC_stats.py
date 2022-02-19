@@ -50,7 +50,7 @@ sdate=2020061000
 edate=2020092118
 aertype='All'
 hint=6
-exp='aerqc_corR'
+exp='aerqc_corR_noaeffR'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
@@ -65,7 +65,7 @@ print(archpath)
 print(fixpath)
 print(outpath)
 print(archdir)
-savedir=outpath+'/'+exp+'_newQC/SD_LUT/'+aertype
+savedir=outpath+'/SD_LUT/'+aertype
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -146,17 +146,21 @@ for date in dlist:
     rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))
     rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
     qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
-    obs1=np.reshape(ds1.Observation.values,(npts,nchs))
+    # obs1=np.reshape(ds1.Observation.values,(npts,nchs))
     sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
     clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
     varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
+    # omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
+    omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
+    obs1=omb_nbc1+sim1
     tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1[:,0]),
                       'rlat1':(['obsloc'],rlat1[:,0]),
                       'qcflag':(['obsloc','wavenumber'],qcflags),
                       'tb_obs':(['obsloc','wavenumber'],obs1),
                       'tb_sim':(['obsloc','wavenumber'],sim1),
                       'tb_clr':(['obsloc','wavenumber'],clr1),
-                      'varinv':(['obsloc','wavenumber'],varinv1)},
+                      'varinv':(['obsloc','wavenumber'],varinv1),
+                      'omb_nbc':(['obsloc','wavenumber'],omb_nbc1)},
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})
     # tmpds=tmpds.sel(wavenumber=chkwvn)
@@ -178,9 +182,9 @@ for chkwvn in chkwvn_list:
     info_tmp=ds_sensorinfo.sel(wavenumber=chkwvn)
     nuchrad=info_tmp.nuchan.values
     iuserad=info_tmp.iuse.values
-    obserr=np.sqrt(info_tmp.obserr.values)
+    obserr=info_tmp.obserr.values
 
-    omb=tb_obs-tb_sim
+    omb=ds_chk.omb_nbc
     aereff_fg=tb_sim-tb_clr
     aereff_obs=tb_obs-tb_clr
     aereff=0.5*abs(aereff_fg)+0.5*abs(aereff_obs)
@@ -239,7 +243,7 @@ for chkwvn in chkwvn_list:
         df_all=pd.concat((df_all,tmpdf))
     icount+=1
 
-df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new.v2.csv')
+df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new.v3.csv')
 # df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
 
 # ds_all=ds_all.assign({'obserr':(['wavenumber'],err_array)})
