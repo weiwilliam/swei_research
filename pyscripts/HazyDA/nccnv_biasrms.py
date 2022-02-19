@@ -56,7 +56,7 @@ diagsuffix='nc4'
 minussign=u'\u2212'
 #mpl.rc('lines',linewidth=1.2)
 
-outputpath=rootpath+'/HazyDA'
+outputpath=rootpath+'/HazyDA/ncdiag/conv'
 inputpath=rootarch
 
 varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
@@ -65,8 +65,8 @@ explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 enum=explist.shape[0]
 
-sdate=2020061400
-edate=2020071418
+sdate=2020061000
+edate=2020071018
 hint=6
 
 loop='anl' #ges,anl
@@ -75,7 +75,7 @@ if (loop=='ges'):
 elif (loop=='anl'):
    lpstr='OMA'
 
-area='Glb'
+area='r2o1'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
 
@@ -85,7 +85,7 @@ if (useqc):
 else:
     qcflg='noqc'
 
-zpltlst=[0]
+zpltlst=[0,1,2,3,4,5,6,7,8]
 
 imgsavpath=outputpath+'/'+expnlist[1]+'/'+area
 if ( not os.path.exists(imgsavpath) ):

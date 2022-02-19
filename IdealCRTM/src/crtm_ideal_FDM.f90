@@ -1147,7 +1147,7 @@ CONTAINS
    real(8) :: h1
    real(8) :: R_eff
 
-   errstat=CRTM_AerosolCoeff_Load("./coefficients/AerosolCoeff.bin",Quiet=.true.)
+   errstat=CRTM_AerosolCoeff_Load("GOCART","Binary","./coefficients/AerosolCoeff.bin",Quiet=.true.)
 
    if ( itype==DUST_AEROSOL ) then
       if (nbin==1) then

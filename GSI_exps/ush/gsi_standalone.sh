@@ -2,8 +2,8 @@
 set -x
 #
 # Set experiment name and analysis date
-machine='hera'
-exp="aerqc_corR"
+machine='s4'
+exp="aertest"
 expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 

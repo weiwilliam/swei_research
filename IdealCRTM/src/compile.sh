@@ -1,6 +1,6 @@
 #!/bin/ksh
-exefile=crtm_ideal_test
-newexefile=crtm_ideal_3h2o
+exefile=crtm_ideal_FDM
+newexefile=crtm_ideal_FDM_v24
 machine=$1
 if [[ $machine == 'hera' ]]; then
    module purge
@@ -20,8 +20,10 @@ elif [[ $machine == 's4' ]]; then
    module load netcdf4
    module list
    BASE=/data/users/swei/Libs
-   export INCCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/include
-   export LIBCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/lib
+   export INCCRTMtest=${BASE}/CRTM-2.4.0/include
+   export LIBCRTMtest=${BASE}/CRTM-2.4.0/lib
+   #export INCCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/include
+   #export LIBCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/lib
    export NETCDF=$SSEC_NETCDF4_DIR
    expdir=/data/users/swei/Experiments/IdealCRTM
 fi

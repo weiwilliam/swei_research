@@ -8,7 +8,7 @@ endian_platform = little
 endian_io       = big
 
 # The file definitions.
-EXE_FILE=crtm_ideal_test
+EXE_FILE=crtm_ideal_FDM
 SRC_FILE=$(EXE_FILE).f90
 OBJ_FILE=${SRC_FILE:.f90=.o}
 
@@ -25,7 +25,7 @@ RED=\033[1;31m
 NC=\033[0m # No Color
 
 # The targets
-all: $(EXE_FILE) $(EXE_FILE2)
+all: $(EXE_FILE) 
 
 check: $(EXE_FILE)
 	@-rm -f .signal >/dev/null 2>&1
