@@ -4,7 +4,7 @@ JOBSQUEUE="`which squeue` -u ${USER}"
 SQFORMAT="%.10i %.9P %.25j %.8u %.8T %.10M %.10L %.3D %R"
 ndatepy=$HOME/bin/ndate.py
 
-export machine='hera'
+export machine='s4'
 
 if [ $machine == 'hera' ] ; then
    gsisub=/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/ush/sub_hera
@@ -17,6 +17,7 @@ if [ $machine == 'hera' ] ; then
 elif [ $machine == 's4' ] ; then
    gsisub=/data/users/swei/Git/GSI/ush/sub_s4
    account=star
+   queue=batch
    gsirunscript=$1
    # nprocs per node / nodes
    procs='12/12'

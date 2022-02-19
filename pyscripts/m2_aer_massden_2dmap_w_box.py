@@ -40,33 +40,30 @@ txsize=12
 mpl.rc('axes',titlesize=txsize,labelsize=txsize)
 mpl.rc('xtick',labelsize=txsize)
 mpl.rc('ytick',labelsize=txsize)
-mpl.rc('legend',fontsize='x-large')
-axe_w=5.4; axe_h=3
-quality=300
+mpl.rc('legend',fontsize='large')
+fsave=1; figfmt='png'; quality=300
+axe_w=6; axe_h=4
+
 
 if (machine=='Cheyenne'):
    inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
 elif (machine=='S4'):
    inputpath='/data/users/swei/common/MERRA2'
 
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap'
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap.wbox'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020062212
-edate=2020062212
+sdate=2020091112
+edate=2020091112
 hint=6
-pltvar='dust'
-area='r2o1'
+pltvar='carbon'
+area='NAmer'
+boxarea='Y20Smk1'
 pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
-plt_pts=1
-#
-if (plt_pts):
-   pts_lat=[17.98]
-   pts_lon=[-60.72]
-   ptsize=20
+
 # 
 clridx=[0,11,20,29,38,47,56,65,74,83,92,101,110,119,128]
 cn_cmap=setup_cmap('MPL_YlOrBr',clridx)
@@ -92,6 +89,10 @@ else:
    minlon=(minlon+180)%360-180
    maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
+
+bminlon, bmaxlon, bminlat, bmaxlat, crosszero, cyclic=setarea.setarea(boxarea)
+bminlon=(bminlon+180)%360-180
+bmaxlon=(bmaxlon+180)%360-180
 
 if (pltvar=='dust'):
    varlst=['DU001','DU002','DU003','DU004','DU005']
@@ -122,8 +123,7 @@ elif (pltvar=='total'):
    scalef=1e4
    cnscale=1e4
 
-
-cblb='Column mass density [$\\times\mathrm{10}^{-%i}$ $\mathrm{kg\cdot m^{-2}}$]' %(int(np.log10(scalef)))
+cblb='Column mass density [%.0e $\mathrm{kg\cdot m^{-2}}$]' %(1/scalef)
 cnlvsarr=np.array(cnlvs)*cnscale
 norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
 
@@ -202,20 +202,22 @@ for date in dlist:
     for n in nplotlist:
         if (n<nvars):
            title='%s column mass density' %(varlst[n])
-           outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
+           outname='%s/%s_%s_cmass.w%s.%s.%s'  %(outputpath,area,varlst[n],boxarea,date,figfmt)
         else:
            title='%s column mass density' %(varname)
-           outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
+           outname='%s/%s_%s_all_cmass.w%s.%s.%s' %(outputpath,area,pltvar,boxarea,date,figfmt)
     
         pltdata=cmass[n,:,:]
         fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-        set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+        set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
         cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
-        #ax.set_title(title)
+        ax.set_title(title)
         plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
-                     format='%.2f',fraction=0.04,aspect=40,pad=0.08,label=cblb)
-        if (plt_pts):
-           sc=ax.scatter(pts_lon,pts_lat,s=ptsize,c='w',marker='x')
+                     format='%.2f',fraction=0.045,aspect=40,pad=0.08,label=cblb)
+
+        bx,by=[bminlon,bmaxlon,bmaxlon,bminlon,bminlon],[bminlat,bminlat,bmaxlat,bmaxlat,bminlat]
+        ax.plot(bx, by,color='tab:red')
+
         print(outname)
         fig.savefig(outname,dpi=quality)
         plt.close()
