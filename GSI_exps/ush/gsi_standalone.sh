@@ -2,13 +2,14 @@
 set -x
 #
 # Set experiment name and analysis date
-machine='s4'
-exp="aertest"
-expid=2 # 1: no aer 2: aer  
+machine='hera'
+exp="test_corR_1"
+expid=1 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
 if_iraerdet=Yes
 if_useaerir=Yes
+USE_CORRELATED_OBERRS=Yes
 
 #
 if [ $machine == 'hera' ]; then
@@ -22,6 +23,8 @@ if [ $machine == 'hera' ]; then
    module purge
    source /scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI/modulefiles/modulefile.ProdGSI.hera
    module list
+   gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
+   fixcrtm="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/Libs/CRTM-2.4.0/fix"
 elif [ $machine == 's4' ]; then
    homedir=/data/users/swei/Experiments/${exp}
    scrpts_home=/home/swei/research/GSI_exps
@@ -32,10 +35,13 @@ elif [ $machine == 's4' ]; then
    module purge
    source /data/users/swei/Git/GSI/modulefiles/modulefile.ProdGSI.s4
    module list
+   gsidir="/data/users/swei/Git/GSI"
+   fixcrtm="/data/users/swei/Libs/CRTM-2.4.0/fix_v2.4.0"
 else
    echo 'not supported machine, exit'
    exit 1
 fi
+fixgsi="${gsidir}/fix"
 
 if [ ${if_observer} = Yes ] ; then
   nummiter=0
@@ -65,14 +71,22 @@ case $expid in
   READEXTAER='.false.'
    MERRA2AER='.false.'
   satinfo=${scrpts_home}/dat/controlrun_satinfo.txt
- anavinfo=${scrpts_home}/dat/anavinfo_controlrun
- allskyinfo=$fixgsi/cloudy_radiance_info.txta ;;
+  if [[ $USE_CORRELATED_OBERRS == "Yes" ]]; then
+     anavinfo=${scrpts_home}/dat/anavinfo_controlrun
+  else
+     anavinfo=${scrpts_home}/dat/anavinfo_controlrun_nocorR
+  fi
+  allskyinfo=${scrpts_home}/dat/cloudy_radiance_info.txt ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
   satinfo=${scrpts_home}/dat/fv3aerorad_satinfo.txt
- anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad
- allskyinfo=${scrpts_home}/dat/all-sky_radiance_info.txt ;;
+  if [[ $USE_CORRELATED_OBERRS == "Yes" ]]; then
+     anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad
+  else
+     anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad_nocorR
+  fi
+  allskyinfo=${scrpts_home}/dat/all-sky_radiance_info.txt ;;
 esac
 
 # Set the JCAP resolution which you want.
@@ -108,16 +122,7 @@ logsdir=$homedir/logs
 
 endianness="Big_Endian"
 
-if [ $machine == 'hera' ]; then
-   gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
-   fixcrtm="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/Libs/CRTM-2.4.0/fix"
-elif [ $machine == 's4' ]; then
-   gsidir="/data/users/swei/Git/GSI"
-   fixcrtm="/data/users/swei/Libs/CRTM-2.4.0/fix_v2.4.0"
-   #NDATE="${PROD_UTIL}/bin/ndate"
-fi
 ndate=${NDATE:-/scratch2/NCEPDEV/nwprod/NCEPLIBS/utils/prod_util.v1.1.0/exec/ndate}
-fixgsi="${gsidir}/fix"
 gsiexec=${gsidir}/exec/global_gsi.x
 CATEXEC=${gsidir}/exec/ncdiag_cat.x
 cdump=gdas
@@ -512,6 +517,22 @@ $ncp $anavinfo ./anavinfo
 $ncp $aeroinfo ./aeroinfo
 $ncp $hybens_info ./hybens_info
 $ncp $atmsbeaminfo ./atms_beamwidth.txt
+
+if [ $USE_CORRELATED_OBERRS == "Yes" ];  then
+  if grep -q "Rcov" $anavinfo ;  then
+     if ls ${fixgsi}/Rcov* 1> /dev/null 2>&1; then
+       $ncp ${fixgsi}/Rcov* $tmpdir
+       echo "using correlated obs error"
+     else
+       echo "FATAL ERROR: Satellite error covariance files (Rcov) are missing."
+       echo "Check for the required Rcov files in " $anavinfo
+       exit 1
+     fi
+  fi
+  export MKL_NUM_THREADS=1
+else
+  echo "not using correlated obs error"
+fi
 
 # Copy CRTM coefficient files
 for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do
