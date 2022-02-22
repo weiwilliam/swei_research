@@ -62,9 +62,9 @@ sensor='iasi_metop-a'
 selwvn=962.5
 loop='ges' #ges,anl
 degres=1
+tkfreq=1
 gen_data=0
 gen_plot=1
-tkfreq=1
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)

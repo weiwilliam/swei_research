@@ -44,7 +44,11 @@ loop='ges' #ges,anl
 degres=1
 
 raddfile='diag_'+sensor+'_'+loop+'.'+str(cdate)+'.nc4'
-infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
+#infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
+#tmppath='/data/users/swei/FTPdir/'
+tmppath='/scratch/users/swei/comrot/hazyda_aero/gdas.20200601/06/atmos'
+#tmppath='/data/users/swei/Experiments/aertest/OUTPUT/aertest/2020060106'
+infile1=tmppath+'/'+raddfile
 
 if (os.path.exists(infile1)):
     print('Processing Radfile: %s' %(raddfile))
@@ -52,6 +56,7 @@ if (os.path.exists(infile1)):
     npts=int(ds1.nobs.size/ds1.nchans.size)
     nchs=ds1.nchans.size
     #ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
+    aerdiag=0
     if ('aero_load' in ds1.variables):
         naer=ds1.aero_frac_arr_dim.size
         aerdiag=1
@@ -65,8 +70,8 @@ if (os.path.exists(infile1)):
     sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
     obs1=sim_nbc1+sim1
     if (aerdiag):
-        aero_load=np.reshape(ds1.aero_load.values,(npts,nchs))[:,0]
-        aero_frac=np.reshape(ds1.aero_frac.values,(npts,nchs,naer))[:,0,:]
+        aero_load=np.reshape(ds1.aero_load.values,(npts,nchs))#[:,0]
+        aero_frac=np.reshape(ds1.aero_frac.values,(npts,nchs,naer))#[:,0,:]
         aero_name=ds1.aero_name.split()
 
     tmpds=xa.Dataset({'rlon':(['obsloc'],rlon1[:,0]),
@@ -79,9 +84,9 @@ if (os.path.exists(infile1)):
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})
     if (aerdiag):
-       tmpds=tmpds.assign({'aero_load':(['obsloc'],aero_load)})
+       tmpds=tmpds.assign({'aero_load':(['obsloc','wavenumber'],aero_load)})
        tmpds=tmpds.assign_coords({'naer':aero_name})
-       tmpds=tmpds.assign({'aero_frac':(['obsloc','naer'],aero_frac)})
+       tmpds=tmpds.assign({'aero_frac':(['obsloc','wavenumber','naer'],aero_frac)})
      
 else:
     print('No such file: %s' %(infile1))

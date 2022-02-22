@@ -20,14 +20,14 @@ elif [ $machine == 's4' ] ; then
    queue=batch
    gsirunscript=$1
    # nprocs per node / nodes
-   procs='12/12'
+   procs='20/8'
    #procs='12/16'
    wtime='00:30:00'
    outfile=/data/users/swei/Experiments/runlogs/log.$gsirunscript
 fi
 
-SDATE=2020062212
-EDATE=2020062212
+SDATE=2020060106
+EDATE=2020060106
 CDATE=$SDATE
 
 until [ $CDATE -gt $EDATE ]; do
@@ -38,7 +38,7 @@ until [ $CDATE -gt $EDATE ]; do
    until [ $sqrc -ne 0 ]; do
       $JOBSQUEUE -o "${SQFORMAT}" | grep "$gsirunscript"
       sqrc=$?
-      sleep 60
+      sleep 10
    done
 done
 
