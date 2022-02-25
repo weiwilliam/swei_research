@@ -9,16 +9,16 @@ elif (os_name=='Windows'):
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
 elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
+#    if (os.path.exists('/scratch1')):
+#        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+#        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+#        rootgit='/home/Shih-wei.Wei/research'
+#    elif (os.path.exists('/glade')):
+#        rootpath='/glade/work/swei/output/images'
+#        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+#        rootgit='/glade/u/home/swei/research'
+#        machine='Cheyenne'
+#    elif (os.path.exists('/cardinal')):
         rootpath='/data/users/swei/Images'
         rootarch='/scratch/users/swei/ncdiag'
         rootgit='/home/swei/research'

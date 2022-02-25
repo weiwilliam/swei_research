@@ -8,6 +8,7 @@ Aerosol detection based on CADS 3.1 from NWP SAF
 
 """
 import sys, os, platform
+machine='S4'
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -16,23 +17,27 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 os_name=platform.system()
-if (os_name=='Darwin'):
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='S4'):
+    rootarch='/data/users/swei/Experiments'
+    rootpath='/data/users/swei'
+    rootgit='/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
-import scipy.stats
+import cProfile, pstats, io
+from pstats import SortKey
+
+#pr = cProfile.Profile()
+#pr.enable()
 
 tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
@@ -42,30 +47,30 @@ mpl.rc('legend',fontsize='large')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=3 ; axe_h=3 ; quality=300
 
-# Projection setting
-proj=ccrs.PlateCarree(globe=None)
-
 # Plotting setup
 sdate=2020061000
 edate=2020092118
 aertype='All'
 hint=6
-exp='aerqc_corR_noaeffR'
+exp='aerqc_corR'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
 binsize=0.1
+version='v4'
+n_seg=8
+seg=7
 
 # Data path setup
-archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
+archpath=rootarch+'/AeroObsStats/OUTPUT'
 fixpath=rootgit+'/GSI_exps/fix'
-outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats'
+outpath=rootarch+'/AeroObsStats'
 archdir=archpath+'/'+exp
 print(archpath)
 print(fixpath)
 print(outpath)
 print(archdir)
-savedir=outpath+'/SD_LUT/'+aertype
+savedir=outpath+'/SD_LUT'
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -105,11 +110,10 @@ date=dlist[0]
 raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
 infile1=archdir+'/'+str(date)+'/'+raddfile
 if (os.path.exists(infile1)):
-    print('Processing the first Radfile: %s' %(raddfile))
+    print('Processing the first Radfile: %s' %(raddfile),flush=1)
     ds1=xa.open_dataset(infile1)
     npts=int(ds1.nobs.size/ds1.nchans.size)
     nchs=ds1.nchans.size
-    ds1=ds1.assign_coords(nuchan=('wavenumber',ds1.wavenumber))
     ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
     wavelength=1e+04/ds1.wavenumber
     chkwvn_list=ds1.wavenumber.values
@@ -118,63 +122,65 @@ if (os.path.exists(infile1)):
                               'iuse':(['wavenumber'],iuse_array)},
                              coords={'wavenumber':ds1.wavenumber.values})
 else:
-    print('%s is not existing'%(raddfile))
+    print('%s is not existing'%(raddfile),flush=1)
 
-for date in dlist:
-    raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
-    infile1=archdir+'/'+str(date)+'/'+raddfile
+l_seg=int(nchs/n_seg)
+seg_ptarr=np.arange(0,nchs,l_seg)
+seg_s=seg_ptarr[seg]
+if (seg+1==n_seg):
+   seg_e=nchs
+else:
+   seg_e=seg_ptarr[seg+1]
 
-    if (os.path.exists(infile1)):
-        print('Processing Radfile: %s' %(raddfile))
-        ds1=xa.open_dataset(infile1)
-        npts=int(ds1.nobs.size/ds1.nchans.size)
-        nchs=ds1.nchans.size
-        ds1=ds1.assign_coords(nuchan=('wavenumber',ds1.wavenumber))
-        ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-        wavelength=1e+04/ds1.wavenumber
-        # chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
-        #usedchidx=np.where(ds1.iuse_rad==1)[0]
-        #unusedchidx=np.where(ds1.iuse_rad==-1)[0]
-        #wvldiff=abs(np.subtract(wavelength[usedchidx],chkwvl))
-        #chkwvlidx=usedchidx[np.where(wvldiff==wvldiff.min())[0][0]]
-        #print('Check wavelength: %.2f' %(wavelength[chkwvlidx]))
-    else:
-        print('%s is not existing'%(raddfile))
-        continue
-    
-    # Observation lat/lon
-    rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))
-    rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
-    qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
-    # obs1=np.reshape(ds1.Observation.values,(npts,nchs))
-    sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
-    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
-    varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
-    # omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
-    omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
-    obs1=omb_nbc1+sim1
-    tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1[:,0]),
-                      'rlat1':(['obsloc'],rlat1[:,0]),
-                      'qcflag':(['obsloc','wavenumber'],qcflags),
-                      'tb_obs':(['obsloc','wavenumber'],obs1),
-                      'tb_sim':(['obsloc','wavenumber'],sim1),
-                      'tb_clr':(['obsloc','wavenumber'],clr1),
-                      'varinv':(['obsloc','wavenumber'],varinv1),
-                      'omb_nbc':(['obsloc','wavenumber'],omb_nbc1)},
-                     coords={'obsloc':np.arange(npts),
-                             'wavenumber':ds1.wavenumber.values})
-    # tmpds=tmpds.sel(wavenumber=chkwvn)
-    
-    if (date==str(sdate)):
-        ds_all=tmpds
-    else:
-        ds_all=xa.concat((ds_all,tmpds),dim='obsloc')
-        
 icount=0
-for chkwvn in chkwvn_list:
-# for chkwvn in [962.5]:
-    print('Processing for channel with wavenumber '+str(chkwvn)+' cm^-1')
-    ds_chk=ds_all.sel(wavenumber=chkwvn)
+for chkwvn in chkwvn_list[seg_s:seg_e]:
+#for chkwvn in [962.5]:
+    print('Processing for channel with wavenumber '+str(chkwvn)+' cm^-1',flush=1)
+    for date in dlist:
+        raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
+        infile1=archdir+'/'+str(date)+'/'+raddfile
+    
+        if (os.path.exists(infile1)):
+            #print('Processing Radfile: %s' %(raddfile),flush=1)
+            ds1=xa.open_dataset(infile1)
+            npts=int(ds1.nobs.size/ds1.nchans.size)
+            nchs=ds1.nchans.size
+            #ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
+            #wavelength=1e+04/ds1.wavenumber
+        else:
+            #print('%s is not existing'%(raddfile),flush=1)
+            continue
+        
+        # Observation lat/lon
+        rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))[:,0]
+        rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))[:,0]
+        qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
+        # obs1=np.reshape(ds1.Observation.values,(npts,nchs))
+        sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
+        clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
+        varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
+        # omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
+        omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
+        obs1=omb_nbc1+sim1
+        tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1),
+                          'rlat1':(['obsloc'],rlat1),
+                          'qcflag':(['obsloc','wavenumber'],qcflags),
+                          'tb_obs':(['obsloc','wavenumber'],obs1),
+                          'tb_sim':(['obsloc','wavenumber'],sim1),
+                          'tb_clr':(['obsloc','wavenumber'],clr1),
+                          'varinv':(['obsloc','wavenumber'],varinv1),
+                          'omb_nbc':(['obsloc','wavenumber'],omb_nbc1)},
+                         coords={'obsloc':np.arange(npts),
+                                 'wavenumber':ds1.wavenumber.values})
+        tmpds=tmpds.sel(wavenumber=chkwvn)
+        
+        if (date==str(sdate)):
+            ds_chk=tmpds
+        else:
+            ds_chk=xa.concat((ds_chk,tmpds),dim='obsloc')
+
+    print('Finish loading data for channel with wavenumber '+str(chkwvn)+' cm^-1',flush=1)
+    #ds_chk=ds_all#.sel(wavenumber=chkwvn)
     tb_sim=ds_chk.tb_sim
     tb_clr=ds_chk.tb_clr
     tb_obs=ds_chk.tb_obs
@@ -191,16 +197,16 @@ for chkwvn in chkwvn_list:
     
     good_msk=(ds_chk.qcflag==0.)
     gross_msk=(ds_chk.qcflag==3.)
-    # cld_msk=(ds_chk.qcflag==7.)
+    cld_msk=(ds_chk.qcflag==7.)
     tzr_msk=(ds_chk.qcflag==10.)
     aer_msk=(ds_chk.qcflag==13.)
     sfcir_msk=(ds_chk.qcflag==53.)
     bust_msk=(ds_chk.qcflag==55.)
-    # bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
+    #bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
 
     ori_msk=((good_msk)|(aer_msk)|(gross_msk)|(sfcir_msk)|(tzr_msk))
     ori_total=np.count_nonzero(ori_msk)
-    final_qc_msk=(good_msk)|((aer_msk)&(~bust_msk))|(gross_msk)
+    final_qc_msk=(good_msk)|(aer_msk)
 
     halfbin=0.5*binsize
     hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
@@ -243,8 +249,15 @@ for chkwvn in chkwvn_list:
         df_all=pd.concat((df_all,tmpdf))
     icount+=1
 
-df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new.v3.csv')
-# df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
+df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new_seg'+str(seg)+'.'+version+'.csv')
 
+#pr.disable()
+#s = io.StringIO()
+#sortby = SortKey.CUMULATIVE
+#ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+#ps.print_stats()
+#print(s.getvalue())
+
+# df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
 # ds_all=ds_all.assign({'obserr':(['wavenumber'],err_array)})
 # ds_all=ds_all.sel(wavenumber=spectral_range)

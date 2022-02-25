@@ -1,0 +1,2 @@
+paths:
+UFS-RAQMS Model half degree: /ships19/models2/lenzen/FV3GFS.9.0.2019/O3.CONTROL/C192/5DEGLL
