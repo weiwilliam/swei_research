@@ -15,7 +15,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
-machine='S4'
+machine='Desktop'
 os_name=platform.system()
 if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
@@ -82,9 +82,9 @@ elif (cbori=='horizontal'):
    cb_pad=0.1
 
 # Data path setup
-archpath=rootarch+'/AeroObsStats/OUTPUT'
-lutpath=rootpath+'/Experiments/AeroObsStats/SD_LUT'
-outpath=rootpath+'/Images/'
+archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
+lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/images'
 archdir=archpath+'/'+exp
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
@@ -197,9 +197,25 @@ for chkwvn in [962.5]:
     wrk_df.insert(3,'OMB',omb)
     wrk_df.insert(4,'Ae',aereff)
 
-    filter_ori=(wrk_df['qcflag']==0.)&(wrk_df['qcflag']==13.)
+    filter_ori=(wrk_df['qcflag']==0.0)|(wrk_df['qcflag']==13.0)
     filter_bst=(abs(wrk_df['OMB'])>3)&(abs(wrk_df['OMB'])>1.8*wrk_df['Ae'])
     filter_fnl=(filter_ori)&(~filter_bst)
+    
+    ori_df=wrk_df.loc[filter_ori,:]
+    fnl_df=wrk_df.loc[filter_fnl,:]
+    
+    ori_df['Ae_cut']=pd.cut(ori_df['Ae'],bins=hist_x_edge)
+    fnl_df['Ae_cut']=pd.cut(fnl_df['Ae'],bins=hist_x_edge)
+    
+    ori_df['bin_mean']=(ori_df.groupby('Ae_cut')['OMB'].transform('mean'))
+    fnl_df['bin_mean']=(fnl_df.groupby('Ae_cut')['OMB'].transform('mean'))
+    
+    ori_df['bin_sd']=(ori_df.groupby('Ae_cut')['OMB'].transform(np.std))
+    fnl_df['bin_sd']=(fnl_df.groupby('Ae_cut')['OMB'].transform(np.std))
+    
+    ori_bin_df=ori_df[['Ae_cut','bin_mean','bin_sd']]
+    fnl_bin_df=fnl_df[['Ae_cut','bin_mean','bin_sd']]
+    
 #        
 #    qc0_msk=(ds_chk.qcflag==0.)
 #    # qc7_msk=(ds_chk.qcflag==7.)
@@ -211,7 +227,7 @@ for chkwvn in [962.5]:
 #    final_qc_msk=(ori_msk)&(~((abs(omb)>3)&(abs(omb)>1.8*aereff)))&(abs(omb)<30.)
 #
 #    if (plthist_mean_sd):
-#        savedir=outpath+'/'+exp+'_newQC/hist/'+aertype
+#        savedir=outpath+'/'+exp+'/hist/'+aertype
 #        if ( not os.path.exists(savedir) ):
 #            os.makedirs(savedir)
 #        
