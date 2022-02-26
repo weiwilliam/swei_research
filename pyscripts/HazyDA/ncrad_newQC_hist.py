@@ -16,14 +16,19 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 os_name=platform.system()
-if (os_name=='Darwin'):
+os_name=platform.system()
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
+elif (machine=='S4'):
+    rootarch='/data/users/swei/Experiments'
+    rootpath='/data/users/swei'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/home/Shih-wei.Wei/research'
@@ -126,15 +131,15 @@ for date in dlist:
         continue
     
     # Observation lat/lon
-    rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))
-    rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
+    rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))[:,0]
+    rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))[:,0]
     qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
     obs1=np.reshape(ds1.Observation.values,(npts,nchs))
     sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
     clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
     varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
-    tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1[:,0]),
-                      'rlat1':(['obsloc'],rlat1[:,0]),
+    tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1),
+                      'rlat1':(['obsloc'],rlat1),
                       'qcflag':(['obsloc','wavenumber'],qcflags),
                       'tb_obs':(['obsloc','wavenumber'],obs1),
                       'tb_sim':(['obsloc','wavenumber'],sim1),
