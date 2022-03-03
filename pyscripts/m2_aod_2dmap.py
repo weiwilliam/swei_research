@@ -45,9 +45,9 @@ if ( not os.path.exists(outputpath) ):
 sdate=2020082200
 edate=2020093018
 hint=6
-pltvar='total'
+pltvar='AODANA'
 area='Glb'
-pltall=0 # 0: total only 1: sub species included
+pltave=1 # 0: single cycle only 1: time average
 m2tag='inst3_2d_gas_Nx'
 tkfreq=1
 
@@ -101,11 +101,11 @@ for date in dlist:
 # MERRA2_401.inst3_3d_aer_Nv.20200916_12Z.nc4
     infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
     ds=xa.open_dataset(infile)
-    ds=ds.sel(time=ds.time[0])
+    tmpvar=ds[pltvar]
 
     outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
     
-    pltdata=ds.AODANA
+    pltdata=tmpvar.sel(time=ds.time[0])
     fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
     set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
     cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
@@ -115,5 +115,25 @@ for date in dlist:
     print(outname)
     fig.savefig(outname,dpi=quality)
     plt.close()
+
+    if (pltave):
+       if (dates_count==0):
+          var=tmpvar
+       else:
+          var=xa.concat((var,tmpvar),dim='time')
+
+       if (date==str(edate)):
+          outname='%s/%s_%s.%s_%s.png' %(outputpath,area,pltvar,sdate,edate)
+
+          pltdata=var.mean(dim='time')
+          fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+          set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+          cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
+          ax.set_title(date,loc='left')
+          plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
+                       fraction=0.045,aspect=40,pad=0.08,label=cblb)
+          print(outname)
+          fig.savefig(outname,dpi=quality)
+          plt.close()
  
     dates_count+=1

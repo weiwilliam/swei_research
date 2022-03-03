@@ -8,43 +8,41 @@ Aerosol detection based on CADS 3.1 from NWP SAF
 
 """
 import sys, os, platform
+machine='S4'
 os_name=platform.system()
-if (os_name=='Darwin'):
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
-        rootpath='/data/users/swei/Experiments/AeroObsStats'
-        rootarch='/scratch/users/swei/ncdiag'
-        rootgit='/home/swei/research'
-        machine='S4'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/data/users/swei/ResearchData'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
 
 # Plotting setup
-exp='AerObserver'
+exp='aerqc_corR'
 sensor='iasi_metop-a'
 lutfmt='csv'
-ver='v3'
+ver='v4'
 nchs=616
 
 # Data path setup
-lutpath=rootpath+'/SD_LUT'
+lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
 
 satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats_new.'+ver+'.'+lutfmt
 if (lutfmt=='xlsx'):
@@ -52,7 +50,7 @@ if (lutfmt=='xlsx'):
 elif (lutfmt=='csv'):
    lutdf=pd.read_csv(satstats_file)
 
-filter = (lutdf.SD_o<lutdf.SD_max)&(lutdf.iuse==1.)
+filter = (lutdf.Aer_sen==1.)&(lutdf.iuse==1.)
 
 nrows=lutdf.shape[0]
 lutdf['ich']=np.arange(1,nrows+1)

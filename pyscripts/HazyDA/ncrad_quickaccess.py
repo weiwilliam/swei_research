@@ -36,7 +36,7 @@ inputpath=rootarch
 
 # Plotting setup
 expname='hazyda_aero'
-cdate=2020060106
+cdate=2020060112
 hint=6
 sensor='iasi_metop-a'
 selwvn=962.5
@@ -46,8 +46,7 @@ degres=1
 raddfile='diag_'+sensor+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
 #tmppath='/data/users/swei/FTPdir/'
-tmppath='/scratch/users/swei/comrot/hazyda_aero/gdas.20200601/06/atmos'
-#tmppath='/data/users/swei/Experiments/aertest/OUTPUT/aertest/2020060106'
+tmppath='/data/users/swei/archive/hazyda_aero/2020060112'
 infile1=tmppath+'/'+raddfile
 
 if (os.path.exists(infile1)):
