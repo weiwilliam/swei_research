@@ -38,15 +38,15 @@ axe_w=10; axe_h=5
 quality=300
 
 inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap/AOD'
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap/AOD_new'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
 sdate=2020082200
-edate=2020093018
+edate=2020082218
 hint=6
 pltvar='AODANA'
-area='Glb'
+area='NAmer'
 pltave=1 # 0: single cycle only 1: time average
 m2tag='inst3_2d_gas_Nx'
 tkfreq=1
@@ -102,6 +102,8 @@ for date in dlist:
     infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
     ds=xa.open_dataset(infile)
     tmpvar=ds[pltvar]
+    if (area!='Glb'):
+       tmpvar=tmpvar.sel(lon=slice(minlon,maxlon),lat=slice(minlat,maxlat))
 
     outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
     
@@ -123,13 +125,14 @@ for date in dlist:
           var=xa.concat((var,tmpvar),dim='time')
 
        if (date==str(edate)):
-          outname='%s/%s_%s.%s_%s.png' %(outputpath,area,pltvar,sdate,edate)
+          outname='%s/%s_%s.mean.%s_%s.png' %(outputpath,area,pltvar,sdate,edate)
+          title_str='%s-%s'%(sdate,edate)
 
           pltdata=var.mean(dim='time')
           fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
           set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
           cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-          ax.set_title(date,loc='left')
+          ax.set_title(title_str,loc='left')
           plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
                        fraction=0.045,aspect=40,pad=0.08,label=cblb)
           print(outname)

@@ -1,0 +1,7 @@
+rda collection path
+ /glade/collections/rda/data/
+
+NCEPADP = ds337.0
+NCEPADPAIR = ds351.0
+NCEPADPSFC = ds461.0
+
