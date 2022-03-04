@@ -117,7 +117,7 @@ for date in dlist:
         nchs=ds1.nchans.size
         ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
         wavelength=1e+04/ds1.wavenumber
-        chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
+        chkwvn_list=ds1.wavenumber.sel(wavenumber=ds1.wavenumber[ds1.use_flag==1])
         dates_count+=1
     else:
         print('%s is not existing'%(raddfile))
@@ -153,11 +153,13 @@ for date in dlist:
 total_obscounts=ds_all.obsloc.size
 ds_all=ds_all.assign_coords(obsloc=np.arange(total_obscounts))
 
-satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.'+lutfmt
+satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats_new.v4.'+lutfmt
 if (lutfmt=='xlsx'):
    lutdf=pd.read_excel(satstats_file)
 elif (lutfmt=='csv'):
    lutdf=pd.read_csv(satstats_file)
+chk_filter=(lutdf['iuse']==1.0)&(lutdf['Aer_sen']==1.0)
+chkwvn_list=lutdf.loc[chk_filter,:]['wavenumber'].tolist()
 
 binsize=0.1
 halfbin=0.5*binsize
