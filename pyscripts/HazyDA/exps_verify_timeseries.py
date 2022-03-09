@@ -1,4 +1,25 @@
 import sys, os, platform
+machine='S4'
+if (machine=='MBP'):
+    rootpath='/Users/weiwilliam'
+    rootarch='/Volumes/WD2TB/ResearchData'
+elif (machine=='Desktop'):
+    rootpath='F:\GoogleDrive_NCU\Albany'
+    rootarch='F:\ResearchData'
+    rootgit='F:\GitHub\swei_research'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
+sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -8,30 +29,6 @@ import matplotlib.colors as mpcrs
 import matplotlib.dates as mdates
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
-os_name=platform.system()
-if (os_name=='Darwin'):
-    rootpath='/Users/weiwilliam'
-    rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
-    rootpath='F:\GoogleDrive_NCU\Albany'
-    rootarch='F:\ResearchData'
-    rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
-        rootpath='/data/users/swei/Images'
-        rootarch='/data/users/swei'
-        rootgit='/home/swei/research'
-        machine='S4'
-sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap

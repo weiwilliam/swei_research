@@ -6,6 +6,27 @@ Created on Wed Jul 18 12:41:00 2018
 @author: weiwilliam
 """
 import sys, os, platform
+machine='S4'
+if (machine=='MBP'):
+    rootpath='/Users/weiwilliam'
+    rootarch='/Volumes/WD2TB/ResearchData'
+elif (machine=='Desktop'):
+    rootpath='F:\GoogleDrive_NCU\Albany'
+    rootarch='F:\ResearchData'
+    rootgit='F:\GitHub\swei_research'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
+sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -15,30 +36,6 @@ import matplotlib.colors as mpcrs
 import matplotlib.dates as mdates
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
-os_name=platform.system()
-if (os_name=='Darwin'):
-    rootpath='/Users/weiwilliam'
-    rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
-    rootpath='F:\GoogleDrive_NCU\Albany'
-    rootarch='F:\ResearchData'
-    rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
-        rootpath='/data/users/swei/Images'
-        rootarch='/scratch/users/swei/ncdiag'
-        rootgit='/home/swei/research'
-        machine='S4'
-sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
@@ -56,17 +53,18 @@ diagsuffix='nc4'
 minussign=u'\u2212'
 #mpl.rc('lines',linewidth=1.2)
 
-outputpath=rootpath+'/HazyDA/ncdiag/conv'
+outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv'
 inputpath=rootarch
 
 varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
+bufrtype='189' # SST: 181-199
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 enum=explist.shape[0]
 
 sdate=2020061000
-edate=2020071018
+edate=2020063018
 hint=6
 
 loop='anl' #ges,anl
@@ -75,7 +73,7 @@ if (loop=='ges'):
 elif (loop=='anl'):
    lpstr='OMA'
 
-area='r2o1'
+area='TRO'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
 
@@ -174,6 +172,8 @@ for var in varlist:
 
         iuse1=ds1.Analysis_Use_Flag
         iuse2=ds2.Analysis_Use_Flag
+        type1=ds1.Observation_Type
+        type2=ds2.Observation_Type
         
         mask1=(~np.isnan(ds1.nobs))
         mask2=(~np.isnan(ds2.nobs))
@@ -185,6 +185,10 @@ for var in varlist:
         if (useqc):
             mask1=(mask1)&(iuse1==1)
             mask2=(mask2)&(iuse2==1)
+
+        if (bufrtype!='all'):
+            mask1=(mask1)&(type1==int(bufrtype))
+            mask2=(mask2)&(type2==int(bufrtype))
         
         if (var=='ps' or var=='sst' or var=='tcp'):
             dpar1=ds1.Obs_Minus_Forecast_adjusted
@@ -229,7 +233,7 @@ for var in varlist:
                 
     if (var=='ps' or var=='sst' or var=='tcp'):
         fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
-        fig.subplots_adjust(hspace=0)
+        fig.subplots_adjust(hspace=0.1)
         for a in np.arange(2):
             ax[a].set_prop_cycle(color=['red','blue'])
             ax[a].grid()
@@ -249,8 +253,8 @@ for var in varlist:
         ax[0].legend(lglist[0,:])
         ax[1].legend(lglist[1,:])
         if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_BIASRMS.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg), dpi=200)
+            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.png' 
+                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype), dpi=quality)
             plt.close()
         
     else:
@@ -278,13 +282,13 @@ for var in varlist:
         ax[1].grid()
         ax[2].grid()
         if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_BIASRMS.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg), dpi=200)
+            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.png' 
+                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype), dpi=quality)
             plt.close()
         
         for z in zpltlst:
             fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
-            fig.subplots_adjust(hspace=0)
+            fig.subplots_adjust(hspace=0.1)
             for a in np.arange(2):
                 ax[a].set_prop_cycle(color=['red','blue'])
                 ax[a].grid()
@@ -305,8 +309,8 @@ for var in varlist:
             ax[1].legend(lglist[1,:])
             
             if (fsave):
-                fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%i_%s_BIASRMS.png' 
-                            %(area,loop,var,explist[0],explist[1],pbot[z],qcflg), dpi=200)
+                fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.png' 
+                            %(area,loop,var,explist[0],explist[1],pbot[z],qcflg,bufrtype), dpi=quality)
                 plt.close()
                 
     uidx=uidx+1
