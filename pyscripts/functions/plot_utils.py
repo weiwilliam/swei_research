@@ -80,7 +80,7 @@ def setupax_2dmap(cornerlatlon,area,proj,lbsize=None):
     gl.xlabel_style={'size':lbsize}
     gl.ylabel_style={'size':lbsize}
 
-    return fig,ax
+    return fig,ax,gl
 
 def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,clrlst,styllst,marker_lst,title,lglst,yinvert,xrefs,fig=None,ax=None,lgloc=None):
     if not fig: fig=plt.gcf()

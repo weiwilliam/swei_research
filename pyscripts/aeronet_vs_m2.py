@@ -1,30 +1,36 @@
 import sys, os, platform
-os_name=platform.system()
-if (os_name=='Darwin'):
+machine='Cheyenne'
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
 from utils import setup_cmap, ndate, latlon_news
-from plot_utils import set_size
+from plot_utils import setupax_2dmap, set_size
+import setuparea as setarea
 import xarray as xa
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.markers as mrk
 import matplotlib as mpl
+import cartopy.crs as ccrs
+import cartopy.feature as cft
 from datetime import datetime, timedelta
 
 # Env and Plot setting
@@ -32,25 +38,31 @@ mpl.rc('axes',titlesize=18,labelsize=12)
 mpl.rc('xtick',labelsize=12)
 mpl.rc('ytick',labelsize=12)
 mpl.rc('legend',fontsize='large')
-axe_w=8; axe_h=3
+axe_w=8; axe_h=3; ptsize=20
 quality=300
 nofill_dtriangle=mrk.MarkerStyle(marker='v',fillstyle='none')
 
+# Constant configuration
+proj=ccrs.PlateCarree()
 
+
+# Path setup
 inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
-outputpath=rootpath+'/Dataset/M2vsAERONET/Timeseries2'
+outputpath=rootpath+'/Dataset/M2vsAERONET/Timeseries'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
+sitelistpath=rootpath+'/Dataset/M2vsAERONET/SiteLists'
+if ( not os.path.exists(sitelistpath) ):
+    os.makedirs(sitelistpath)
 
-#station_list=['PNNL','Fort_McMurray','']
-
-#station='Boulder'
-
+#
 sdate=2020082200
 edate=2020093018
 hint=6
 m2tag='inst3_2d_gas_Nx'
 do_mean=1
+area='CONUS'
+pltsitemap=1
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -74,21 +86,49 @@ while (cdate<=edate):
     tnum=tnum+1
     cdate=ndate(hint,cdate)
 
-aeronet_arch='/glade/work/swei/common/AOD/AOD20/TMP'
-#aeronet_arch='/glade/work/swei/common/AOD/AOD20/ALL_POINTS'
+# Setup plotting area
+minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
+print(minlat,maxlat,minlon,maxlon,crosszero,cyclic)
+if (area=='Glb'):
+   minlon=-180. ; maxlon=180.
+else:
+   minlon=(minlon+180)%360-180
+   maxlon=(maxlon+180)%360-180
+cornerll=[minlat,maxlat,minlon,maxlon]
+
+#aeronet_arch='/glade/work/swei/common/AOD/AOD20/TMP'
+aeronet_arch='/glade/work/swei/common/AOD/AOD20/ALL_POINTS'
 #infile=aeronet_arch+'/19930101_20211106_'+station+'.lev20'
 filelist=os.listdir(aeronet_arch)
 filelist.sort()
 
+prefiltered=0
+sitelist_file='%s/%s.%s_%s.txt' %(sitelistpath,area,sdate,edate)
+if ( os.path.exists(sitelist_file) ):
+   prefilter_df=pd.read_csv(sitelist_file)
+   prefiltered=1
+
+staidx=0
 for infile in filelist:
     df=pd.read_csv(aeronet_arch+'/'+infile,skiprows=6,encoding_errors='ignore')
     df_datetime=pd.to_datetime(df['Date(dd:mm:yyyy)']+' '+df['Time(hh:mm:ss)'],format="%d:%m:%Y %H:%M:%S")
     
     tmpdf=df[["AERONET_Site_Name","Site_Latitude(Degrees)","Site_Longitude(Degrees)","AOD_500nm"]]
     station_name=tmpdf["AERONET_Site_Name"].values[0]
+
+    if ( prefiltered and not prefilter_df["station"].str.contains(station_name).any() ):
+       print('%s is not in the prefiltered list' %(station_name))
+       continue
+
     tmpdf.insert(0,"Datetime",df_datetime)
-    filter=((tmpdf["Datetime"]<=date2_p15m)&(tmpdf["Datetime"]>=date1_m15m)&
-            (tmpdf["AOD_500nm"]>=0.))
+    if (area!='Glb'):
+       filter=((tmpdf["Site_Latitude(Degrees)"]<=maxlat)&(tmpdf["Site_Latitude(Degrees)"]>=minlat)&
+               (tmpdf["Site_Longitude(Degrees)"]<=maxlon)&(tmpdf["Site_Longitude(Degrees)"]>=minlon)&
+               (tmpdf["Datetime"]<=date2_p15m)&(tmpdf["Datetime"]>=date1_m15m)&
+               (tmpdf["AOD_500nm"]>=0.))
+    else:
+       filter=((tmpdf["Datetime"]<=date2_p15m)&(tmpdf["Datetime"]>=date1_m15m)&
+               (tmpdf["AOD_500nm"]>=0.))
     tmpdf=tmpdf.loc[filter,:]
     if (tmpdf.shape[0]==0):
         print('%s : No available data' %(station_name))
@@ -177,4 +217,35 @@ for infile in filelist:
     fig.savefig(outname,dpi=quality)
     plt.close()
 
+    tmp_sites_df=pd.DataFrame(data={'station':station_name,'latitude':stalat,'longitude':stalon},
+                              index=[staidx])
+    if (staidx==0):
+       sites_df=tmp_sites_df
+    else:
+       sites_df=pd.concat([sites_df,tmp_sites_df])
 
+    if ( not os.path.exists(sitelist_file) ):
+       sites_df.to_csv(sitelist_file,index=0)
+
+    staidx+=1
+
+if (pltsitemap):
+   fig2,ax2,gl=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+   set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95,ax=ax2)
+
+   ax2.scatter(sites_df['longitude'],sites_df['latitude'],s=ptsize,c='r',marker='s',edgecolors='k')
+
+   for i in np.arange(staidx):
+       sta=' %s' %(sites_df['station'].values[i])
+       lon=sites_df['longitude'].values[i]
+       lat=sites_df['latitude'].values[i]
+       ax2.annotate( sta, xy=(lon,lat), zorder=9 )
+
+   gl.xlines=False
+   gl.ylines=False
+   ax2.add_feature(cft.BORDERS,zorder=2)
+   ax2.add_feature(cft.STATES,zorder=2)
+
+   sitemapname='%s/%s_sitemap.%s_%s.png' %(outputpath,area,sdate,edate)
+   fig2.savefig(sitemapname,dpi=quality)
+   plt.close()

@@ -124,6 +124,8 @@ def setarea(areaname):
         minlat=42.;maxlat=55.;minlon=254.;maxlon=267.
     elif (areaname == 'NYS'): # 2020091500
         minlat=40.;maxlat=50.;minlon=270.;maxlon=290.
+    elif (areaname == 'CONUS'): # 2020091500
+        minlat=28.; maxlat=52.; minlon=235.; maxlon=285.
     else:
         print('Unknown area! Available lists: '
               'Glb | NH | SH | NAfr | TAfr  | Asia | EAsia|'
