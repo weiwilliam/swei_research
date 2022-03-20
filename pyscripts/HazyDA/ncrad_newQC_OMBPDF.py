@@ -8,6 +8,27 @@ Aerosol detection based on CADS 3.1 from NWP SAF
 
 """
 import sys, os, platform
+machine='S4'
+if (machine=='MBP'):
+    rootpath='/Users/weiwilliam'
+    rootarch='/Volumes/WD2TB/ResearchData'
+elif (machine=='Desktop'):
+    rootpath='F:\GoogleDrive_NCU\Albany'
+    rootarch='F:\ResearchData'
+    rootgit='F:\GitHub\swei_research'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
+sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -15,15 +36,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
-os_name=platform.system()
-if (os_name=='Darwin'):
-    rootpath='/Users/weiwilliam'
-    rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
-    rootpath='F:\GoogleDrive_NCU\Albany'
-    rootarch='F:\ResearchData'
-    rootgit='F:\GitHub\swei_research'
-sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
@@ -46,9 +58,9 @@ sdate=2020082200
 edate=2020092118
 aertype='Smoke'
 hint=6
-exp0='GDAS'
-exp1='aerqc_corR'
-lglst=['Clear','Hazy']
+exp0='hazyda_ctrl'
+exp1='hazyda_aero'
+lglst=['CTL','AER']
 sensor='iasi_metop-a'
 spectral_range=slice(600,1300)
 loop='ges' #ges,anl
@@ -76,11 +88,11 @@ else:
     bcflg='nobc'
 
 # Data path setup
-archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
-lutpath='F:\GoogleDrive_NCU\Albany\AlbanyWork\Prospectus\Experiments\AeroObsStats\SD_LUT\All'
-outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/images/'
-archdir0=archpath+'/'+exp0
-archdir1=archpath+'/'+exp1
+lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/rad'
+archdir0=rootarch+'/'+exp0
+archdir1=rootarch+'/'+exp1
+
 savedir=outpath+'/'+exp1+'/pdf/'+aertype
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
@@ -208,9 +220,7 @@ for date in dlist:
 total_obscounts=ds_all1.obsloc.size
 ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
 
-# satinfo_excel=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.xlsx'
-# lutdf=pd.read_excel(satinfo_excel)
-satinfo_csv=lutpath+'/'+sensor+'_'+str(nchs1)+'_stats_new.v3.csv'
+satinfo_csv=lutpath+'/'+sensor+'_'+str(nchs1)+'_stats_new.v4.csv'
 lutdf=pd.read_csv(satinfo_csv)
 filter = ((lutdf.Aer_sen==1.)&(lutdf.iuse==1.)&
           (lutdf.wavenumber>=spectral_range.start)&

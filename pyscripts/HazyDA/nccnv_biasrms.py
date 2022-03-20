@@ -56,15 +56,15 @@ minussign=u'\u2212'
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv'
 inputpath=rootarch
 
-varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
+varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
-bufrtype='189' # SST: 181-199
+bufrtype='all' # SST: 181-199
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 enum=explist.shape[0]
 
 sdate=2020061000
-edate=2020063018
+edate=2020071018
 hint=6
 
 loop='anl' #ges,anl
@@ -104,7 +104,7 @@ xdates= mdates.drange(date1, xdate2, delta)
 
 rule = rrulewrapper(DAILY, byhour=6, interval=5)
 loc = RRuleLocator(rule)
-formatter = DateFormatter('%Y%h %n %d %Hz')
+formatter = DateFormatter('%Y %h %n %d %Hz')
 
 # Calculate how many cases are going to do statistic.
 tnum=0
@@ -273,7 +273,7 @@ for var in varlist:
         ax[1].plot(rmsplot,pbot,'--')
         ax[1].set_title('RMS %s [%s]'%(lpstr,unitlist[uidx]))
         ax[2].plot(diffplot,pbot)
-        ax[2].set_title(expnlist[1]+'-'+expnlist[0])
+        ax[2].set_title(expnlist[1]+minussign+expnlist[0])
         ax[0].invert_yaxis()
         fig.suptitle('%s [%s]' %(var.upper(),unit))
         ax[0].legend(expnlist)

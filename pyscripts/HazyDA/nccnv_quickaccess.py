@@ -47,32 +47,27 @@ if (os.path.exists(infile1)):
     print('Processing Cnvfile: %s' %(cnvdfile))
     ds1=xa.open_dataset(infile1)
     
-    rlat1=ds1.Latitude.values
-    rlon1=ds1.Longitude.values
-    rlon1=(rlon1+180)%360-180
-#    qcflags=ds1.QC_Flag.values
-#    sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
-#    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
-#    sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
-#    obs1=sim_nbc1+sim1
-#    if (aerdiag):
-#        aero_load=np.reshape(ds1.aero_load.values,(npts,nchs))#[:,0]
-#        aero_frac=np.reshape(ds1.aero_frac.values,(npts,nchs,naer))#[:,0,:]
-#        aero_name=ds1.aero_name.split()
-#
-#    tmpds=xa.Dataset({'rlon':(['obsloc'],rlon1[:,0]),
-#                      'rlat':(['obsloc'],rlat1[:,0]),
-#                      'qcflag':(['obsloc','wavenumber'],qcflags),
-#                      'tb_obs':(['obsloc','wavenumber'],obs1),
-#                      'tb_sim':(['obsloc','wavenumber'],sim1),
-#                      'tb_clr':(['obsloc','wavenumber'],clr1)
-#                      },
-#                     coords={'obsloc':np.arange(npts),
-#                             'wavenumber':ds1.wavenumber.values})
-#    if (aerdiag):
-#       tmpds=tmpds.assign({'aero_load':(['obsloc','wavenumber'],aero_load)})
-#       tmpds=tmpds.assign_coords({'naer':aero_name})
-#       tmpds=tmpds.assign({'aero_frac':(['obsloc','wavenumber','naer'],aero_frac)})
-#     
+    npts=ds1.nobs.size
+    rlat=ds1.Latitude.values
+    rlon=ds1.Longitude.values
+    rlon=(rlon+180)%360-180
+    sta_id=ds1.Station_ID.values
+    obstype=ds1.Observation_Type.values
+    sta_elev=ds1.Station_Elevation.values
+    qcflags=ds1.Analysis_Use_Flag.values
+    errinv=ds1.Errinv_Final.values
+    obs=ds1.Observation.values
+    omb_bc=ds1.Obs_Minus_Forecast_adjusted
+    omb_nbc=ds1.Obs_Minus_Forecast_unadjusted
+
+    tmpds=xa.Dataset({'rlon':(['obsloc'],rlon),
+                      'rlat':(['obsloc'],rlat),
+                      'qcflag':(['obsloc'],qcflags),
+                      'obs':(['obsloc'],obs),
+                      'omb_bc':(['obsloc'],sim1),
+                      'omb_nbc':(['obsloc'],clr1)
+                      },
+                     coords={'obsloc':np.arange(npts)})
+     
 else:
     print('No such file: %s' %(infile1))
