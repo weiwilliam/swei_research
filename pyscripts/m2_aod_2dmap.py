@@ -28,29 +28,31 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
+import cartopy.feature as cft
 
 # Plotting setup
-mpl.rc('axes',titlesize=18,labelsize=16)
-mpl.rc('xtick',labelsize=16)
-mpl.rc('ytick',labelsize=16)
-mpl.rc('legend',fontsize='xx-large')
-axe_w=10; axe_h=5
+txsize=12
+mpl.rc('axes',titlesize=12,labelsize=12)
+mpl.rc('xtick',labelsize=12)
+mpl.rc('ytick',labelsize=12)
+mpl.rc('legend',fontsize='large')
+axe_w=6; axe_h=4
 quality=300
 
 inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap/AOD_new'
-if ( not os.path.exists(outputpath) ):
-    os.makedirs(outputpath)
 
 sdate=2020082200
-edate=2020082218
+edate=2020092118
 hint=6
 pltvar='AODANA'
 area='NAmer'
-pltave=1 # 0: single cycle only 1: time average
+pltave=0 # 0: single cycle only 1: time average
 m2tag='inst3_2d_gas_Nx'
 tkfreq=1
 
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap/AOD_new/'+area
+if ( not os.path.exists(outputpath) ):
+    os.makedirs(outputpath)
 #
 cnlvs=np.array((0., 0.05, 0.1, 0.15, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 2.5))
 clridx=np.array((0,2,4,7,8,9,10,12,14,15,16,17,18))
@@ -108,12 +110,14 @@ for date in dlist:
     outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
     
     pltdata=tmpvar.sel(time=ds.time[0])
-    fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
     set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
     cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
     ax.set_title(date,loc='left')
     plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
                  fraction=0.045,aspect=40,pad=0.08,label=cblb)
+    if (area=='NAmer'):
+       ax.add_feature(cft.STATES,zorder=2)
     print(outname)
     fig.savefig(outname,dpi=quality)
     plt.close()
@@ -129,12 +133,14 @@ for date in dlist:
           title_str='%s-%s'%(sdate,edate)
 
           pltdata=var.mean(dim='time')
-          fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+          fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
           set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
           cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
           ax.set_title(title_str,loc='left')
           plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
                        fraction=0.045,aspect=40,pad=0.08,label=cblb)
+          if (area=='NAmer'):
+             ax.add_feature(cft.STATES,zorder=2)
           print(outname)
           fig.savefig(outname,dpi=quality)
           plt.close()
