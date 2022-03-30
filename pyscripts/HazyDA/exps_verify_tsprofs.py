@@ -8,8 +8,8 @@ elif (machine=='Desktop'):
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
-    rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootpath='/data/users/swei/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
+    rootarch='/data/users/swei'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -64,7 +64,7 @@ if (pltvar=='z'):
 else:
     expvar=pltvar
 
-area='Glb'
+area='TRO'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
 if (area=='Glb'):
@@ -74,7 +74,7 @@ else:
    maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
 
-imgsavpath=outputpath+'/'+area+'/2dmap'
+imgsavpath=outputpath+'/ts_profs/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
@@ -91,7 +91,7 @@ dates = pd.date_range(start=date1, end=date2, freq=delta)
 xdate2= date2+delta
 xdates= mdates.drange(date1, xdate2, delta)
 
-rule = rrulewrapper(DAILY, byhour=6, interval=5)
+rule = rrulewrapper(DAILY, byhour=hint, interval=5)
 loc = RRuleLocator(rule)
 formatter = DateFormatter('%Y%h %n %d %Hz')
 
@@ -132,9 +132,9 @@ for date in dlist:
     tmpexp1=tmpexp1.sortby(tmpexp1.longitude)
 
     if (area!='Glb'):
-       tmpera=tmpera.sel(latitude=slice(minlat,maxlat),longitude=slice(minlon,maxlon))
-       tmpexp0=tmpexp0.sel(latitude=slice(minlat,maxlat),longitude=slice(minlon,maxlon))
-       tmpexp1=tmpexp1.sel(latitude=slice(minlat,maxlat),longitude=slice(minlon,maxlon))
+       tmpera=tmpera.sel(latitude=slice(maxlat,minlat),longitude=slice(minlon,maxlon))
+       tmpexp0=tmpexp0.sel(latitude=slice(maxlat,minlat),longitude=slice(minlon,maxlon))
+       tmpexp1=tmpexp1.sel(latitude=slice(maxlat,minlat),longitude=slice(minlon,maxlon))
 
     lat_weight=np.cos(np.deg2rad(tmpera.latitude))
     exp0_err=tmpexp0-tmpera
@@ -204,7 +204,8 @@ if (fsave):
     fig.savefig(filename,dpi=quality)
     plt.close()
 
-for pres in [850,500]:
+#for pres in [850,500]:
+for pres in plt_me.preslv.data:
     fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
     fig.subplots_adjust(hspace=0.15)
     for a in np.arange(2):

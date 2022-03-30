@@ -8,6 +8,27 @@ Aerosol detection based on CADS 3.1 from NWP SAF
 
 """
 import sys, os, platform
+machine='S4'
+if (machine=='MBP'):
+    rootpath='/Users/weiwilliam'
+    rootarch='/Volumes/WD2TB/ResearchData'
+elif (machine=='Desktop'):
+    rootpath='F:\GoogleDrive_NCU\Albany'
+    rootarch='F:\ResearchData'
+    rootgit='F:\GitHub\swei_research'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
+sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -15,14 +36,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
-os_name=platform.system()
-if (os_name=='Darwin'):
-    rootpath='/Users/weiwilliam'
-    rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
-    rootpath='F:\GoogleDrive_NCU\Albany'
-    rootarch='F:\ResearchData'
-sys.path.append(rootpath+'/AlbanyWork/Utility/Python3/functions')
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
@@ -46,7 +59,8 @@ sdate=2020061000
 edate=2020071018
 aertag='Dust'
 hint=6
-exp='AerObserver'
+exp='hazyda_aero'
+expn='AER'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
@@ -71,10 +85,8 @@ elif (cbori=='horizontal'):
    cb_pad=0.1
 
 # Data path setup
-archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
-outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/images/'
-archdir=archpath+'/'+exp
-
+archpath=rootarch+'/'+exp
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/rad'
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -103,22 +115,17 @@ for date in dlist:
     didx+=1
     cur_date=dates[didx-1]
     raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
-    infile1=archdir+'/'+str(date)+'/'+raddfile
+    infile1=archpath+'/'+str(date)+'/'+raddfile
 
     if (os.path.exists(infile1)):
         print('Processing Radfile: %s' %(raddfile))
         ds1=xa.open_dataset(infile1)
         npts=int(ds1.nobs.size/ds1.nchans.size)
         nchs=ds1.nchans.size
-        ds1=ds1.assign_coords(nuchan=('wavenumber',ds1.wavenumber))
+        ds1=ds1.assign_coords(nuchan=('wavenumber',ds1.wavenumber.data))
         ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
         wavelength=1e+04/ds1.wavenumber
         chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
-        #usedchidx=np.where(ds1.iuse_rad==1)[0]
-        #unusedchidx=np.where(ds1.iuse_rad==-1)[0]
-        #wvldiff=abs(np.subtract(wavelength[usedchidx],chkwvl))
-        #chkwvlidx=usedchidx[np.where(wvldiff==wvldiff.min())[0][0]]
-        #print('Check wavelength: %.2f' %(wavelength[chkwvlidx]))
         
         rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))
         rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
@@ -151,24 +158,24 @@ for date in dlist:
             print('postpone the starting date')
             continue
     
-    qc_cnts=xa.Dataset({'qc0cnts':(['wavenumber'],qc0cnts),
-                        'qc13cnts':(['wavenumber'],qc13cnts)},
+    qc_cnts=xa.Dataset({'qc0cnts':(['wavenumber'],qc0cnts.data),
+                        'qc13cnts':(['wavenumber'],qc13cnts.data)},
                        coords={'wavenumber':chkwvn_list})
 
     # Observation lat/lon
     if (date==str(sdate)):
-        qc_alldates=qc_cnts
+        qccnts_all=qc_cnts
     else:
-        qc_alldates=xa.concat((qc_alldates,qc_cnts),dim='dates')
+        qccnts_all=xa.concat((qccnts_all,qc_cnts),dim='dates')
 
-qc_alldates=qc_alldates.assign_coords(dates=('dates',dates))
+qccnts_all=qccnts_all.assign_coords(dates=('dates',dates))
 
-savedir=outpath+'/'+exp+'/timeseries/'+aertag
+savedir=outpath+'/'+expn+'/timeseries/'+aertag
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 # for chkwvn in [906.25]:
 for chkwvn in chkwvn_list:
-    qc_chk=qc_alldates.sel(wavenumber=chkwvn)
+    qc_chk=qccnts_all.sel(wavenumber=chkwvn)
     
     fig,ax=plt.subplots()
     set_size(axe_w,axe_h,b=0.2)
@@ -189,11 +196,11 @@ for chkwvn in chkwvn_list:
         fig.savefig(savedir+'/'+fname,dpi=quality)
         plt.close()
 
-savedir=outpath+'/'+exp+'/spec/'+aertag
+savedir=outpath+'/'+expn+'/spec/'+aertag
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
-wvn=qc_alldates.wavenumber.values
+wvn=qccnts_all.wavenumber.values
 wvl=1e4/wvn
 wvnlb='Wavenumber [$cm^{-1}$]' 
 wvllb='Wavelength [µm]'
@@ -203,7 +210,7 @@ mrklst=['o','^','x']
 lglst=['Total','Passed','Aer-affected']
 yaxlb='Number of observations'
 
-datessum=qc_alldates.sum(dim='dates')
+datessum=qccnts_all.sum(dim='dates')
 total=datessum.qc0cnts+datessum.qc13cnts
 qc0sum=datessum.qc0cnts
 qc13sum=datessum.qc13cnts

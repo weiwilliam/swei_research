@@ -33,16 +33,20 @@ import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
-import scipy.stats
+import cartopy.crs as ccrs
 
-tlsize=12 ; lbsize=10
-mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
-mpl.rc('xtick',labelsize=lbsize)
-mpl.rc('ytick',labelsize=lbsize)
+tlsize=12 ; txsize=10
+mpl.rc('axes', titlesize=tlsize,labelsize=txsize)
+mpl.rc('xtick',labelsize=txsize)
+mpl.rc('ytick',labelsize=txsize)
 mpl.rc('legend',fontsize='small')
 fsave=1 ; ffmt='png' ; ptsize=4
-axe_w=3 ; axe_h=3 ; quality=300
+axe_w=6 ; axe_h=3 ; quality=300
+tkfreq=2
 minussign=u'\u2212'
+
+# Projection setting
+proj=ccrs.PlateCarree(globe=None)
 
 outputpath=rootpath+'/vsERA5'
 era5arch=rootarch+'/common/ERA5'
@@ -53,7 +57,7 @@ expnlist=['CTL','AER']
 #enum=explist.shape[0]
 
 sdate=2020061000
-edate=2020061018
+edate=2020071018
 hint=6
 pltvar='t' # z, r, q, t, u, v
 units='K'  # m,'K','%','g/kg','K','m/s','mb'
@@ -74,9 +78,17 @@ else:
    maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
 
-imgsavpath=outputpath+'/'+area+'/2dmap'
+imgsavpath=outputpath+'/2dmap/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
+
+cbori='horizontal' #vertical, horizontal
+if (cbori=='vertical'):
+   cb_frac=0.025
+   cb_pad=0.06
+elif (cbori=='horizontal'):
+   cb_frac=0.04
+   cb_pad=0.1
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -87,29 +99,6 @@ date1 = datetime(syy,smm,sdd,shh)
 date2 = datetime(eyy,emm,edd,ehh)
 delta = timedelta(hours=hint)
 dates = pd.date_range(start=date1, end=date2, freq=delta)
-
-xdate2= date2+delta
-xdates= mdates.drange(date1, xdate2, delta)
-
-rule = rrulewrapper(DAILY, byhour=6, interval=5)
-loc = RRuleLocator(rule)
-formatter = DateFormatter('%Y%h %n %d %Hz')
-
-metcks=np.arange(-10,11,1)
-me_lvs=metcks
-clridx=[]
-for idx in np.linspace(2,254,metcks.size):
-    clridx.append(int(idx))
-clrmap=setup_cmap('BlueYellowRed',clridx)
-norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
-
-rmsetcks=np.arange(0,11,0.5)
-rmse_lvs=rmsetcks
-clridx=[]
-for idx in np.linspace(2,254,rmsetcks.size):
-    clridx.append(int(idx))
-clrmap=setup_cmap('WhiteYellowOrangeRed',clridx)
-norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
 
 tnum=0
 dlist=[]
@@ -170,64 +159,118 @@ exp1_me=exp1_err.mean(dim='time')
 exp0_rmse=np.sqrt((exp0_err*exp0_err).mean(dim='time'))
 exp1_rmse=np.sqrt((exp1_err*exp1_err).mean(dim='time'))
 
-#plt_me=(xa.concat((me0_ts_da,me1_ts_da),dim='exps'))
-#plt_rmse=(xa.concat((rmse0_ts_da,rmse1_ts_da),dim='exps'))
-#preslv=plt_me.preslv.data
-#biasprof=plt_me.mean(dim='time')
-#rmseprof=plt_rmse.mean(dim='time')
-#diffprof=xa.concat((biasprof.diff(dim='exps'),rmseprof.diff(dim='exps')),dim='type')
-#diffprof=diffprof.sel(exps=0)
-#
-#fig,ax=plt.subplots(1,3,sharey=True)
-#fig.subplots_adjust(wspace=0.05)
-#ax[0].set_prop_cycle(color=['red','blue'])
-#ax[1].set_prop_cycle(color=['red','blue'])
-#ax[2].set_prop_cycle(color=['k','k'],linestyle=['-','--'])
-#ax[0].plot(biasprof[pltvar].data.swapaxes(0,1),preslv,'-')
-#ax[0].set_title('BIAS [%s]'%(units))
-#ax[1].plot(rmseprof[pltvar].data.swapaxes(0,1),preslv,'--')
-#ax[1].set_title('RMSE [%s]'%(units))
-#ax[2].plot(diffprof[pltvar].data.swapaxes(0,1),preslv)
-#ax[2].set_title(expnlist[1]+minussign+expnlist[0])
-#ax[0].invert_yaxis()
-#fig.suptitle('%s [%s]' %(pltvar.upper(),units))
-#ax[0].legend(expnlist)
-#ax[2].legend(['BIAS','RMSE'])
-#ax[0].grid()
-#ax[1].grid()
-#ax[2].grid()
-#if (fsave):
-#    filename=imgsavpath+'/%s_%s_%s_%s_BIASRMS.png' %(area,pltvar,expnlist[0],expnlist[1])
-#    fig.savefig(filename,dpi=quality)
-#    plt.close()
-#
 for pres in [850,500]:
-    fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+
+    me_da0=exp0_me.sel(isobaricInhPa=pres)
+    me_da1=exp1_me.sel(isobaricInhPa=pres)
+    rmse_da0=exp0_rmse.sel(isobaricInhPa=pres)
+    rmse_da1=exp1_rmse.sel(isobaricInhPa=pres)
+
+    melv_max=np.ceil( np.max( (np.quantile(abs(me_da0),0.9),np.quantile(abs(me_da1),0.9)) ))
+    melv_int=melv_max/10
+    metcks=np.arange(-melv_max,melv_max+melv_int,melv_int)
+    me_lvs=metcks
+    clridx=[]
+    for idx in np.linspace(2,254,metcks.size):
+        clridx.append(int(idx))
+    meclrmap=setup_cmap('BlueYellowRed',clridx)
+    menorm = mpcrs.BoundaryNorm(me_lvs,len(clridx)+1,extend='both')
+    
+    rmselv_max=np.ceil( np.max( (np.quantile(abs(rmse_da0),0.9),np.quantile(abs(rmse_da1),0.9)) ))
+    rmselv_int=rmselv_max/20
+    rmsetcks=np.arange(0,rmselv_max+rmselv_int,rmselv_int)
+    rmse_lvs=rmsetcks
+    clridx=[]
+    for idx in np.linspace(2,254,rmsetcks.size):
+        clridx.append(int(idx))
+    rmseclrmap=setup_cmap('WhiteYellowOrangeRed',clridx)
+    rmsenorm = mpcrs.BoundaryNorm(rmse_lvs,len(clridx)+1,extend='both')
+
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
     set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
-#    for a in np.arange(2):
-#        ax[a].set_prop_cycle(color=['red','blue'])
-#        ax[a].grid()
-#    
-#    plt_lv_me=plt_me[pltvar].sel(preslv=pres).data.swapaxes(0,1)
-#    plt_lv_rmse=plt_rmse[pltvar].sel(preslv=pres).data.swapaxes(0,1)
-#    ax[0].xaxis.set_major_locator(loc)
-#    ax[0].xaxis.set_major_formatter(formatter)
-#    ax[0].xaxis.set_tick_params(rotation=30, labelsize=10)
-#    ax[0].set_title('%s [%s] %.1f [hPa]' %(pltvar.upper(),units,pres),loc='left')
-#    ax[0].plot_date(dates,plt_lv_rmse,'--')
-#    ax[0].set_ylabel('RMSE [%s]'%(units))
-#    ax[1].plot_date(dates,plt_lv_me,'-')
-#    ax[1].set_ylabel('BIAS [%s]'%(units))
-#    lglist=np.zeros((2,2),dtype='<U30')
-#    for ex in np.arange(2):
-#        lglist[0,ex]=expnlist[ex]+'(%.2f)' %(plt_lv_rmse[:,ex].mean())
-#        lglist[1,ex]=expnlist[ex]+'(%.2f)' %(plt_lv_me[:,ex].mean())
-#    ax[0].legend(lglist[0,:])
-#    ax[1].legend(lglist[1,:])
-#
-#    if (fsave):
-#        fig.savefig(imgsavpath+'/%s_%s_%s_%s_%i_BIASRMS.png'
-#                    %(area,pltvar,expnlist[0],expnlist[1],pres), dpi=200)
-#        plt.close()
+    pltdata=exp0_me.sel(isobaricInhPa=pres)
+    cblabel='%s Mean Error [%s]' %(expnlist[0],units)
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
+                   cmap=meclrmap,norm=menorm,extend='both')
+    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
+                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+    outname='%s/%s_%s_%s_MeanError.%s_%s.%s' %(imgsavpath,expnlist[0],pltvar,pres,sdate,edate,ffmt)
+    if (fsave):
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()
 
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    pltdata=exp1_me.sel(isobaricInhPa=pres)
+    cblabel='%s Mean Error [%s]' %(expnlist[1],units)
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
+                   cmap=meclrmap,norm=menorm,extend='both')
+    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
+                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+    outname='%s/%s_%s_%s_MeanError.%s_%s.%s' %(imgsavpath,expnlist[1],pltvar,pres,sdate,edate,ffmt)
+    if (fsave):
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()
 
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    pltdata=exp1_me.sel(isobaricInhPa=pres)-exp0_me.sel(isobaricInhPa=pres)
+    cblabel='%s%s%s Mean Error [%s]' %(expnlist[1],minussign,expnlist[0],units)
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
+                   cmap=meclrmap,norm=menorm,extend='both')
+    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
+                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+    title_str='(%.2f [%s])' %(pltdata.mean(),units)
+    ax.set_title(title_str,loc='left')
+    outname='%s/%s-%s_%s_%s_MeanError.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,pres,sdate,edate,ffmt)
+    if (fsave):
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()
+
+    # RMSE
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    pltdata=exp0_rmse.sel(isobaricInhPa=pres)
+    cblabel='%s Root-Mean-Square-Error [%s]' %(expnlist[0],units)
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=rmse_lvs,
+                   cmap=rmseclrmap,norm=rmsenorm,extend='both')
+    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
+                 pad=cb_pad,ticks=rmse_lvs[::tkfreq],aspect=40,label=cblabel)
+    outname='%s/%s_%s_%s_RMSE.%s_%s.%s' %(imgsavpath,expnlist[0],pltvar,pres,sdate,edate,ffmt)
+    if (fsave):
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()
+
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    pltdata=exp1_rmse.sel(isobaricInhPa=pres)
+    cblabel='%s Root-Mean-Square-Error [%s]' %(expnlist[1],units)
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=rmse_lvs,
+                   cmap=rmseclrmap,norm=rmsenorm,extend='both')
+    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
+                 pad=cb_pad,ticks=rmse_lvs[::tkfreq],aspect=40,label=cblabel)
+    outname='%s/%s_%s_%s_RMSE.%s_%s.%s' %(imgsavpath,expnlist[1],pltvar,pres,sdate,edate,ffmt)
+    if (fsave):
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()
+
+    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    pltdata=exp1_rmse.sel(isobaricInhPa=pres)-exp0_rmse.sel(isobaricInhPa=pres)
+    cblabel='%s%s%s Root-Mean-Square-Error [%s]' %(expnlist[1],minussign,expnlist[0],units)
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
+                   cmap=meclrmap,norm=menorm,extend='both')
+    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
+                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+    title_str='(%.2f [%s])' %(pltdata.mean(),units)
+    ax.set_title(title_str,loc='left')
+    outname='%s/%s-%s_%s_%s_RMSE.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,pres,sdate,edate,ffmt)
+    if (fsave):
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()
