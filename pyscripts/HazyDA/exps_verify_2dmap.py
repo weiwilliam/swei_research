@@ -187,7 +187,7 @@ for pres in [850,500]:
     rmsenorm = mpcrs.BoundaryNorm(rmse_lvs,len(clridx)+1,extend='both')
 
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp0_me.sel(isobaricInhPa=pres)
     cblabel='%s Mean Error [%s]' %(expnlist[0],units)
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
@@ -201,7 +201,7 @@ for pres in [850,500]:
        plt.close()
 
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp1_me.sel(isobaricInhPa=pres)
     cblabel='%s Mean Error [%s]' %(expnlist[1],units)
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
@@ -215,7 +215,7 @@ for pres in [850,500]:
        plt.close()
 
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp1_me.sel(isobaricInhPa=pres)-exp0_me.sel(isobaricInhPa=pres)
     cblabel='%s%s%s Mean Error [%s]' %(expnlist[1],minussign,expnlist[0],units)
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
@@ -232,7 +232,7 @@ for pres in [850,500]:
 
     # RMSE
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp0_rmse.sel(isobaricInhPa=pres)
     cblabel='%s Root-Mean-Square-Error [%s]' %(expnlist[0],units)
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=rmse_lvs,
@@ -246,7 +246,7 @@ for pres in [850,500]:
        plt.close()
 
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp1_rmse.sel(isobaricInhPa=pres)
     cblabel='%s Root-Mean-Square-Error [%s]' %(expnlist[1],units)
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=rmse_lvs,
@@ -260,7 +260,7 @@ for pres in [850,500]:
        plt.close()
 
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp1_rmse.sel(isobaricInhPa=pres)-exp0_rmse.sel(isobaricInhPa=pres)
     cblabel='%s%s%s Root-Mean-Square-Error [%s]' %(expnlist[1],minussign,expnlist[0],units)
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,

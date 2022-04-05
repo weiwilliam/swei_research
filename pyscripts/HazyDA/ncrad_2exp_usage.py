@@ -221,7 +221,7 @@ for date in dlist:
 
 usedcnts_all=usedcnts_all.assign_coords(dates=('dates',dates))
 
-savedir=outpath+'/datausage/'+expnlist[1]+'/timeseries/'+aertag
+savedir=outpath+'/'+expnlist[1]+'/datausage/timeseries/'+aertag
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 # for chkwvn in [906.25]:
@@ -248,7 +248,7 @@ for chkwvn in chkwvn_list:
         fig.savefig(savedir+'/'+fname,dpi=quality)
         plt.close()
 
-savedir=outpath+'/datausage/'+expnlist[1]+'/spec/'+aertag
+savedir=outpath+'/'+expnlist[1]+'/datausage/spec/'+aertag
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 

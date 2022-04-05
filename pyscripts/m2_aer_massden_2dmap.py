@@ -1,27 +1,24 @@
 import sys, os, platform
-os_name=platform.system()
-if (os_name=='Darwin'):
+machine='S4'
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
-        rootpath='/data/users/swei/Images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/swei/research'
-        machine='S4'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
+elif (machine=='S4'):
+    rootpath='/data/users/swei/Images'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
 from utils import setup_cmap, ndate
 from plot_utils import setupax_2dmap,set_size
@@ -41,27 +38,24 @@ mpl.rc('axes',titlesize=txsize,labelsize=txsize)
 mpl.rc('xtick',labelsize=txsize)
 mpl.rc('ytick',labelsize=txsize)
 mpl.rc('legend',fontsize='x-large')
-axe_w=5.4; axe_h=3
-quality=300
+axe_w=6; axe_h=3; quality=300
 
 if (machine=='Cheyenne'):
    inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
 elif (machine=='S4'):
    inputpath='/data/users/swei/common/MERRA2'
 
-outputpath=rootpath+'/Dataset/MERRA-2/2dmap'
-if ( not os.path.exists(outputpath) ):
-    os.makedirs(outputpath)
-
-sdate=2020062212
-edate=2020062212
-hint=6
-pltvar='dust'
-area='r2o1'
-pltall=0 # 0: total only 1: sub species included
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
-plt_pts=1
+
+sdate=2020060100
+edate=2020071018
+hint=6
+pltvar='dust'
+area='Glb'
+pltall=0 # 0: total only 1: sub species included
+pltave=1
+plt_pts=0
 #
 if (plt_pts):
    pts_lat=[17.98]
@@ -78,7 +72,9 @@ cnlvs=[0      ,  2.5e-5,   5e-5, 7.5e-5,
 #       1.25e-5,  1.5e-5,1.75e-5,   2e-5,
 #          3e-5,    4e-5,   5e-5,   6e-5,
 #          8e-5,    1e-4,   3e-4,   5e-4]
-
+outputpath=rootpath+'/Dataset/MERRA-2/2dmap/'+area
+if ( not os.path.exists(outputpath) ):
+    os.makedirs(outputpath)
 # Constant configuration
 proj=ccrs.PlateCarree()
 grav=9.80665e+0
@@ -122,7 +118,6 @@ elif (pltvar=='total'):
    scalef=1e4
    cnscale=1e4
 
-
 cblb='Column mass density [$\\times\mathrm{10}^{-%i}$ $\mathrm{kg\cdot m^{-2}}$]' %(int(np.log10(scalef)))
 cnlvsarr=np.array(cnlvs)*cnscale
 norm = mpcrs.BoundaryNorm(cnlvsarr,len(cnlvsarr))
@@ -162,6 +157,8 @@ for date in dlist:
     if (machine=='S4'):
        infile=inputpath+'/'+yy+'/'+mm+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'.nc4'
        multi_time=1
+
+    print('Processing '+infile,flush=1)
    
     ds=xa.open_dataset(infile)
     if (multi_time):
@@ -184,15 +181,7 @@ for date in dlist:
 
     conc=xa.concat((conc,total),dim='bins')
 
-#    if (dates_count==0):
-#       totalconc=conc
-#    else:
-#       totalconc=xa.concat((totalconc,conc),dim='bin')
-    
-#    del(conc)
-
-# Get the column integral
-    cmass=np.sum(conc,axis=1)
+    cmass=conc.sum(dim='lev')
     
     if (not pltall):
        nplotlist=[nvars]
@@ -208,7 +197,7 @@ for date in dlist:
            outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
     
         pltdata=cmass[n,:,:]
-        fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+        fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
         set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
         cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
         #ax.set_title(title)
@@ -220,4 +209,33 @@ for date in dlist:
         fig.savefig(outname,dpi=quality)
         plt.close()
  
+    if (pltave):
+       if (dates_count==0):
+          cmass_all=cmass
+       else:
+          cmass_all=xa.concat((cmass_all,cmass),dim='time')
+
     dates_count+=1
+
+if (pltave):
+   cmass_mean=cmass_all.mean(dim='time')
+   for n in nplotlist:
+       if (n<nvars):
+          title='%s column mass density' %(varlst[n])
+          outname='%s/%s_%s_cmass.%s_%s.png'  %(outputpath,area,varlst[n],sdate,edate)
+       else:
+          title='%s column mass density' %(varname)
+          outname='%s/%s_%s_all_cmass.%s_%s.png' %(outputpath,area,pltvar,sdate,edate)
+
+       pltdata=cmass_mean.sel(bins=n)
+       fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+       set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+       cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
+       #ax.set_title(title)
+       plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
+                    format='%.2f',fraction=0.04,aspect=40,pad=0.08,label=cblb)
+       if (plt_pts):
+          sc=ax.scatter(pts_lon,pts_lat,s=ptsize,c='w',marker='x')
+       print(outname)
+       fig.savefig(outname,dpi=quality)
+       plt.close()

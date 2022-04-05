@@ -54,11 +54,12 @@ if (os.path.exists(infile1)):
     ds1=xa.open_dataset(infile1)
     npts=int(ds1.nobs.size/ds1.nchans.size)
     nchs=ds1.nchans.size
+    chkwvn_list=ds1.wavenumber[ds1.use_flag==1]
     #ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
     aerdiag=0
-    if ('aero_load' in ds1.variables):
-        naer=ds1.aero_frac_arr_dim.size
-        aerdiag=1
+    #if ('aero_load' in ds1.variables):
+        #naer=ds1.aero_frac_arr_dim.size
+        #aerdiag=1
     
     rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))
     rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
@@ -82,10 +83,25 @@ if (os.path.exists(infile1)):
                       },
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})
+
     if (aerdiag):
        tmpds=tmpds.assign({'aero_load':(['obsloc','wavenumber'],aero_load)})
        tmpds=tmpds.assign_coords({'naer':aero_name})
        tmpds=tmpds.assign({'aero_frac':(['obsloc','wavenumber','naer'],aero_frac)})
-     
+
+    tmpds=tmpds.sel(wavenumber=chkwvn_list.data) 
 else:
     print('No such file: %s' %(infile1))
+
+degres=1
+latbin=np.arange(-90,90+0.5*degres,degres)
+latgrd=np.arange(-90+0.5*degres,90,degres)
+lonbin=np.arange(-180,180+0.5*degres,degres)
+longrd=np.arange(-180+0.5*degres,180,degres)
+
+df=tmpds.to_dataframe()
+df_qcfilter=((df['qcflag']==0.0))
+tmpdf=df.loc[df_qcfilter,:]
+tmpdf['lat']=pd.cut(tmpdf['rlat'],bins=latbin,labels=latgrd)
+tmpdf['lon']=pd.cut(tmpdf['rlon'],bins=lonbin,labels=longrd)
+grp = tmpdf.groupby(["latcut", "loncut"]).agg({"tb_obs": ["mean", "count",'var']})
