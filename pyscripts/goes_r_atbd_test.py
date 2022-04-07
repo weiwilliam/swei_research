@@ -62,6 +62,16 @@ s_z = r_s*np.cos(lat_rad)*np.sin(lon_rad)
 lat = (180.0/np.pi)*(np.arctan(((r_eq*r_eq)/(r_pol*r_pol))*((s_z/np.sqrt(((H-s_x)*(H-s_x))+(s_y*s_y))))))
 lon = (lambda_0 - np.arctan(s_y/(H-s_x)))*(180.0/np.pi)
 
+lon_bound = [-152.10928, -52.94688]
+lat_bound = [14.57134, 56.76145]
+x_bound = ds['x_image_bounds'][:]
+y_bound = ds['y_image_bounds'][:]
+x_interp = interp1d(x_bound, lon_bound)
+y_interp = interp1d(y_bound, lat_bound)
+alon = x_interp(np.array(ds['x'][:]))
+alat = y_interp(np.array(ds['y'][:]))
+aalon, aalat = np.meshgrid(alon,alat)
+
 # Read in dust and smoke mask
 smoke_msk=ds.Smoke
 dust_msk=ds.Dust
@@ -163,14 +173,14 @@ gl.yformatter=LatitudeFormatter(degree_symbol=u'\u00B0 ')
 gl.xlabel_style={'size':lbsize}
 gl.ylabel_style={'size':lbsize}
 
-sc1=ax.scatter(lon[pltsmk==1],lat[pltsmk==1],s=0.2,
+sc1=ax.scatter(aalon[pltsmk==1],aalat[pltsmk==1],s=0.2,
             c=smoke_arr[pltsmk==1],cmap=smkcmap,
             norm=aer_norm,zorder=3)
 cb1=plt.colorbar(sc1,cax=cax1,ticks=[1.,2.,3.],label=smkcbn,
                  orientation=hcbori)
 cb1.ax.set_xticklabels(cbtck_lbs)
 
-sc2=ax.scatter(lon[pltdst==1],lat[pltdst==1],s=0.2,
+sc2=ax.scatter(aalon[pltdst==1],aalat[pltdst==1],s=0.2,
             c=smoke_arr[pltdst==1],cmap=dstcmap,
             norm=aer_norm,zorder=3)
 cb2=plt.colorbar(sc2,cax=cax2,ticks=[1.,2.,3.],label=dstcbn,
@@ -178,7 +188,7 @@ cb2=plt.colorbar(sc2,cax=cax2,ticks=[1.,2.,3.],label=dstcbn,
 cb2.ax.set_xticklabels(cbtck_lbs)
 
 # Define the output name and save
-imgname=filepath+'/Reg_test.png'
+imgname=filepath+'/Reg_test1.png'
 fig.savefig(imgname,dpi=quality)
 plt.close()
 
