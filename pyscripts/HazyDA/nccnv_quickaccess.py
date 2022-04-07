@@ -30,14 +30,42 @@ import pandas as pd
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
+import setuparea as setarea
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import matplotlib.colors as mpcrs
+import cartopy.crs as ccrs
+
+tlsize=12 ; txsize=10
+mpl.rc('axes', titlesize=tlsize,labelsize=txsize)
+mpl.rc('xtick',labelsize=txsize)
+mpl.rc('ytick',labelsize=txsize)
+mpl.rc('legend',fontsize='small')
+fsave=1 ; ffmt='png' ; ptsize=4
+axe_w=6 ; axe_h=3 ; quality=300
+tkfreq=2
+minussign=u'\u2212'
+
+# Projection setting
+proj=ccrs.PlateCarree(globe=None)
 
 # Plotting setup
-cdate=2022030618
+cdate=2018071418
 hint=6
 cnvvar='t'
 loop='ges' #ges,anl
+area='NYS'
+minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
+print(area,minlat,maxlat,minlon,maxlon,crosszero)
+if (area=='Glb'):
+   minlon=-180. ; maxlon=180.
+else:
+   minlon=(minlon+180)%360-180
+   maxlon=(maxlon+180)%360-180
+cornerll=[minlat,maxlat,minlon,maxlon]
 
 tmppath='/data/users/swei/FTPdir/'
+tmppath='C:/Users/ck102/Downloads'
 #tmppath='/data/users/swei/archive/hazyda_aero/2020060112'
 cnvdfile='diag_conv_'+cnvvar+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
@@ -48,26 +76,34 @@ if (os.path.exists(infile1)):
     ds1=xa.open_dataset(infile1)
     
     npts=ds1.nobs.size
-    rlat=ds1.Latitude.values
-    rlon=ds1.Longitude.values
+    rlat=ds1.Latitude.data
+    rlon=ds1.Longitude.data
     rlon=(rlon+180)%360-180
-    sta_id=ds1.Station_ID.values
-    obstype=ds1.Observation_Type.values
-    sta_elev=ds1.Station_Elevation.values
-    qcflags=ds1.Analysis_Use_Flag.values
-    errinv=ds1.Errinv_Final.values
-    obs=ds1.Observation.values
-    omb_bc=ds1.Obs_Minus_Forecast_adjusted
-    omb_nbc=ds1.Obs_Minus_Forecast_unadjusted
+    sta_id=ds1.Station_ID.data
+    obstype=ds1.Observation_Type.data
+    sta_elev=ds1.Station_Elevation.data
+    qcflags=ds1.Analysis_Use_Flag.data
+    errinv=ds1.Errinv_Final.data
+    obs=ds1.Observation.data
+    omb_bc=ds1.Obs_Minus_Forecast_adjusted.data
+    omb_nbc=ds1.Obs_Minus_Forecast_unadjusted.data
 
     tmpds=xa.Dataset({'rlon':(['obsloc'],rlon),
                       'rlat':(['obsloc'],rlat),
                       'qcflag':(['obsloc'],qcflags),
                       'obs':(['obsloc'],obs),
-                      'omb_bc':(['obsloc'],sim1),
-                      'omb_nbc':(['obsloc'],clr1)
+                      'omb_bc':(['obsloc'],omb_bc),
+                      'omb_nbc':(['obsloc'],omb_nbc),
+                      'sta_id':(['obsloc'],sta_id),
+                      'obstype':(['obsloc'],obstype),
                       },
                      coords={'obsloc':np.arange(npts)})
      
 else:
     print('No such file: %s' %(infile1))
+
+pltmsk=tmpds.obstype==188
+fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
+ax.scatter(tmpds.rlon[pltmsk],tmpds.rlat[pltmsk],c='r')
+

@@ -14,6 +14,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cft
 from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
 from scipy.interpolate import interp1d
+from netCDF4 import Dataset
 
 # label size of plot
 lbsize=11; quality=500
@@ -25,8 +26,7 @@ vcbori='vertical'  ; vcb_frac=0.025; vcb_pad=0.06
 filepath="C:/Users/ck102/Documents/Globus/GOES-16"
 filename=filepath+'/OR_ABI-L2-ADPC-M6_G16_s20220892351172_e20220892353545_c20220892355250.nc'
 
-ds=xa.open_dataset(filename)
-
+readin=Dataset(filename)
 ### Convert radian to lat/lon
 # Degree conversion code is from the webpage below
 # https://www.star.nesdis.noaa.gov/smcd/spb/aq/AMS_Short_Course/abi_visualize.php
@@ -35,9 +35,9 @@ ds=xa.open_dataset(filename)
 np.seterr(invalid='ignore')
 
 # Read in GOES Imager Projection data
-lat_rad_1d = ds.x
-lon_rad_1d = ds.y
-projection_info = ds.goes_imager_projection
+lat_rad_1d = readin['x'][:]
+lon_rad_1d = readin['y'][:]
+projection_info = readin['goes_imager_projection']
 lon_origin = projection_info.longitude_of_projection_origin
 H = projection_info.perspective_point_height+projection_info.semi_major_axis
 r_eq = projection_info.semi_major_axis
