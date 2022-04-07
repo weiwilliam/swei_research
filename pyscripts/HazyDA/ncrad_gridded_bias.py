@@ -48,7 +48,7 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-biasterm=7
+biasterm=5
 biastermname=['BC_Total',
               'BC_angord',
               'BC_Cloud_Liquid_Water',
@@ -61,8 +61,8 @@ biastermname=['BC_Total',
               'BC_Scan_Angle',
               'BC_Sine_Latitude']
 
-#degres=2.5
-degres=1
+degres=2.5
+#degres=1
 
 expset=1
 if (expset==1):
@@ -152,6 +152,7 @@ for date in dlist:
     # Observation lat/lon from exp 0 (test)
     rlat0=np.reshape(ds0.Latitude.values,(npts0,nchs0))[:,0]
     rlon0=np.reshape(ds0.Longitude.values,(npts0,nchs0))[:,0]
+    rlon0=(rlon0+180)%360-180
     qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
     omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
     omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
@@ -159,6 +160,7 @@ for date in dlist:
     # Observation lat/lon from exp 1 (test)
     rlat1=np.reshape(ds1.Latitude.values,(npts1,nchs1))[:,0]
     rlon1=np.reshape(ds1.Longitude.values,(npts1,nchs1))[:,0]
+    rlon1=(rlon1+180)%360-180
     qcflags1=np.reshape(ds1.QC_Flag.values,(npts1,nchs1))
     omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts1,nchs1))
     omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts1,nchs1))

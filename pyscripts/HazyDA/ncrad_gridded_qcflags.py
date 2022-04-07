@@ -85,8 +85,8 @@ biastermname=['BC_Total',
               'BC_Sine_Latitude']
 
 
-#degres=2.5
-degres=1
+degres=2.5
+#degres=1
 
 expset=1
 if (expset==1):

@@ -85,8 +85,8 @@ biastermname=['BC_Total',
               'BC_Sine_Latitude']
 
 
-#degres=2.5
-degres=1
+degres=2.5
+#degres=1
 
 expset=1
 if (expset==1):
@@ -263,10 +263,10 @@ for var in ['omb_bc','omb_nbc']:
       grdds0=grdds0.rename({(var,stats):(newname)})
       grdds1=grdds1.rename({(var,stats):(newname)})
 
-fname0='%s/%s_%s_%s_%s_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+fname0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
 print(fname0,flush=1)
 grdds0.to_netcdf(fname0)
 
-fname1='%s/%s_%s_%s_%s_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
+fname1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 print(fname1,flush=1)
 grdds1.to_netcdf(fname1)

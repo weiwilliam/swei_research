@@ -27,10 +27,7 @@ elif (machine=='Cheyenne'):
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/glade/u/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
-import setuparea as setarea
 import numpy as np
-from datetime import datetime
-from datetime import timedelta
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
@@ -66,26 +63,19 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-biasterm=5
-degres=2.5
-#degres=1
-
-expset=1
-if (expset==1):
-   explist=np.array(['hazyda_ctrl','hazyda_aero'])
-   expnlist=['CTL','AER']
-elif (expset==2):
-   explist=np.array(['prctrl','praero'])
-   expnlist=['CTL','CAER']
-
-sensor='iasi_metop-a'
-
+pltvar='omb_bc_mean'
+varlb='OMB w/ BC'
 sdate=2020061000
 edate=2020071018
 hint=6
+
+sensor='iasi_metop-a'
 chkwvn=962.5
-pltvar='bcterm_mean'
+degres=1
 units='K'
+
+explist=np.array(['hazyda_ctrl','hazyda_aero'])
+expnlist=['CTL','AER']
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -116,6 +106,7 @@ if (cbori=='vertical'):
 elif (cbori=='horizontal'):
    cb_frac=0.04
    cb_pad=0.1
+
     
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded'
@@ -123,27 +114,16 @@ imgsavpath=outputpath+'/2dmap/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_%s_bcterm%s_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,biasterm,degres,degres,sdate,edate)
-grdfile1='%s/%s_%s_%s_%s_bcterm%s_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,biasterm,degres,degres,sdate,edate)
+grdfile0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
 ds1=xa.open_dataset(grdfile1)
-bctermname=ds0.bcterm
 
 pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
 pltda1=ds1[pltvar].sel(wavenumber=chkwvn)
 
-def find_cnlvmax(indata):
-    per997val=np.nanquantile(abs(indata),0.997)
-    if (per997val<1.):
-       ndecimals=int(abs(np.floor(np.log10(per997val))))
-       cnlvmax=round(per997val,ndecimals)
-    else:
-       cnlvmax=np.ceil(per997val)
-    print(cnlvmax)
-    return cnlvmax
-
-lv_max=np.max( (find_cnlvmax(pltda0), find_cnlvmax(pltda1)) )
+lv_max=np.ceil( np.max( (np.nanquantile(abs(pltda0),0.95),np.nanquantile(abs(pltda1),0.95)) ))
 lv_int=lv_max/10
 tcks=np.arange(-lv_max,lv_max+lv_int,lv_int)
 lvs=tcks
@@ -153,25 +133,25 @@ for idx in np.linspace(2,254,tcks.size):
 clrmap=setup_cmap('BlueYellowRed',clridx)
 norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
 
-difflv_max=find_cnlvmax(pltda1-pltda0)
+difflv_max=np.ceil( np.nanquantile(abs(pltda1-pltda0),0.95) )
 difflv_int=difflv_max/20
-difftcks=np.arange(-difflv_max,difflv_max+difflv_int,difflv_int)
+difftcks=np.arange(0,difflv_max+difflv_int,difflv_int)
 diff_lvs=difftcks
 clridx=[]
 for idx in np.linspace(2,254,difftcks.size):
     clridx.append(int(idx))
-diffclrmap=setup_cmap('BlueYellowRed',clridx)
+diffclrmap=setup_cmap('WhiteYellowOrangeRed',clridx)
 diffnorm = mpcrs.BoundaryNorm(diff_lvs,len(clridx)+1,extend='both')
 
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda0
-cblabel='%s %s [%s]' %(expnlist[0],bctermname,units)
+cblabel='%s %s [%s]' %(expnlist[0],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=lvs,
                cmap=clrmap,norm=norm,extend='both')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
              pad=cb_pad,ticks=lvs[::tkfreq],aspect=40,label=cblabel)
-outname='%s/%s_%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,area,expnlist[0],sensor,chkwvn,bctermname,sdate,edate,ffmt)
+outname='%s/%s_%s.%s_%s.%s' %(imgsavpath,expnlist[0],pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
@@ -180,12 +160,12 @@ if (fsave):
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda1
-cblabel='%s %s [%s]' %(expnlist[1],bctermname,units)
+cblabel='%s %s [%s]' %(expnlist[1],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=lvs,
                cmap=clrmap,norm=norm,extend='both')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
              pad=cb_pad,ticks=lvs[::tkfreq],aspect=40,label=cblabel)
-outname='%s/%s_%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,area,expnlist[1],sensor,chkwvn,bctermname,sdate,edate,ffmt)
+outname='%s/%s_%s.%s_%s.%s' %(imgsavpath,expnlist[1],pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
@@ -194,13 +174,15 @@ if (fsave):
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda1-pltda0
-cblabel='%s%s%s %s [%s]' %(expnlist[1],minussign,expnlist[0],bctermname,units)
+cblabel='%s%s%s %s [%s]' %(expnlist[1],minussign,expnlist[0],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=diff_lvs,
                cmap=diffclrmap,norm=diffnorm,extend='both')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-             pad=cb_pad,aspect=40,label=cblabel)
-outname='%s/%s_%s-%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,area,expnlist[1],expnlist[0],sensor,chkwvn,bctermname,sdate,edate,ffmt)
+             pad=cb_pad,ticks=diff_lvs[::tkfreq],aspect=40,label=cblabel)
+outname='%s/%s-%s_%s.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
    plt.close()
+
+
