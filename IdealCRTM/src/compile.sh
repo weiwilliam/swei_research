@@ -15,16 +15,18 @@ if [[ $machine == 'hera' ]]; then
 elif [[ $machine == 's4' ]]; then
    module purge
    module load license_intel/S4
-   module load intel
-   module load hdf hdf5
-   module load netcdf4
+   module use /data/prod/hpc-stack/modulefiles/stack
+   module load hpc/1.1.0
+   module load hpc-intel/18.0.4
+   module load hpc-impi/18.0.4
+   module load netcdf/4.7.4
    module list
    BASE=/data/users/swei/Libs
    export INCCRTMtest=${BASE}/CRTM-2.4.0/include
    export LIBCRTMtest=${BASE}/CRTM-2.4.0/lib
    #export INCCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/include
    #export LIBCRTMtest=${BASE}/REL-2.3.0/crtm_v2.3.0/crtm_v2.3.0/lib
-   export NETCDF=$SSEC_NETCDF4_DIR
+   export NETCDF=${NETCDF:-$SSEC_NETCDF4_DIR}
    expdir=/data/users/swei/Experiments/IdealCRTM
 fi
 

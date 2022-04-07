@@ -2,9 +2,9 @@
 set -x
 #
 # Set experiment name and analysis date
-machine='hera'
-exp="test_corR_1"
-expid=1 # 1: no aer 2: aer  
+machine='s4'
+exp="bc_check"
+expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
 if_iraerdet=Yes
@@ -26,7 +26,7 @@ if [ $machine == 'hera' ]; then
    gsidir="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/GSI"
    fixcrtm="/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/Libs/CRTM-2.4.0/fix"
 elif [ $machine == 's4' ]; then
-   homedir=/data/users/swei/Experiments/${exp}
+   homedir=/data/users/swei/Experiments/testing
    scrpts_home=/home/swei/research/GSI_exps
    aerpath=/data/users/swei/common/MERRA2_L64
    obsarch=/data/prod/glopara/dump
@@ -291,6 +291,7 @@ cat << EOF > gsiparm.anl
    verbose=${VERBOSE},
    lwrite_peakwt=.true.,
    lread_obs_save=${if_read_obs_save},lread_obs_skip=${if_read_obs_skip},
+   lwrite_predterms=.true.
  /
  &GRIDOPTS
    JCAP_B=$JCAP,JCAP=$JCAP_A,NLAT=$NLAT_A,NLON=$NLON_A,nsig=$LEVS,

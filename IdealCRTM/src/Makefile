@@ -14,9 +14,9 @@ OBJ_FILE=${SRC_FILE:.f90=.o}
 
 # Tool-specific substitution variables
 FC       = ifort
-FCFLAGS  = -I${INCCRTMtest} -I${NETCDF_INC} -assume byterecl -convert big_endian -O3 -fp-model source -e08 -free -assume byterecl,realloc_lhs -c -traceback
+FCFLAGS  = -I${INCCRTMtest} -I${NETCDF_INC} -I${MKLROOT}/include -qopenmp -assume byterecl -convert big_endian -O3 -fp-model source -e08 -free -assume byterecl,realloc_lhs -c -traceback
 FPPFLAGS = 
-LDFLAGS  = -L${LIBCRTMtest} -L${NETCDF_LIB}
+LDFLAGS  = -qopenmp -L${LIBCRTMtest} -L${NETCDF_LIB}
 LIBS     = -l$(tarname) -lnetcdff
 
 # Colours for test result output

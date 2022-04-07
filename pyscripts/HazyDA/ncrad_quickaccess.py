@@ -31,12 +31,9 @@ from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 
-outputpath=rootpath+'/../archive/HazyDA/gridded_diag'
-inputpath=rootarch
-
 # Plotting setup
 expname='hazyda_aero'
-cdate=2020060112
+cdate=2020062212
 hint=6
 sensor='iasi_metop-a'
 selwvn=962.5
@@ -46,7 +43,7 @@ degres=1
 raddfile='diag_'+sensor+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
 #tmppath='/data/users/swei/FTPdir/'
-tmppath='/data/users/swei/archive/hazyda_aero/2020060112'
+tmppath='/data/users/swei/Experiments/testing/OUTPUT/bc_check/2020062212'
 infile1=tmppath+'/'+raddfile
 
 if (os.path.exists(infile1)):
@@ -69,6 +66,8 @@ if (os.path.exists(infile1)):
     clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
     sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
     obs1=sim_nbc1+sim1
+    bcemiss=np.reshape(ds1.BC_Emissivity.values,(npts,nchs))
+    bcpredemiss=np.reshape(ds1.BCPred_Emissivity.values,(npts,nchs))
     if (aerdiag):
         aero_load=np.reshape(ds1.aero_load.values,(npts,nchs))#[:,0]
         aero_frac=np.reshape(ds1.aero_frac.values,(npts,nchs,naer))#[:,0,:]
@@ -79,7 +78,9 @@ if (os.path.exists(infile1)):
                       'qcflag':(['obsloc','wavenumber'],qcflags),
                       'tb_obs':(['obsloc','wavenumber'],obs1),
                       'tb_sim':(['obsloc','wavenumber'],sim1),
-                      'tb_clr':(['obsloc','wavenumber'],clr1)
+                      'tb_clr':(['obsloc','wavenumber'],clr1),
+                      'bc_emiss':(['obsloc','wavenumber'],bcemiss),
+                      'bcpred_emiss':(['obsloc','wavenumber'],bcpredemiss),
                       },
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})
@@ -93,15 +94,3 @@ if (os.path.exists(infile1)):
 else:
     print('No such file: %s' %(infile1))
 
-degres=1
-latbin=np.arange(-90,90+0.5*degres,degres)
-latgrd=np.arange(-90+0.5*degres,90,degres)
-lonbin=np.arange(-180,180+0.5*degres,degres)
-longrd=np.arange(-180+0.5*degres,180,degres)
-
-df=tmpds.to_dataframe()
-df_qcfilter=((df['qcflag']==0.0))
-tmpdf=df.loc[df_qcfilter,:]
-tmpdf['lat']=pd.cut(tmpdf['rlat'],bins=latbin,labels=latgrd)
-tmpdf['lon']=pd.cut(tmpdf['rlon'],bins=lonbin,labels=longrd)
-grp = tmpdf.groupby(["latcut", "loncut"]).agg({"tb_obs": ["mean", "count",'var']})

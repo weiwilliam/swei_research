@@ -26,14 +26,16 @@ elif [ $machine == 's4' ]; then
    USHDIR=${SCRPDIR}/ush
    HOMEDIR=/data/users/swei/Experiments/IdealCRTM
    WRKDIR=${HOMEDIR}/wrk
-   OUTDIR=${HOMEDIR}/output_tinv
-   EXEC=${HOMEDIR}/bin/crtm_ideal_tinv
+   OUTDIR=${HOMEDIR}/output_v24
+   EXEC=${HOMEDIR}/bin/crtm_ideal_FDM_v24
    #EXEC=${HOMEDIR}/bin/crtm_ideal_FDM
    module purge
    module load license_intel/S4
-   module load intel
-   module load hdf hdf5
-   module load netcdf4
+   module use /data/prod/hpc-stack/modulefiles/stack
+   module load hpc/1.1.0
+   module load hpc-intel/18.0.4
+   module load hpc-impi/18.0.4
+   module load netcdf/4.7.4
 fi
 module list
 INNML=${USHDIR}/idealcrtm.nml.IN
@@ -41,13 +43,13 @@ KMODFILE='kmod_inspection.nc'
 AODKFILE='aodk_inspection.nc'
 
 # Exp on/off
-BSL='Y'  # No aerosols experiment
-EXP1='Y' # Concentration
+BSL='N'  # No aerosols experiment
+EXP1='N' # Concentration
 EXP2='N' # Thickness (only for genmethod 1)
-EXP3='Y' # Altitude
+EXP3='N' # Altitude
 EXP4='N' # Sfc_Peak_Ratio (SPR), available for genmethod 2 only
 EXP5='N' # Bins Partition
-EXP6='N' # Surface type
+EXP6='Y' # Surface type
 EXP7='N' # Surface Emissivity
 EXP8='N' # Day and Night test
 

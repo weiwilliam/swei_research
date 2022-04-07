@@ -26,8 +26,8 @@ elif [ $machine == 's4' ] ; then
    outfile=/data/users/swei/Experiments/runlogs/log.$gsirunscript
 fi
 
-SDATE=2020060106
-EDATE=2020060106
+SDATE=2020062212
+EDATE=2020062212
 CDATE=$SDATE
 
 until [ $CDATE -gt $EDATE ]; do
