@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 # Plotting setup
 expname='hazyda_aero'
-cdate=2020062212
+cdate=2020060106
 hint=6
 sensor='iasi_metop-a'
 selwvn=962.5
@@ -45,7 +45,8 @@ raddfile='diag_'+sensor+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
 #tmppath='/data/users/swei/FTPdir/'
 # tmppath='/data/users/swei/Experiments/testing/OUTPUT/bc_check/2020062212'
-tmppath='F:/ResearchData/Prospectus/HazyDA'
+# tmppath='F:/ResearchData/Prospectus/HazyDA'
+tmppath='/scratch/users/swei/ncdiag/hazyda_aero/'+str(cdate)
 infile1=tmppath+'/'+raddfile
 
 if (os.path.exists(infile1)):
@@ -69,12 +70,13 @@ if (os.path.exists(infile1)):
     sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
     obs1=sim_nbc1+sim1
     bcemiss=np.reshape(ds1.BC_Emissivity.values,(npts,nchs))
-    bcpredemiss=np.reshape(ds1.BCPred_Emissivity.values,(npts,nchs))
+    #bcpredemiss=np.reshape(ds1.BCPred_Emissivity.values,(npts,nchs))
     if (aerdiag):
         aero_load=np.reshape(ds1.aero_load.values,(npts,nchs))#[:,0]
         aero_frac=np.reshape(ds1.aero_frac.values,(npts,nchs,naer))#[:,0,:]
         aero_name=ds1.aero_name.split()
 
+                      #'bcpred_emiss':(['obsloc','wavenumber'],bcpredemiss),
     tmpds=xa.Dataset({'rlon':(['obsloc'],rlon1[:,0]),
                       'rlat':(['obsloc'],rlat1[:,0]),
                       'qcflag':(['obsloc','wavenumber'],qcflags),
@@ -82,7 +84,6 @@ if (os.path.exists(infile1)):
                       'tb_sim':(['obsloc','wavenumber'],sim1),
                       'tb_clr':(['obsloc','wavenumber'],clr1),
                       'bc_emiss':(['obsloc','wavenumber'],bcemiss),
-                      'bcpred_emiss':(['obsloc','wavenumber'],bcpredemiss),
                       },
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})
