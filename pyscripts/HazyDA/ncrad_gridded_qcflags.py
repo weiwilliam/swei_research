@@ -45,46 +45,6 @@ import warnings
 #
 warnings.filterwarnings('ignore')
 
-sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
-            'amsua_n19','atms_npp','avhrr_metop-a','avhrr_n18','cris_npp','gmi_gpm',
-            'hirs4_metop-a','hirs4_metop-b','hirs4_n19','iasi_metop-a','iasi_metop-b',
-            'mhs_metop-a','mhs_metop-b','mhs_n18','mhs_n19','saphir_meghat',
-            'seviri_m08','seviri_m10','sndrd1_g15','sndrd2_g15','sndrd3_g15',
-            'sndrd4_g15','ssmis_f17','ssmis_f18']
-#hsensorlist=['airs_aqua','iasi_metop-a','iasi_metop-b','cris_npp']
-#lsensor1list=['hirs4_metop-a','hirs4_metop-b','hirs4_n19']
-#lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
-#lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
-''' ! radiance bias correction terms are as follows:
-!  pred(1,:)  = global offset
-!  pred(2,:)  = zenith angle predictor, is not used and set to zero now
-!  pred(3,:)  = cloud liquid water predictor for clear-sky microwave radiance assimilation
-!  pred(4,:)  = square of temperature laps rate predictor
-!  pred(5,:)  = temperature laps rate predictor
-!  pred(6,:)  = cosinusoidal predictor for SSMI/S ascending/descending bias
-!  pred(7,:)  = sinusoidal predictor for SSMI/S
-!  pred(8,:)  = emissivity sensitivity predictor for land/sea differences
-!  pred(9,:)  = fourth order polynomial of angle bias correction
-!  pred(10,:) = third order polynomial of angle bias correction
-!  pred(11,:) = second order polynomial of angle bias correction
-!  pred(12,:) = first order polynomial of angle bias correction  
-!  pred(13,:) = sum of term 9 to 12 
-!  pred(14,:) = NSST '''
-
-biasterm=5
-biastermname=['BC_Total',
-              'BC_angord',
-              'BC_Cloud_Liquid_Water',
-              'BC_Constant',
-              'BC_Cosine_Latitude_times_Node',
-              'BC_Emissivity',
-              'BC_Fixed_Scan_Position',
-              'BC_Lapse_Rate',
-              'BC_Lapse_Rate_Squared',
-              'BC_Scan_Angle',
-              'BC_Sine_Latitude']
-
-
 degres=2.5
 #degres=1
 
@@ -224,6 +184,7 @@ total_obscounts0=outds0.obsloc.size
 outds0=outds0.assign_coords(obsloc=np.arange(total_obscounts0))
 total_obscounts1=outds1.obsloc.size
 outds1=outds1.assign_coords(obsloc=np.arange(total_obscounts1))
+print((total_obscounts0,total_obscounts1),flush=1)
 
 latbin=np.arange(-90,90+0.5*degres,degres)
 latgrd=np.arange(-90+0.5*degres,90,degres)

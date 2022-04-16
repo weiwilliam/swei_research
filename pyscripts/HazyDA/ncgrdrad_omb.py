@@ -36,10 +36,10 @@ import pandas as pd
 
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
-from utils import setup_cmap
+from utils import setup_cmap,find_cnlvs
 import cartopy.crs as ccrs
 
-tlsize=12 ; txsize=10
+tlsize=10 ; txsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=txsize)
 mpl.rc('xtick',labelsize=txsize)
 mpl.rc('ytick',labelsize=txsize)
@@ -63,15 +63,15 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-pltvar='omb_bc_mean'
-varlb='OMB w/ BC'
+pltvar='omb_nbc_mean'
+varlb='OMB w/o BC'
 sdate=2020061000
 edate=2020071018
 hint=6
 
 sensor='iasi_metop-a'
 chkwvn=962.5
-degres=1
+degres=2.5
 units='K'
 
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
@@ -107,10 +107,9 @@ elif (cbori=='horizontal'):
    cb_frac=0.04
    cb_pad=0.1
 
-    
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded'
-imgsavpath=outputpath+'/2dmap/'+area
+imgsavpath=outputpath+'/2dmap/omb/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
@@ -123,35 +122,35 @@ ds1=xa.open_dataset(grdfile1)
 pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
 pltda1=ds1[pltvar].sel(wavenumber=chkwvn)
 
-lv_max=np.ceil( np.max( (np.nanquantile(abs(pltda0),0.95),np.nanquantile(abs(pltda1),0.95)) ))
-lv_int=lv_max/10
-tcks=np.arange(-lv_max,lv_max+lv_int,lv_int)
-lvs=tcks
+tmpda=xa.concat((pltda0,pltda1),dim='exps')
+
+cnlvs=find_cnlvs(tmpda,ntcks=21,eqside=0)
 clridx=[]
-for idx in np.linspace(2,254,tcks.size):
+for idx in np.linspace(2,254,cnlvs.size):
     clridx.append(int(idx))
 clrmap=setup_cmap('BlueYellowRed',clridx)
-norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
+norm = mpcrs.BoundaryNorm(cnlvs,len(clridx)+1,extend='both')
 
-difflv_max=np.ceil( np.nanquantile(abs(pltda1-pltda0),0.95) )
-difflv_int=difflv_max/20
-difftcks=np.arange(0,difflv_max+difflv_int,difflv_int)
-diff_lvs=difftcks
+diff_lvs=find_cnlvs(pltda1-pltda0,ntcks=21,eqside=0)
 clridx=[]
-for idx in np.linspace(2,254,difftcks.size):
+for idx in np.linspace(2,254,diff_lvs.size):
     clridx.append(int(idx))
-diffclrmap=setup_cmap('WhiteYellowOrangeRed',clridx)
+diffclrmap=setup_cmap('BlueYellowRed',clridx)
 diffnorm = mpcrs.BoundaryNorm(diff_lvs,len(clridx)+1,extend='both')
 
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda0
 cblabel='%s %s [%s]' %(expnlist[0],varlb,units)
-cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=lvs,
+cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
                cmap=clrmap,norm=norm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-             pad=cb_pad,ticks=lvs[::tkfreq],aspect=40,label=cblabel)
-outname='%s/%s_%s.%s_%s.%s' %(imgsavpath,expnlist[0],pltvar,sdate,edate,ffmt)
+             pad=cb_pad,aspect=40,label=cblabel)
+outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
@@ -161,11 +160,15 @@ fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda1
 cblabel='%s %s [%s]' %(expnlist[1],varlb,units)
-cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=lvs,
+cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
                cmap=clrmap,norm=norm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-             pad=cb_pad,ticks=lvs[::tkfreq],aspect=40,label=cblabel)
-outname='%s/%s_%s.%s_%s.%s' %(imgsavpath,expnlist[1],pltvar,sdate,edate,ffmt)
+             pad=cb_pad,aspect=40,label=cblabel)
+outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
@@ -177,9 +180,13 @@ pltdata=pltda1-pltda0
 cblabel='%s%s%s %s [%s]' %(expnlist[1],minussign,expnlist[0],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=diff_lvs,
                cmap=diffclrmap,norm=diffnorm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-             pad=cb_pad,ticks=diff_lvs[::tkfreq],aspect=40,label=cblabel)
-outname='%s/%s-%s_%s.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,sdate,edate,ffmt)
+             pad=cb_pad,aspect=40,label=cblabel)
+outname='%s/%s-%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)

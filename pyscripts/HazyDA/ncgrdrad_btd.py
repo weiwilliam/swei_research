@@ -36,10 +36,10 @@ import pandas as pd
 
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
-from utils import setup_cmap
+from utils import setup_cmap,find_cnlvs
 import cartopy.crs as ccrs
 
-tlsize=12 ; txsize=10
+tlsize=10 ; txsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=txsize)
 mpl.rc('xtick',labelsize=txsize)
 mpl.rc('ytick',labelsize=txsize)
@@ -63,8 +63,8 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-pltvar='qc0_count'
-varlb='clear-sky'
+pltvar='btd_max'
+varlb='BTD Maximum'
 sdate=2020061000
 edate=2020071018
 hint=6
@@ -72,10 +72,10 @@ hint=6
 sensor='iasi_metop-a'
 chkwvn=962.5
 degres=2.5
-units='%'
+units='K'
 
-explist=np.array(['hazyda_ctrl','hazyda_aero'])
-expnlist=['CTL','AER']
+exp='hazyda_aero'
+expn='AER'
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -107,73 +107,39 @@ elif (cbori=='horizontal'):
    cb_frac=0.04
    cb_pad=0.1
 
-    
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded'
-imgsavpath=outputpath+'/2dmap/qcfrac/'+area
+imgsavpath=outputpath+'/2dmap/btd/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_qcflags_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,degres,degres,sdate,edate)
-grdfile1='%s/%s_%s_%s_qcflags_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,degres,degres,sdate,edate)
+grdfile0='%s/%s_%s_%s_%s_btd_%.1fx%.1f.%s_%s.nc' %(inpath,expn,sensor,loop,qcflg,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
-ds1=xa.open_dataset(grdfile1)
 
-tmpds0=ds0.sel(wavenumber=chkwvn)
-tmpds1=ds1.sel(wavenumber=chkwvn)
+pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
 
-def countall(inds):
-    ivar=0
-    for var in inds.var():
-        if (ivar==0):
-           if (np.isnan(inds[var]).all()):
-              continue
-           else:
-              all_count=inds[var].astype('float')
-        else:
-           if (np.isnan(inds[var]).all()):
-              continue
-           else:
-              all_count=all_count+inds[var].astype('float')
-        ivar+=1
-    return all_count
-
-allcnts0=countall(tmpds0)
-allcnts1=countall(tmpds1)
-
-pltda0=ds0[pltvar].sel(wavenumber=chkwvn)/allcnts0*100
-pltda1=ds1[pltvar].sel(wavenumber=chkwvn)/allcnts1*100
-
-cnlvs=np.array((0., 1., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.))
-clridx=np.array((2,3,5,7,8,9,10,12,14,16,17,18))
-clrmap=setup_cmap('precip3_16lev',clridx)
-clnorm = mpcrs.BoundaryNorm(cnlvs,len(clridx),extend='max')
+cnlvs=find_cnlvs(pltda0,ntcks=21,eqside=0)
+clridx=[]
+for idx in np.linspace(2,255,cnlvs.size):
+    clridx.append(int(idx))
+clrmap=setup_cmap('BlueYellowRed',clridx)
+norm = mpcrs.BoundaryNorm(cnlvs,len(clridx)+1,extend='both')
 
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda0
-cblabel='%s fraction of %s [%s]' %(expnlist[0],varlb,units)
+cblabel='%s %s [%s]' %(expn,varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
-               cmap=clrmap,norm=clnorm,extend='max')
+               cmap=clrmap,norm=norm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
              pad=cb_pad,aspect=40,label=cblabel)
+outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expn,sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
-   outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
-   print(outname)
-   fig.savefig(outname,dpi=quality)
-   plt.close()
-
-fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
-pltdata=pltda1
-cblabel='%s fraction of %s [%s]' %(expnlist[1],varlb,units)
-cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
-               cmap=clrmap,norm=clnorm,extend='max')
-plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-             pad=cb_pad,aspect=40,label=cblabel)
-if (fsave):
-   outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],sensor,chkwvn,pltvar,sdate,edate,ffmt)
    print(outname)
    fig.savefig(outname,dpi=quality)
    plt.close()

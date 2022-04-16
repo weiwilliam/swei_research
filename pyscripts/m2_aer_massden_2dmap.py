@@ -48,12 +48,13 @@ elif (machine=='S4'):
 m2tag='inst3_3d_aer_Nv'
 tkfreq=2
 
-sdate=2020060100
-edate=2020071018
+sdate=2020081300
+edate=2020092118
 hint=6
-pltvar='dust'
+pltvar='total'
 area='Glb'
 pltall=0 # 0: total only 1: sub species included
+pltsnap=0
 pltave=1
 plt_pts=0
 #
@@ -187,27 +188,28 @@ for date in dlist:
        nplotlist=[nvars]
     else:
        nplotlist=np.arange(nvars+1)
-    
-    for n in nplotlist:
-        if (n<nvars):
-           title='%s column mass density' %(varlst[n])
-           outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
-        else:
-           title='%s column mass density' %(varname)
-           outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
-    
-        pltdata=cmass[n,:,:]
-        fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-        set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
-        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
-        #ax.set_title(title)
-        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
-                     format='%.2f',fraction=0.04,aspect=40,pad=0.08,label=cblb)
-        if (plt_pts):
-           sc=ax.scatter(pts_lon,pts_lat,s=ptsize,c='w',marker='x')
-        print(outname)
-        fig.savefig(outname,dpi=quality)
-        plt.close()
+   
+    if (pltsnap): 
+       for n in nplotlist:
+           if (n<nvars):
+              title='%s column mass density' %(varlst[n])
+              outname='%s/%s_%s_cmass.%s.png'  %(outputpath,area,varlst[n],date)
+           else:
+              title='%s column mass density' %(varname)
+              outname='%s/%s_%s_all_cmass.%s.png' %(outputpath,area,pltvar,date)
+       
+           pltdata=cmass[n,:,:]
+           fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+           set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
+           cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
+           #ax.set_title(title)
+           plt.colorbar(cn,ax=ax,orientation='horizontal',
+                        format='%.2f',fraction=0.04,aspect=40,pad=0.08,label=cblb)
+           if (plt_pts):
+              sc=ax.scatter(pts_lon,pts_lat,s=ptsize,c='w',marker='x')
+           print(outname)
+           fig.savefig(outname,dpi=quality)
+           plt.close()
  
     if (pltave):
        if (dates_count==0):
@@ -232,7 +234,7 @@ if (pltave):
        set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
        cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata*scalef,levels=cnlvsarr,cmap=cn_cmap,norm=norm)
        #ax.set_title(title)
-       plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvsarr[::tkfreq],
+       plt.colorbar(cn,ax=ax,orientation='horizontal',
                     format='%.2f',fraction=0.04,aspect=40,pad=0.08,label=cblb)
        if (plt_pts):
           sc=ax.scatter(pts_lon,pts_lat,s=ptsize,c='w',marker='x')

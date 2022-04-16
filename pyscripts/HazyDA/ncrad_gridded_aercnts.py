@@ -12,12 +12,12 @@ elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/home/Shih-wei.Wei/research'
-elif (machine=='Cheyenne')):
+elif (machine=='Cheyenne'):
     rootpath='/glade/work/swei/output/images'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/glade/u/home/swei/research'
-elif (machine='S4')):
-    rootpath='/data/users/swei/Images'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
     rootarch='/scratch/users/swei/ncdiag'
     rootgit='/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
@@ -41,26 +41,27 @@ mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
 mpl.rc('legend',fontsize='large')
 fsave=1 ; ffmt='png' ; ptsize=4
-axe_w=7 ; axe_h=3 ; quality=300
+axe_w=6 ; axe_h=3 ; quality=300
 
 # Projection setting
 proj=ccrs.PlateCarree(globe=None)
 
-outputpath=rootpath+'/../archive/HazyDA/gridded_diag'
+outputpath=rootpath+'/archive/HazyDA/gridded_diag'
 inputpath=rootarch
 
 # Plotting setup
 expname='hazyda_ctrl'
 sensor='iasi_metop-a'
-sdate=2020061000
-edate=2020071018
+sdate=2020082200
+edate=2020092118
 hint=6
 sensor='iasi_metop-a'
 selwvn=962.5
 loop='ges' #ges,anl
-degres=1
+degres=2.5
 tkfreq=1
 gen_data=0
+gen_file=0
 gen_plot=1
 
 area='Glb'
@@ -165,10 +166,8 @@ if (gen_data):
             tmpds=tmpds.sel(wavenumber=selwvn)
             aermsk_tmpds=xa.Dataset({'rlon':(['obsloc'],tmpds.rlon.data),
                                      'rlat':(['obsloc'],tmpds.rlat.data),
-                                     'aer_msk':(['obsloc'],aer_tmp.data)
-                                     },
-                                    coords={'obsloc':np.arange(npts),
-                                            'wavenumber':tmpds.wavenumber.data})
+                                     'aer_msk':(['obsloc'],aer_tmp.data)},
+                                    coords={'obsloc':np.arange(npts)})
             
         # Observation lat/lon
         if (date==str(sdate)):
@@ -176,53 +175,68 @@ if (gen_data):
         else:
             aermsk=xa.concat((aermsk,aermsk_tmpds),dim='obsloc')
     
+    total_obscounts=aermsk.obsloc.size
+    aermsk=aermsk.assign_coords(obsloc=np.arange(total_obscounts))
+   
+    df=aermsk.to_dataframe()
+ 
+    latbin=np.arange(-90,90+0.5*degres,degres)
     latgrd=np.arange(-90+0.5*degres,90,degres)
+    lonbin=np.arange(-180,180+0.5*degres,degres)
     longrd=np.arange(-180+0.5*degres,180,degres)
     
-    grdsdata=np.zeros((latgrd.size,longrd.size),dtype='float')
-    for i in np.arange(longrd.size):
-       for j in np.arange(latgrd.size):
-          grdmsk=((aermsk.rlat>=(latgrd[j]-0.5*degres))&(aermsk.rlat<=(latgrd[j]+0.5*degres))&
-                  (aermsk.rlon>=(longrd[i]-0.5*degres))&(aermsk.rlon<=(longrd[i]+0.5*degres)))
-          grd_aermsk=(grdmsk)&(aermsk.aer_msk==1)
-          if (np.count_nonzero(grdmsk)!=0):
-              grdsdata[j,i]=np.count_nonzero(grd_aermsk==1)/np.count_nonzero(grdmsk)
-          else:
-              grdsdata[j,i]=0.
-          
-    grd_ds=xa.Dataset({'aero_frac':(['lat','lon'],grdsdata)},
-                      coords={'lat':latgrd,'lon':longrd})
+    df['lat']=pd.cut(df['rlat'],bins=latbin,labels=latgrd)
+    df['lon']=pd.cut(df['rlon'],bins=lonbin,labels=longrd)
+    
+    grp = df.groupby(['lat','lon']).agg({'aer_msk':['count']})
+    grp=grp.rename(columns={'aer_msk':'total'})
+
+    df_filter=((df['aer_msk']==True))
+    filtered_df=df.loc[df_filter,:]   
+    filtered_df=filtered_df.reset_index()
+    
+    filtered_df['lat']=pd.cut(filtered_df['rlat'],bins=latbin,labels=latgrd)
+    filtered_df['lon']=pd.cut(filtered_df['rlon'],bins=lonbin,labels=longrd)
+    filtered_grp = filtered_df.groupby(['lat','lon']).agg({'aer_msk':['count']})
+    filtered_grp = filtered_grp.rename(columns={'aer_msk':'hazy'})
+
+    outgrp=pd.concat((grp,filtered_grp),axis=1)
+    
+    grdds=outgrp.to_xarray()
+    for var in ['total','hazy']:
+        newname='%s_count'%(var)
+        grdds=grdds.rename({(var,'count'):(newname)})
 
 savedir=outputpath
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
-
-filename=savedir+'/aer_msk.'+str(sdate)+'_'+str(edate)+'.nc4'
-if (gen_data):
-    grd_ds.to_netcdf(filename)
+filename='%s/aer_msk.%.1fx%.1f.%s_%s.nc4' %(savedir,degres,degres,sdate,edate)
+if (gen_file):
+    grdds.to_netcdf(filename)
 
 if (gen_plot):
     print('Generate plot')
-    imgsavpath=rootpath+'/HazyDA/Diag/gridded'
+    imgsavpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/gridded/2dmap/aermsk/'+area
     if ( not os.path.exists(imgsavpath) ):
         os.makedirs(imgsavpath)
 
-    cnlvs=np.array((0., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.))
-    clridx=np.array((0,2,4,7,8,9,10,12,14,15,16,18))
+    cnlvs=np.array((0.,1., 10., 20., 30., 40., 50., 60., 70., 80., 90., 100.))
+    clridx=np.array((2,3,5,7,8,9,10,12,14,16,17,18))
     clrmap=setup_cmap('precip3_16lev',clridx)
-    aer_norm = mpcrs.BoundaryNorm(cnlvs,len(clridx),extend='both')
+    aer_norm = mpcrs.BoundaryNorm(cnlvs,len(clridx),extend='max')
     cblb='Fraction of aerosol-affected data [%]'
 
-    ds=xa.open_dataset(filename)
+    if (not gen_data):
+       grdds=xa.open_dataset(filename)
 
-    pltdata=ds['data']*100
+    pltdata=grdds['hazy_count']/grdds['total_count']*100
     #pltdata=ds.aero_frac
-    fig,ax=setupax_2dmap(cornll,area,proj,lbsize=lbsize)
+    fig,ax,gl=setupax_2dmap(cornll,area,proj,lbsize=lbsize)
     set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-    cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-    plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
+    cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='max')
+    plt.colorbar(cn,ax=ax,orientation='horizontal',
                  fraction=0.045,aspect=40,pad=0.08,label=cblb)
-    outname=imgsavpath+'/aer_msk.'+str(sdate)+'_'+str(edate)+'.'+ffmt
+    outname='%s/aer_msk_%.1fx%.1f.%s_%s.%s' %(imgsavpath,degres,degres,sdate,edate,ffmt)
     print(outname)
     fig.savefig(outname,dpi=quality)
     plt.close()

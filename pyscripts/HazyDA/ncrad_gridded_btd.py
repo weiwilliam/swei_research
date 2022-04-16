@@ -58,7 +58,6 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 
 degres=2.5
 #degres=1
-statslist=['mean','count','var','max','min']
 
 expset=1
 if (expset==1):
@@ -150,16 +149,22 @@ for date in dlist:
     rlon0=np.reshape(ds0.Longitude.values,(npts0,nchs0))[:,0]
     rlon0=(rlon0+180)%360-180
     qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
-    omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
-    omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
+    sim0=np.reshape(ds0.Simulated_Tb.values,(npts0,nchs0))
+    clr0=np.reshape(ds0.Clearsky_Tb.values,(npts0,nchs0))
+    btd0=sim0-clr0
+    #omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
+    #omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
 
     # Observation lat/lon from exp 1 (test)
     rlat1=np.reshape(ds1.Latitude.values,(npts1,nchs1))[:,0]
     rlon1=np.reshape(ds1.Longitude.values,(npts1,nchs1))[:,0]
     rlon1=(rlon1+180)%360-180
     qcflags1=np.reshape(ds1.QC_Flag.values,(npts1,nchs1))
-    omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts1,nchs1))
-    omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts1,nchs1))
+    sim1=np.reshape(ds1.Simulated_Tb.values,(npts1,nchs1))
+    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts1,nchs1))
+    btd1=sim1-clr1
+    #omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts1,nchs1))
+    #omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts1,nchs1))
 
     if (crosszero):
         rlon1[rlon1>=maxlon]=rlon1[rlon1>=maxlon]-360.
@@ -168,8 +173,7 @@ for date in dlist:
     tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0),
                        'rlat':(['obsloc'],rlat0),
                        'qcflag':(['obsloc','wavenumber'],qcflags0),
-                       'omb_bc':(['obsloc','wavenumber'],omb_bc0),
-                       'omb_nbc':(['obsloc','wavenumber'],omb_nbc0),
+                       'btd':(['obsloc','wavenumber'],btd0),
                        },
                       coords={'obsloc':np.arange(npts0),
                               'wavenumber':ds0.wavenumber.values})
@@ -178,8 +182,7 @@ for date in dlist:
     tmpds1=xa.Dataset({'rlon':(['obsloc'],rlon1),
                        'rlat':(['obsloc'],rlat1),
                        'qcflag':(['obsloc','wavenumber'],qcflags1),
-                       'omb_bc':(['obsloc','wavenumber'],omb_bc1),
-                       'omb_nbc':(['obsloc','wavenumber'],omb_nbc1),
+                       'btd':(['obsloc','wavenumber'],btd1),
                        },
                       coords={'obsloc':np.arange(npts1),
                               'wavenumber':ds0.wavenumber.values})
@@ -222,23 +225,20 @@ else:
 outdf1['lat']=pd.cut(outdf1['rlat'],bins=latbin,labels=latgrd)
 outdf1['lon']=pd.cut(outdf1['rlon'],bins=lonbin,labels=longrd)
 
-grp0 = outdf0.groupby(['wavenumber','lat','lon']).agg({'omb_bc':statslist,
-                                                       'omb_nbc':statslist})
-grp1 = outdf1.groupby(['wavenumber','lat','lon']).agg({'omb_bc':statslist,
-                                                       'omb_nbc':statslist})
+grp0 = outdf0.groupby(['wavenumber','lat','lon']).agg({'btd':['mean','count','var','max','min']})
+grp1 = outdf1.groupby(['wavenumber','lat','lon']).agg({'btd':['mean','count','var','max','min']})
 grdds0=grp0.to_xarray()
 grdds1=grp1.to_xarray()
 
-for var in ['omb_bc','omb_nbc']:
-   for stats in statslist:
-      newname='%s_%s'%(var,stats)
-      grdds0=grdds0.rename({(var,stats):(newname)})
-      grdds1=grdds1.rename({(var,stats):(newname)})
+for stats in ['mean','count','var','max','min']:
+   newname='btd_%s'%(stats)
+   grdds0=grdds0.rename({('btd',stats):(newname)})
+   grdds1=grdds1.rename({('btd',stats):(newname)})
 
-fname0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+fname0='%s/%s_%s_%s_%s_btd_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
 print(fname0,flush=1)
 grdds0.to_netcdf(fname0)
 
-fname1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
+fname1='%s/%s_%s_%s_%s_btd_%.1fx%.1f.%s_%s.nc' %(outpath,leglist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 print(fname1,flush=1)
 grdds1.to_netcdf(fname1)

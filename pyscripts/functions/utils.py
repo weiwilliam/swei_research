@@ -1,4 +1,6 @@
-__all__ = ['ndate','setup_cmap','cnbestF','latlon_news','lat_ns','lon_we','gen_eqs_by_stats']
+__all__ = ['ndate','setup_cmap','cnbestF','latlon_news','lat_ns','lon_we','gen_eqs_by_stats',
+           'find_cnlvs']
+import numpy as np
 
 def ndate(hinc,cdate):
     from datetime import datetime
@@ -137,3 +139,41 @@ def gen_eqs_by_stats(stats_in):
     else:
        fiteqs='y=%.2f*x' %(stats_in.slope)
     return fiteqs
+
+def find_cnlvs(indata,ntcks=None,eqside=None):
+    if not ntcks: ntcks=21
+    if not eqside: eqside=0
+    tmpmax=np.nanquantile(indata,0.997)
+    tmpmin=np.nanquantile(indata,0.003)
+    print(tmpmin,tmpmax)
+    if ( abs(tmpmax)<1. and tmpmax!=0. ):
+       ndecimals=int(abs(np.floor(np.log10(abs(tmpmax)))))
+       cnlvmax=round(tmpmax,ndecimals)
+    else:
+       cnlvmax=np.sign(tmpmax)*(np.ceil(abs(tmpmax)))
+    if ( abs(tmpmin)<1. and tmpmin!=0. ):
+       ndecimals=int(abs(np.floor(np.log10(abs(tmpmin)))))
+       cnlvmin=round(tmpmin,ndecimals)
+    else:
+       cnlvmin=np.sign(tmpmin)*(np.ceil(abs(tmpmin)))
+    print(cnlvmin,cnlvmax)
+    if (cnlvmax*cnlvmin<0):
+       if (eqside):
+          cnlvmax=np.max((abs(cnlvmin),abs(cnlvmax)))
+          cnlvs=np.linspace(-cnlvmax,cnlvmax,ntcks)
+       else:
+          h_ntcks=int(ntcks*0.5)
+          if ( np.mod(ntcks,2)==0 ):
+             neg_lvs=np.linspace(cnlvmin,0,h_ntcks,endpoint=False)
+             pos_int=(abs(cnlvmax)/int(ntcks*0.5))
+             pos_lvs=np.arange(0+pos_int,cnlvmax+pos_int,pos_int)
+          else:
+             neg_lvs=np.linspace(cnlvmin,0,h_ntcks,endpoint=False)
+             pos_lvs=np.linspace(0,cnlvmax,h_ntcks+1)
+          cnlvs=np.append(neg_lvs,pos_lvs)
+    else:
+       if (eqside): print('Warning equal side is not applicable because max=%.f, min=%.f' %(cnlvmax,cnlvmin))
+       cnlvs=np.linspace(cnlvmin,cnlvmax,ntcks)
+    print(cnlvs)
+    return cnlvs
+
