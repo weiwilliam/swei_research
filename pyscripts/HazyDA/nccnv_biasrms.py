@@ -53,31 +53,33 @@ diagsuffix='nc4'
 minussign=u'\u2212'
 #mpl.rc('lines',linewidth=1.2)
 
-outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv'
+sfctype_list=['180','181','182','183','187']
+outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/biasrms'
 inputpath=rootarch
 
 varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
-bufrtype='all' # SST: 181-199
+bufrtype='181' # SST: 181-199
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 enum=explist.shape[0]
 
-sdate=2020061000
-edate=2020071018
+sdate=2020082200
+edate=2020092118
 hint=6
 
-loop='anl' #ges,anl
+loop='ges' #ges,anl
+area='NAfr'
+useqc=0
+
 if (loop=='ges'):
    lpstr='OMF'
 elif (loop=='anl'):
    lpstr='OMA'
 
-area='TRO'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
 
-useqc=1
 if (useqc):
     qcflg='qc'
 else:
@@ -85,7 +87,7 @@ else:
 
 zpltlst=[0,1,2,3,4,5,6,7,8]
 
-imgsavpath=outputpath+'/'+expnlist[1]+'/'+area
+imgsavpath=outputpath+'/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
@@ -124,7 +126,9 @@ znum=ptop.size
 uidx=0
 for var in varlist:
     unit=unitlist[uidx]
-    if (var=='ps' or var=='sst' or var=='tcp'):
+    sfcflag=(var=='ps' or var=='sst' or var=='tcp'
+             or bufrtype in sfctype_list)
+    if ( sfcflag ):
         icount=np.zeros((tnum,2))
     else:
         icount=np.zeros((tnum,znum,2))
@@ -142,7 +146,7 @@ for var in varlist:
             try:
                 omg_mean
             except NameError:
-                if (var=='ps' or var=='sst' or var=='tcp'):
+                if (sfcflag):
                     omg_mean=np.zeros((tnum,2),dtype='float')
                     omg_rmsq=np.zeros_like(omg_mean)
                     omg_mean[:,:]=np.nan
@@ -166,7 +170,7 @@ for var in varlist:
             rlon1[rlon1>=maxlon]=rlon1[rlon1>=maxlon]-360.
             rlon2[rlon2>=maxlon]=rlon2[rlon2>=maxlon]-360.
       
-        if (var!='ps' or var!='sst' or var!='tcp'):
+        if (sfcflag):
            pres1=ds1.Pressure
            pres2=ds2.Pressure
 
@@ -190,7 +194,7 @@ for var in varlist:
             mask1=(mask1)&(type1==int(bufrtype))
             mask2=(mask2)&(type2==int(bufrtype))
         
-        if (var=='ps' or var=='sst' or var=='tcp'):
+        if (sfcflag):
             dpar1=ds1.Obs_Minus_Forecast_adjusted
             dpar2=ds2.Obs_Minus_Forecast_adjusted
             
@@ -231,7 +235,7 @@ for var in varlist:
                 omg_rmsq[d,z,1]=np.sqrt(np.nanmean(np.square(zdpar2)))
         d=d+1
                 
-    if (var=='ps' or var=='sst' or var=='tcp'):
+    if (sfcflag):
         fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
         fig.subplots_adjust(hspace=0.1)
         for a in np.arange(2):
@@ -253,8 +257,8 @@ for var in varlist:
         ax[0].legend(lglist[0,:])
         ax[1].legend(lglist[1,:])
         if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype), dpi=quality)
+            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png' 
+                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype,sdate,edate), dpi=quality)
             plt.close()
         
     else:
@@ -282,8 +286,8 @@ for var in varlist:
         ax[1].grid()
         ax[2].grid()
         if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype), dpi=quality)
+            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png' 
+                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype,sdate,edate), dpi=quality)
             plt.close()
         
         for z in zpltlst:
@@ -309,8 +313,8 @@ for var in varlist:
             ax[1].legend(lglist[1,:])
             
             if (fsave):
-                fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.png' 
-                            %(area,loop,var,explist[0],explist[1],pbot[z],qcflg,bufrtype), dpi=quality)
+                fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
+                            %(area,loop,var,explist[0],explist[1],pbot[z],qcflg,bufrtype,sdate,edate), dpi=quality)
                 plt.close()
                 
     uidx=uidx+1

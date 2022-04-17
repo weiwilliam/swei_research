@@ -53,8 +53,8 @@ axe_w=3 ; axe_h=3 ; quality=300
 sdate=2020061000
 edate=2020071018
 hint=6
-exp='hazyda_ctrl'
-expname='CTL'
+exp='hazyda_aero'
+expname='AER'
 sensor='iasi_metop-a'
 spectral_range=slice(600,1300)
 loop='ges' #ges,anl
@@ -63,7 +63,6 @@ loop='ges' #ges,anl
 #elif loop=='ges':
 #    tlstr='OMF'
 plthist=1 # plot 2d histogram
-usebc=1
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -80,15 +79,11 @@ elif (cbori=='horizontal'):
    cb_frac=0.04
    cb_pad=0.1
 
-if (usebc):
-   bcflg='bc'
-else:
-   bcflg='nobc'
 
 # Data path setup
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir0=rootarch+'/'+exp
-savedir=outpath+'/DiagFiles/rad/pdf_norm/'+area
+savedir=outpath+'/DiagFiles/rad/pdf_norm/'+area+'/'+expname
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -163,7 +158,7 @@ ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
 
 binsize=0.2
 halfbin=0.5*binsize
-hist_x_edge=np.arange(-3-halfbin,3.+binsize,binsize)
+hist_x_edge=np.arange(-5,5.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
 # for chkwvn in [652.0]:
@@ -177,11 +172,6 @@ for chkwvn in chkwvn_list:
     omb_nbc0=ds_chk0.omb_nbc
     varinv0=ds_chk0.varinv
     qcflg0=ds_chk0.qcflag
-
-    if (usebc):
-       omb0=omb_bc0
-    else:
-       omb0=omb_nbc0
     
     good_msk0=(ds_chk0.qcflag==0.)
     gross_msk0=(ds_chk0.qcflag==3.)
@@ -194,14 +184,24 @@ for chkwvn in chkwvn_list:
     ori_msk0=(good_msk0)|(aer_msk0)|(bust_msk0)|(tzr_msk0)|(gross_msk0)
     
     if (plthist):            
-        pltda_x1=omb0[good_msk0]*varinv0[good_msk0]
-        pltda_x2=omb0[aer_msk0]*varinv0[aer_msk0]
+        bcflg1='bc'
+        bcflg2='nobc'
         x_label='Normalized OMB'
+        y_label='Data Count'
+        pltda_x1=omb_bc0[good_msk0]*varinv0[good_msk0]
+        pltda_x2=omb_bc0[aer_msk0]*varinv0[aer_msk0]
         hdata1, tmpbins=np.histogram(pltda_x1, bins=hist_x_edge, density=0)
         hdata2, tmpbins=np.histogram(pltda_x2, bins=hist_x_edge, density=0)
-    
-        omb_mean=np.zeros_like(bin_center,dtype='float')
-        omb_sd=np.zeros_like(bin_center,dtype='float')
+        pltda_x3=omb_nbc0[good_msk0]*varinv0[good_msk0]
+        pltda_x4=omb_nbc0[aer_msk0]*varinv0[aer_msk0]
+        hdata3, tmpbins=np.histogram(pltda_x3, bins=hist_x_edge, density=0)
+        hdata4, tmpbins=np.histogram(pltda_x4, bins=hist_x_edge, density=0)
+        tmpymax=np.nanmax((hdata1,hdata2,hdata3,hdata4)) 
+        ymax=np.ceil(tmpymax/np.power(10,int(np.log10(tmpymax))))*np.power(10,int(np.log10(tmpymax)))
+        #print('ymax at %.2f = %s, %s' %(chkwvn,tmpymax,ymax) )
+
+        #omb_mean=np.zeros_like(bin_center,dtype='float')
+        #omb_sd=np.zeros_like(bin_center,dtype='float')
         # counts=np.zeros_like(bin_center,dtype='int')
         
         tistr=('%s (%.2f $\mathrm{cm^{-1}}$)' %(sensor,chkwvn))
@@ -211,18 +211,39 @@ for chkwvn in chkwvn_list:
         set_size(axe_w,axe_h,l=0.2,r=0.9)
         ax.set_title(tistr,loc='left')
         ax.set_xlabel(x_label)
-        ax.plot(bin_center,hdata1*binsize,'bo',fillstyle='none',ms=3)
-        ax.plot(bin_center,hdata2*binsize,'ro',fillstyle='none',ms=3)
+        ax.plot(bin_center,hdata1,'bo',fillstyle='none',ms=2.5)
+        ax.plot(bin_center,hdata2,'ro',fillstyle='none',ms=2.5)
         #ax.set_yscale("log")
-        #ax.set_ylim(1e-4,1.4e0)
         #ax.set_ylabel("PDF")
-        ax.set_ylabel('Counts')
+        ax.set_ylim(0,ymax)
+        ax.set_ylabel(y_label)
         ax.vlines(0.,0,1,transform=ax.get_xaxis_transform(),colors='grey',linestyle='dashed',linewidth=0.7)
         ax.legend(['Clear','Hazy'],loc=2)
         
         if (fsave):
             fname=('%s/PDF_NormOMB_%s_%s_%s_%.2f_%s.%s_%s.%s'
-                    %(savedir,area,expname,sensor,chkwvn,bcflg,sdate,edate,ffmt))
+                    %(savedir,area,expname,sensor,chkwvn,bcflg1,sdate,edate,ffmt))
+            print(fname,flush=1)
+            fig.savefig(fname,dpi=quality)
+            plt.close()
+
+        fig=plt.figure()
+        ax=plt.subplot()
+        set_size(axe_w,axe_h,l=0.2,r=0.9)
+        ax.set_title(tistr,loc='left')
+        ax.set_xlabel(x_label)
+        ax.plot(bin_center,hdata3,'bo',fillstyle='none',ms=2.5)
+        ax.plot(bin_center,hdata4,'ro',fillstyle='none',ms=2.5)
+        #ax.set_yscale("log")
+        #ax.set_ylabel("PDF")
+        ax.set_ylim(-500,ymax)
+        ax.set_ylabel(y_label)
+        ax.vlines(0.,0,1,transform=ax.get_xaxis_transform(),colors='grey',linestyle='dashed',linewidth=0.7)
+        ax.legend(['Clear','Hazy'],loc=2)
+        
+        if (fsave):
+            fname=('%s/PDF_NormOMB_%s_%s_%s_%.2f_%s.%s_%s.%s'
+                    %(savedir,area,expname,sensor,chkwvn,bcflg2,sdate,edate,ffmt))
             print(fname,flush=1)
             fig.savefig(fname,dpi=quality)
             plt.close()
