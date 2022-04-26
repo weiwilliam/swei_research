@@ -140,11 +140,12 @@ def gen_eqs_by_stats(stats_in):
        fiteqs='y=%.2f*x' %(stats_in.slope)
     return fiteqs
 
-def find_cnlvs(indata,ntcks=None,eqside=None):
+def find_cnlvs(indata,topq=None,ntcks=None,eqside=None):
+    if not topq: topq=0.997
     if not ntcks: ntcks=21
     if not eqside: eqside=0
-    tmpmax=np.nanquantile(indata,0.997)
-    tmpmin=np.nanquantile(indata,0.003)
+    tmpmax=np.nanquantile(indata,topq)
+    tmpmin=np.nanquantile(indata,1-topq)
     print(tmpmin,tmpmax)
     if ( abs(tmpmax)<1. and tmpmax!=0. ):
        ndecimals=int(abs(np.floor(np.log10(abs(tmpmax)))))

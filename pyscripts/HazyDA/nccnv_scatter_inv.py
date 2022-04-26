@@ -45,6 +45,7 @@ from datetime import timedelta
 import xarray as xa
 import seaborn as sns
 
+txsize=14
 axe_w=6 ; axe_h=6
 mpl.rc('axes',titlesize=16,labelsize=16)
 mpl.rc('xtick',labelsize=16)
@@ -55,8 +56,8 @@ fsave=1; ffmt='png'; quality=300
 sfctype_list=['180','181','182','183','187']
 varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
-colorlist=['r','b']
-markerlist=['*','o']
+colorlist=['b','b']
+markerlist=['o','o']
 
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
@@ -64,14 +65,14 @@ expnlist=['CTL','AER']
 sdate=2020061000
 edate=2020071018
 hint=6
-bufrtype='181'
-loop='anl' #ges,anl
+bufrlist=['181','187']
+loop='ges' #ges,anl
 useqc=0
 area='NAfr'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
 
-outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/scatter'
+outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles'
 inputpath=rootarch
-imgsavpath=outputpath+'/'+area
+imgsavpath=outputpath+'/conv/sc_inv/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
@@ -87,27 +88,17 @@ else:
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero, cyclic)
 
-def scatterplot_x2y2(xdata1,xdata2,xlb,ydata1,ydata2,ylb,stat1,stat2,lglst,clrlst,mkrlst,title,fname,fig=None,ax=None):
-    from utils import gen_eqs_by_stats
+def scatterplot_xy(xdata1,xlb,ydata1,ylb,clrlst,mkrlst,title,fig=None,ax=None):
     if not fig: fig=plt.gcf()
     if not  ax: ax=plt.gca()
-    ax.scatter(xdata1,ydata1,c=clrlst[0],marker=mkrlst[0],alpha=0.5,edgecolors='None')
-    ax.scatter(xdata2,ydata2,c=clrlst[1],marker=mkrlst[1],alpha=0.5,edgecolors='None')
+    ax.scatter(xdata1,ydata1,c=clrlst[0],marker=mkrlst[0],alpha=0.7,ec=clrlst[0],fc='None')
 
-    vmin=np.floor(np.array((xdata1.min(),xdata2.min(),ydata1.min(),ydata2.min())).min())
-    vmax= np.ceil(np.array((xdata1.max(),xdata2.max(),ydata1.max(),ydata2.max())).max())
+    vmin=np.floor(np.array((xdata1.min(),ydata1.min())).min())
+    vmax= np.ceil(np.array((xdata1.max(),ydata1.max())).max())
     ax.set_xlim(vmin,vmax)
     ax.set_ylim(vmin,vmax)
 
-    regeqs1=gen_eqs_by_stats(stat1)
-    regeqs2=gen_eqs_by_stats(stat2)
-    lglst[0]='%s (%s) $R^2=$ %.2f' %(lglst[0],regeqs1,np.square(stat1.rvalue))
-    lglst[1]='%s (%s) $R^2=$ %.2f' %(lglst[1],regeqs2,np.square(stat2.rvalue))
-    ax.legend(lglst)
-
     ax.plot(np.arange(vmin,vmax+.5),np.arange(vmin,vmax+.5),color='grey',linewidth=0.8)
-    ax.plot(xdata1,stat1.slope*xdata1+stat1.intercept,color=clrlst[0])
-    ax.plot(xdata2,stat2.slope*xdata2+stat2.intercept,color=clrlst[1])
     if (np.arange(vmin,vmax+.5).size>10 or
         np.arange(vmin,vmax+.5).size<4):
        xyticknum=8
@@ -118,11 +109,7 @@ def scatterplot_x2y2(xdata1,xdata2,xlb,ydata1,ydata2,ylb,stat1,stat2,lglst,clrls
     ax.set_xlabel(xlb)
     ax.set_ylabel(ylb)
     ax.set_title(title,loc='left')
-    fig.savefig(fname,dpi=300)
-    plt.close()
-    return
-    #sns.regplot(x=xdata1,y=ydata1,color=clrlst[0],marker=mkrlst[0],scatter_kws={"alpha":0.7},ax=ax)
-    #sns.regplot(x=xdata2,y=ydata2,color=clrlst[1],marker=mkrlst[1],scatter_kws={"alpha":0.7},ax=ax)
+    return fig,ax
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -156,9 +143,9 @@ znum=ptop.size
 
 uidx=0
 for var in varlist:
-    unit=unitlist[uidx]
+    units=unitlist[uidx]
     sfcflag=(var=='ps' or var=='sst' or var=='tcp'
-             or bufrtype in sfctype_list)
+             or np.intersect1d(bufrlist, sfctype_list).size != 0)
     if (sfcflag):
         d=0
         for date in dlist:
@@ -197,16 +184,10 @@ for var in varlist:
             dpar1=ds1.Obs_Minus_Forecast_adjusted.data
             dpar2=ds2.Obs_Minus_Forecast_adjusted.data
 
-            obs1=ds1.Observation.data
-            obs2=ds2.Observation.data
-            mdl1=obs1-dpar1
-            mdl2=obs2-dpar2
-
             tmpds1=xa.Dataset({'rlon':(['obsloc'],rlon1),
                                'rlat':(['obsloc'],rlat1),
                                'iuse':(['obsloc'],iuse1),
-                               'obs':(['obsloc'],obs1),
-                               'mdl':(['obsloc'],mdl1),
+                               'dpar':(['obsloc'],dpar1),
                                'stid':(['obsloc'],stid1),
                                'obstype':(['obsloc'],type1),
                                },
@@ -215,8 +196,7 @@ for var in varlist:
             tmpds2=xa.Dataset({'rlon':(['obsloc'],rlon2),
                                'rlat':(['obsloc'],rlat2),
                                'iuse':(['obsloc'],iuse2),
-                               'obs':(['obsloc'],obs2),
-                               'mdl':(['obsloc'],mdl2),
+                               'dpar':(['obsloc'],dpar2),
                                'stid':(['obsloc'],stid2),
                                'obstype':(['obsloc'],type2),
                                },
@@ -242,41 +222,51 @@ for var in varlist:
             mask1=(mask1)&(scatda1.iuse==1)
             mask2=(mask2)&(scatda2.iuse==1)
 
-        if (bufrtype!='all'):
-            mask1=(mask1)&(scatda1.obstype==int(bufrtype))
-            mask2=(mask2)&(scatda2.obstype==int(bufrtype))
+        if (len(bufrlist)==1):
+           if (bufrlist[0]!='all'):
+               mask1=(mask1)&(scatda1.obstype==int(bufrlist[0]))
+               mask2=(mask2)&(scatda2.obstype==int(bufrlist[0]))
+        else:
+           mask1=(mask1)&(scatda1.obstype==int(bufrlist[0]))
+           mask2=(mask2)&(scatda2.obstype==int(bufrlist[0]))
+           for bufrtype in bufrlist[1:]:
+               mask1=(mask1)|(scatda1.obstype==int(bufrtype))
+               mask2=(mask2)|(scatda2.obstype==int(bufrtype))
         
         cnts1=np.count_nonzero(mask1)
         cnts2=np.count_nonzero(mask2)
          
-        pltobs1=scatda1.obs[mask1]
-        pltobs2=scatda2.obs[mask2]
-        pltmdl1=scatda1.mdl[mask1]
-        pltmdl2=scatda2.mdl[mask2]
+        pltdpar1=scatda1.dpar[mask1]
+        pltdpar2=scatda2.dpar[mask2]
 
-        pltmean1=np.mean(pltobs1-pltmdl1)
-        pltmean2=np.mean(pltobs2-pltmdl2)
-        pltrms1=np.sqrt(np.mean(np.square(pltobs1-pltmdl1)))
-        pltrms2=np.sqrt(np.mean(np.square(pltobs2-pltmdl2)))
-
-        stat_res1=stats.linregress(pltobs1,pltmdl1)
-        stat_res2=stats.linregress(pltobs2,pltmdl2)
+        pltmean1=np.mean(pltdpar1)
+        pltmean2=np.mean(pltdpar2)
+        pltrms1=np.sqrt(np.mean(np.square(pltdpar1)))
+        pltrms2=np.sqrt(np.mean(np.square(pltdpar2)))
         
-        xlb='Observed %s [K]' %(var.upper())
         if (loop=='ges'):
-           ylb='First-guess %s [K]'%(var.upper())
+           xlb='%s %s OMF [%s]' %(expnlist[0],var.upper(),units)
+           ylb='%s %s OMF [%s]' %(expnlist[1],var.upper(),units)
         elif (loop=='anl'):
-           ylb='Analyzed %s [K]'%(var.upper())
+           xlb='%s %s OMA [%s]' %(expnlist[0],var.upper(),units)
+           ylb='%s %s OMA [%s]' %(expnlist[1],var.upper(),units)
 
-        title='RMS %s:%.2f %s:%.2f Mean %s:%.2f %s:%.2f' %(expnlist[0], pltrms1,expnlist[1], pltrms2,
-                                                           expnlist[0],pltmean1,expnlist[1],pltmean2)
+        lgbox='\n'.join(('%s RMS=%.2f, Mean=%.2f' %(expnlist[0], pltrms1,pltmean1),
+                         '%s RMS=%.2f, Mean=%.2f' %(expnlist[1], pltrms2,pltmean2)))
+        lgbox_props=dict(boxstyle='square',lw=0.8,fc='None',ec='grey')
+        bufrtypestr='_'.join((bufrlist[:]))
         fname='%s/%s_%s_%s_%s_bufr%s.%s_%s.%s_%s.%s'%(imgsavpath,area,var.upper(),tlstr,qcflg,
-                                                   bufrtype,cnts1,cnts2,sdate,edate,ffmt)
-
+                                                   bufrtypestr,cnts1,cnts2,sdate,edate,ffmt)
+        title=''
         fig,ax=plt.subplots()
         set_size(axe_w,axe_h,ax=ax,l=0.15)
-        scatterplot_x2y2(pltobs1,pltobs2,xlb,pltmdl1,pltmdl2,ylb,stat_res1,stat_res2,expnlist,
-                         colorlist,markerlist,title,fname,ax=ax)
+        fig,ax=scatterplot_xy(pltdpar1,xlb,pltdpar2,ylb,colorlist,markerlist,title,ax=ax)
+        ax.text(0.05, 0.95, lgbox, transform=ax.transAxes, fontsize=txsize,
+                verticalalignment='top', bbox=lgbox_props)
+        if (fsave):
+           print(fname) 
+           fig.savefig(fname,dpi=quality)
+           plt.close()
          
     else:
         for z in np.arange(1):

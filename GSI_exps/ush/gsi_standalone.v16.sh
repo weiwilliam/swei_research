@@ -3,7 +3,7 @@ set -x
 #
 # Set experiment name and analysis date
 machine='s4'
-exp="aertest"
+exp="aer_seaonly"
 expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 

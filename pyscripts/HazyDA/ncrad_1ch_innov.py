@@ -6,49 +6,43 @@ Created on Thu Mar 21 21:59:35 2019
 @author: weiwilliam
 """
 import os, sys, platform
-os_name=platform.system()
-if (os_name=='Darwin'):
+machine='S4'
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
-        rootpath='/data/users/swei/Images'
-        rootarch='/scratch/users/swei/ncdiag'
-        rootgit='/home/swei/research'
-        machine='S4'
+elif (machine=='S4'):
+    rootpath='/data/users/swei'
+    rootarch='/scratch/users/swei/ncdiag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from utils import ndate 
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors as mpcrs
-import cartopy.crs as ccrs
-from cartopy.mpl.ticker import LongitudeFormatter, LatitudeFormatter
+from plot_utils import set_size
 from datetime import datetime
 from datetime import timedelta
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
 import matplotlib.ticker as ticker
+import numpy as np
 import xarray as xa
-import seaborn as sb
 import pandas as pd
 
-tlsize=8 ; lbsize=8
+tlsize=10 ; lbsize=8
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
 mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
@@ -57,49 +51,64 @@ fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=6 ; axe_h=2.7 ; quality=300
 diagsuffix='nc4'
 
-outputpath=rootpath+'/HazyDA'
+outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 inputpath=rootarch
 
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 sensor='iasi_metop-a'
+units='K'
 
-chkwvl=13.
-colormap=['bwr','bwr','bwr']
-
-sdate=2020061000
-edate=2020061000
+sdate=2020060106
+edate=2020071018
 hint=6
-spectral_range=slice(600,1300)
+chkwvn=962.5
 
-area='r2o10'
+area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero,cyclic)
 
 loop='ges' #ges,anl
+usebc=1
+useqc=0
+# -1: exp self msk, 0: use first exp msk, 1: use second exp msk 2: intersection of both exp (useqc=0)
+usemsk=2 
+
 if loop=='anl':
-    tlstr='OMA'
+   lpstr='OMA'
 elif loop=='ges':
-    tlstr='OMF'
-usebc=0
+   lpstr='OMF'
+
 if (usebc):
     bcflg='bc'
+    bc_ylbstr='w/ BC'
 else:
     bcflg='nobc'
-useqc=1
-if (useqc):
+    bc_ylbstr='w/o BC'
+
+if (useqc==-2):
+    qcflg='noqc'
+elif (useqc==-1):
     qcflg='qc'
 else:
-    qcflg='noqc'
-    
+    qcflg='qc%s'%(useqc)
+
 rmflier=1
 wateronly=0
 if (wateronly):
     waterflg='water'
 else:
     waterflg='all'
+if (usemsk==-1):
+    mskflg='omsk'
+elif (usemsk==0):
+    mskflg='msk0'
+elif (usemsk==1):
+    mskflg='msk1'
+elif (usemsk==2):
+    mskflg='imsk'
 
-imgsavpath=outputpath+'/'+expnlist[1]+'/'+area
+imgsavpath=outputpath+'/DiagFiles/rad/1ch_innov/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
     
@@ -129,7 +138,7 @@ while (cdate<=edate):
     tnum=tnum+1
     cdate=ndate(hint,cdate)
 
-dates_count=0
+idx=0
 for date in dlist:
     raddfile='diag_'+sensor+'_'+loop+'.'+date+'.'+diagsuffix
     infile0=inputpath+'/'+explist[0]+'/'+date+'/'+raddfile
@@ -137,7 +146,7 @@ for date in dlist:
     
     if (os.path.exists(infile0) and
         os.path.exists(infile1) ):
-        print('Processing Radfile: %s' %(raddfile))
+        print('Processing Radfile: %s' %(raddfile),flush=1)
         ds0=xa.open_dataset(infile0)
         ds1=xa.open_dataset(infile1)
         # npts0=ds0.obsloc.size
@@ -145,13 +154,14 @@ for date in dlist:
         npts1=int(ds1.nobs.size/ds1.nchans.size)
         nchs0=ds0.nchans.size
         nchs1=ds1.nchans.size
-        ds0=ds0.swap_dims({"nchans":"wavenumber"})
-        ds1=ds1.swap_dims({"nchans":"wavenumber"})
-        wavelength=1e+04/ds1.wavenumber
-        chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
-        dates_count+=1
+        if (idx==0):
+           pltdates=dates[idx]
+        else:
+           pltdates=np.append(pltdates,dates[idx])
+        idx+=1
     else:
-        print('%s is not existing'%(raddfile0))
+        print('%s is not existing'%(raddfile),flush=1)
+        idx+=1
         continue
 
 
@@ -177,7 +187,7 @@ for date in dlist:
                       'omb_nbc':(['obsloc','wavenumber'],sim_nbc0)},
                       coords={'obsloc':np.arange(npts0),
                              'wavenumber':ds0.wavenumber.values})
-    tmpds0=tmpds0.sel(wavenumber=chkwvn_list)
+    tmpds0=tmpds0.sel(wavenumber=chkwvn)
 
     # Observation lat/lon from exp 1 (test)
     rlat1=np.reshape(ds1.Latitude.values,(npts1,nchs1))
@@ -201,79 +211,99 @@ for date in dlist:
                       'omb_nbc':(['obsloc','wavenumber'],sim_nbc1)},
                       coords={'obsloc':np.arange(npts1),
                              'wavenumber':ds1.wavenumber.values})
-    tmpds1=tmpds1.sel(wavenumber=chkwvn_list)
-
-    mask0=~np.isnan(tmpds0.rlon)
-    mask1=~np.isnan(tmpds1.rlon)
-
-    if (area!='Glb'):
-        mask0=(mask0)&((tmpds0.rlon<=maxlon)&(tmpds0.rlon>=minlon)&(tmpds0.rlat<=maxlat)&(tmpds0.rlat>=minlat))
-        mask1=(mask1)&((tmpds1.rlon<=maxlon)&(tmpds1.rlon>=minlon)&(tmpds1.rlat<=maxlat)&(tmpds1.rlat>=minlat))
-
-    if (useqc):
-        mask0=(mask0)&((tmpds0.qcflag==0)|(tmpds0.qcflag==13))
-        mask1=(mask1)&((tmpds1.qcflag==0)|(tmpds1.qcflag==13))
-
-    if (usebc):
-        omb0=tmpds0.omb_bc
-        omb1=tmpds1.omb_bc
+    tmpds1=tmpds1.sel(wavenumber=chkwvn)
+#
+    if (date==str(sdate)):
+        ds_all0=tmpds0
+        ds_all1=tmpds1
     else:
-        omb0=tmpds0.omb_nbc
-        omb1=tmpds1.omb_nbc
+        ds_all0=xa.concat((ds_all0,tmpds0),dim='time')
+        ds_all1=xa.concat((ds_all1,tmpds1),dim='time')
+#
+total_obscounts=ds_all0.obsloc.size
+ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
+ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
+#
+mask0=~np.isnan(ds_all0.rlon)
+mask1=~np.isnan(ds_all1.rlon)
 
-#    if (date==str(sdate)):
-#        omb0_all=omb0
-#        ds_all1=tmpds1
-#    else:
-#        ds_all0=xa.concat((ds_all0,tmpds0),dim='obsloc')
-#        ds_all1=xa.concat((ds_all1,tmpds1),dim='obsloc')
+if (area!='Glb'):
+    mask0=(mask0)&((ds_all0.rlon<=maxlon)&(ds_all0.rlon>=minlon)&(ds_all0.rlat<=maxlat)&(ds_all0.rlat>=minlat))
+    mask1=(mask1)&((ds_all1.rlon<=maxlon)&(ds_all1.rlon>=minlon)&(ds_all1.rlat<=maxlat)&(ds_all1.rlat>=minlat))
+
+if (useqc==-2):
+    pass
+elif (useqc==-1):
+    mask0=(mask0)&((ds_all0.qcflag==0)|(ds_all0.qcflag==13))
+    mask1=(mask1)&((ds_all1.qcflag==0)|(ds_all1.qcflag==13))
+else:
+    mask0=(mask0)&((ds_all0.qcflag==useqc))
+    mask1=(mask1)&((ds_all1.qcflag==useqc))
 #
-#total_obscounts=ds_all0.obsloc.size
-#ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
-#ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
+if (usebc):
+    omb0=ds_all0.omb_bc
+    omb1=ds_all1.omb_bc
+else:
+    omb0=ds_all0.omb_nbc
+    omb1=ds_all1.omb_nbc
+
+if (usemsk==-1):
+    pltmsk0=mask0
+    pltmsk1=mask1
+elif (usemsk==0):
+    pltmsk0=mask0
+    pltmsk1=mask0
+elif (usemsk==1):
+    pltmsk0=mask1
+    pltmsk1=mask1
+elif (usemsk==2):
+    pltmsk0=mask0&mask1
+    pltmsk1=mask0&mask1
+
+print('plot counts: %s, %s' %(np.count_nonzero(pltmsk0),np.count_nonzero(pltmsk1)))
+
+omb0=xa.where(pltmsk0,omb0,np.nan)
+omb1=xa.where(pltmsk1,omb1,np.nan)
+
+omb_mean0=omb0.mean(dim='obsloc',skipna=1)
+omb_mean1=omb1.mean(dim='obsloc',skipna=1)
+
+omb_rms0=np.sqrt((omb0*omb0).mean(dim='obsloc',skipna=1))
+omb_rms1=np.sqrt((omb1*omb1).mean(dim='obsloc',skipna=1))
+
+omb=xa.concat((omb_mean0,omb_mean1),dim='exp')
+rms=xa.concat((omb_rms0,omb_rms1),dim='exp')
+pltmean=omb.data.swapaxes(0,1)
+pltrms=rms.data.swapaxes(0,1)
+
+fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
+fig.subplots_adjust(hspace=0.1)
+for a in np.arange(2):
+    ax[a].set_prop_cycle(color=['blue','red'])
+    ax[a].grid(axis='x')
+
+ax[1].plot_date(pltdates,pltmean,'-o',ms=2)
+ax[0].xaxis.set_major_locator(loc)
+ax[0].xaxis.set_major_formatter(formatter)
+ax[0].xaxis.set_tick_params(rotation=30, labelsize=10)
+ax[0].plot_date(pltdates,pltrms,'-o',ms=2)
+ax[0].set_ylabel('RMS %s [%s]' %(lpstr,units))
+ax[1].set_ylabel('Mean %s [%s]'%(lpstr,units))
+lglist=np.zeros((2,2),dtype='<U30')
+for ex in np.arange(2):
+    lglist[0,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(pltrms[:,ex]))
+    lglist[1,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(pltmean[:,ex]))
+ax[0].legend(lglist[0,:])
+ax[1].legend(lglist[1,:])
+tistr='%s %.2f $\mathrm{cm^{-1}}$'%(sensor,chkwvn)
+ax[0].set_title(tistr,loc='left')
 #
-#    omf1=xa.where(mask1,np.nan,omf1)
-#    omf2=xa.where(mask2,np.nan,omf2)
-#    
-#    bias[d,0]=np.nanmean(omf1)
-#    bias[d,1]=np.nanmean(omf2)
-#    rms[d,0]=np.sqrt(np.nanmean(np.square(omf1)))
-#    rms[d,1]=np.sqrt(np.nanmean(np.square(omf2)))
-#    
-#    dates_count+=1
-#
-#xaxis=np.arange(len(dlist))
-#fig,ax=plt.subplots(2,1,sharex=True,figsize=(axe_w,axe_h))
-#fig.subplots_adjust(hspace=0.15)
-#for a in np.arange(2):
-#    ax[a].set_prop_cycle(color=['blue','red'])
-#    ax[a].grid(axis='x')
-#        
-#ax[1].plot_date(dates,bias,'-')
-#ax[0].xaxis.set_major_locator(loc)
-#ax[0].xaxis.set_major_formatter(formatter)
-#ax[0].xaxis.set_tick_params(rotation=30)
-#ax[0].set_title('%s %s %.2fµm: AOD>%.2f %s>%.2f'%(
-#        sensor,tlstr,wavelength[chkwvlidx],aodmin,aersp,aerfracmin),
-#            loc='left')
-#ax[0].plot_date(dates,rms,'--')
-#ax[0].set_ylabel('RMS [K]')
-#ax[1].set_ylabel('BIAS [K]')
-#lglist=np.zeros((2,2),dtype='<U30')
-#for ex in np.arange(2):
-#    lglist[0,ex]=leglist[ex]+'(%8.4f)' %(np.nanmean(rms[:,ex]))
-#    lglist[1,ex]=leglist[ex]+'(%8.4f)' %(np.nanmean(bias[:,ex]))
-#ax[0].legend(lglist[0,:])
-#ax[1].legend(lglist[1,:])
-#
-#savedir=outpath+'/Innov/1ch'
-#if ( not os.path.exists(savedir) ):
-#    os.makedirs(savedir)
-#
-#if (fsave):
-#    outname='%s/%s_%s_%s_%s_%s_%s_%s_%s_%.2fµm_BIASRMS.png' %(savedir,area,sensor,tlstr,leglist[0],leglist[1],
-#                  qcflg,bcflg,waterflg,wavelength[chkwvlidx])
-#    fig.savefig(outname, dpi=quality)
-#    plt.close()
+if (fsave):
+    outname=('%s/%s_%s_%s_%s_%s_%s_%s_%s_%s_%.2f_BIASRMS.%s_%s.png'
+             %(imgsavpath,area,sensor,lpstr,
+               expnlist[0],expnlist[1],bcflg,qcflg,mskflg,waterflg,chkwvn,sdate,edate))
+    print(outname,flush=1)
+    fig.savefig(outname, dpi=quality)
+    plt.close()
     
 

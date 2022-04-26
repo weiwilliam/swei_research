@@ -156,7 +156,7 @@ for date in dlist:
 total_obscounts=ds_all0.obsloc.size
 ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
 
-binsize=0.2
+binsize=0.1
 halfbin=0.5*binsize
 hist_x_edge=np.arange(-5,5.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
@@ -215,7 +215,7 @@ for chkwvn in chkwvn_list:
         ax.plot(bin_center,hdata2,'ro',fillstyle='none',ms=2.5)
         #ax.set_yscale("log")
         #ax.set_ylabel("PDF")
-        ax.set_ylim(0,ymax)
+        ax.set_ylim(-int(ymax*0.05),ymax)
         ax.set_ylabel(y_label)
         ax.vlines(0.,0,1,transform=ax.get_xaxis_transform(),colors='grey',linestyle='dashed',linewidth=0.7)
         ax.legend(['Clear','Hazy'],loc=2)
@@ -236,7 +236,7 @@ for chkwvn in chkwvn_list:
         ax.plot(bin_center,hdata4,'ro',fillstyle='none',ms=2.5)
         #ax.set_yscale("log")
         #ax.set_ylabel("PDF")
-        ax.set_ylim(-500,ymax)
+        ax.set_ylim(-int(ymax*0.05),ymax)
         ax.set_ylabel(y_label)
         ax.vlines(0.,0,1,transform=ax.get_xaxis_transform(),colors='grey',linestyle='dashed',linewidth=0.7)
         ax.legend(['Clear','Hazy'],loc=2)

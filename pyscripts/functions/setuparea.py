@@ -18,6 +18,8 @@ def setarea(areaname):
         minlat=-80.;maxlat=-20.;minlon=0.;maxlon=360.
     elif (areaname == 'NAfr'):
         minlat=5.;maxlat=35.;minlon=342.;maxlon=45.
+    elif (areaname == 'NAfrC'):
+        minlat=5.;maxlat=35.;minlon=330.;maxlon=350.
     elif (areaname == 'NAtl'):
         minlat=5. ; maxlat=65. ; minlon=265.  ; maxlon=10.
     elif (areaname == 'SAtl'):
@@ -133,7 +135,7 @@ def setarea(areaname):
               'NPO | NML| TRO| SML  | SPO   | GLK  | EUO  |'
               'NEU | Tri| Pir| Indi | NMLAtl|NMLPac|SMLInd|'
               'SMLPac   |TIWA|NWPac | Phil  | HudB | SF1~5|'
-              'ST1~4| r2o1~6')
+              'ST1~4| r2o1~10')
         pass
     
     if (areaname!='Glb' and minlon > maxlon):

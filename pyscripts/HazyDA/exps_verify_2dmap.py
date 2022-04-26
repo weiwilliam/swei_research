@@ -31,7 +31,7 @@ from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
-from utils import ndate,setup_cmap
+from utils import ndate,setup_cmap,find_cnlvs
 from datetime import datetime, timedelta
 import cartopy.crs as ccrs
 
@@ -54,7 +54,7 @@ expsarch=rootarch+'/archive'
 
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
-#enum=explist.shape[0]
+pres_list=[850,700,500,200]
 
 sdate=2020061000
 edate=2020071018
@@ -159,32 +159,42 @@ exp1_me=exp1_err.mean(dim='time')
 exp0_rmse=np.sqrt((exp0_err*exp0_err).mean(dim='time'))
 exp1_rmse=np.sqrt((exp1_err*exp1_err).mean(dim='time'))
 
-for pres in [850,500]:
+for pres in pres_list:
 
     me_da0=exp0_me.sel(isobaricInhPa=pres)
     me_da1=exp1_me.sel(isobaricInhPa=pres)
+    me_da=xa.concat((me_da0,me_da1),dim='exps')
     rmse_da0=exp0_rmse.sel(isobaricInhPa=pres)
     rmse_da1=exp1_rmse.sel(isobaricInhPa=pres)
+    rmse_da=xa.concat((rmse_da0,rmse_da1),dim='exps')
 
-    melv_max=np.ceil( np.max( (np.quantile(abs(me_da0),0.9),np.quantile(abs(me_da1),0.9)) ))
-    melv_int=melv_max/10
-    metcks=np.arange(-melv_max,melv_max+melv_int,melv_int)
-    me_lvs=metcks
+    me_lvs=find_cnlvs(me_da,eqside=1)
     clridx=[]
-    for idx in np.linspace(2,254,metcks.size):
+    for idx in np.linspace(2,254,me_lvs.size):
         clridx.append(int(idx))
     meclrmap=setup_cmap('BlueYellowRed',clridx)
     menorm = mpcrs.BoundaryNorm(me_lvs,len(clridx)+1,extend='both')
-    
-    rmselv_max=np.ceil( np.max( (np.quantile(abs(rmse_da0),0.9),np.quantile(abs(rmse_da1),0.9)) ))
-    rmselv_int=rmselv_max/20
-    rmsetcks=np.arange(0,rmselv_max+rmselv_int,rmselv_int)
-    rmse_lvs=rmsetcks
+
+    dme_lvs=find_cnlvs((me_da1-me_da0),eqside=1)
     clridx=[]
-    for idx in np.linspace(2,254,rmsetcks.size):
+    for idx in np.linspace(2,254,dme_lvs.size):
+        clridx.append(int(idx))
+    dmeclrmap=setup_cmap('BlueYellowRed',clridx)
+    dmenorm = mpcrs.BoundaryNorm(dme_lvs,len(clridx)+1,extend='both')
+    
+    rmse_lvs=find_cnlvs(rmse_da)
+    clridx=[]
+    for idx in np.linspace(2,254,rmse_lvs.size):
         clridx.append(int(idx))
     rmseclrmap=setup_cmap('WhiteYellowOrangeRed',clridx)
     rmsenorm = mpcrs.BoundaryNorm(rmse_lvs,len(clridx)+1,extend='both')
+
+    drmse_lvs=find_cnlvs((rmse_da1-rmse_da0),eqside=1)
+    clridx=[]
+    for idx in np.linspace(2,254,drmse_lvs.size):
+        clridx.append(int(idx))
+    drmseclrmap=setup_cmap('BlueYellowRed',clridx)
+    drmsenorm = mpcrs.BoundaryNorm(drmse_lvs,len(clridx)+1,extend='both')
 
     fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
     set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
@@ -193,7 +203,7 @@ for pres in [850,500]:
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
                    cmap=meclrmap,norm=menorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     outname='%s/%s_%s_%s_MeanError.%s_%s.%s' %(imgsavpath,expnlist[0],pltvar,pres,sdate,edate,ffmt)
     if (fsave):
        print(outname)
@@ -207,7 +217,7 @@ for pres in [850,500]:
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
                    cmap=meclrmap,norm=menorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     outname='%s/%s_%s_%s_MeanError.%s_%s.%s' %(imgsavpath,expnlist[1],pltvar,pres,sdate,edate,ffmt)
     if (fsave):
        print(outname)
@@ -218,10 +228,10 @@ for pres in [850,500]:
     set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp1_me.sel(isobaricInhPa=pres)-exp0_me.sel(isobaricInhPa=pres)
     cblabel='%s%s%s Mean Error [%s]' %(expnlist[1],minussign,expnlist[0],units)
-    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
-                   cmap=meclrmap,norm=menorm,extend='both')
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=dme_lvs,
+                   cmap=dmeclrmap,norm=dmenorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     title_str='(%.2f [%s])' %(pltdata.mean(),units)
     ax.set_title(title_str,loc='left')
     outname='%s/%s-%s_%s_%s_MeanError.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,pres,sdate,edate,ffmt)
@@ -238,7 +248,7 @@ for pres in [850,500]:
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=rmse_lvs,
                    cmap=rmseclrmap,norm=rmsenorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=rmse_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     outname='%s/%s_%s_%s_RMSE.%s_%s.%s' %(imgsavpath,expnlist[0],pltvar,pres,sdate,edate,ffmt)
     if (fsave):
        print(outname)
@@ -252,7 +262,7 @@ for pres in [850,500]:
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=rmse_lvs,
                    cmap=rmseclrmap,norm=rmsenorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=rmse_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     outname='%s/%s_%s_%s_RMSE.%s_%s.%s' %(imgsavpath,expnlist[1],pltvar,pres,sdate,edate,ffmt)
     if (fsave):
        print(outname)
@@ -263,10 +273,10 @@ for pres in [850,500]:
     set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
     pltdata=exp1_rmse.sel(isobaricInhPa=pres)-exp0_rmse.sel(isobaricInhPa=pres)
     cblabel='%s%s%s Root-Mean-Square-Error [%s]' %(expnlist[1],minussign,expnlist[0],units)
-    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
-                   cmap=meclrmap,norm=menorm,extend='both')
+    cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=drmse_lvs,
+                   cmap=drmseclrmap,norm=drmsenorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     title_str='(%.2f [%s])' %(pltdata.mean(),units)
     ax.set_title(title_str,loc='left')
     outname='%s/%s-%s_%s_%s_RMSE.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,pres,sdate,edate,ffmt)

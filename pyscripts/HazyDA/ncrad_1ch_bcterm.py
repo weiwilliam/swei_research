@@ -57,11 +57,9 @@ inputpath=rootarch
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 sensor='iasi_metop-a'
-pltvar='BC_Emissivity'
-units='K'
-
 chkwvn=962.5
-colormap=['bwr','bwr','bwr']
+pltvar='BC_Constant'
+units='K'
 
 sdate=2020060106
 edate=2020071018
@@ -287,7 +285,7 @@ ax.set_title(tistr,loc='left')
 ax.set_ylabel('%s [%s]'%(pltvar.replace('_',' '),units))
 lglist=[]
 for ex in np.arange(2):
-    lglist.append( '%s(%.4f)' %(expnlist[ex],np.nanmean(bcterm[:,ex])) )
+    lglist.append( '%s(%.4f)' %(expnlist[ex],np.nanmean(bcterm[ex,:])) )
 ax.legend(lglist)
 #
 if (fsave):

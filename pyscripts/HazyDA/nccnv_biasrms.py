@@ -59,31 +59,29 @@ inputpath=rootarch
 
 varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
-bufrtype='181' # SST: 181-199
+bufrtype='all' # SST: 181-199
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 enum=explist.shape[0]
 
-sdate=2020082200
-edate=2020092118
+sdate=2020061000
+edate=2020071018
 hint=6
 
-loop='ges' #ges,anl
-area='NAfr'
-useqc=0
+loop='anl' #ges,anl
+area='Glb'
+useqc=1
 
 if (loop=='ges'):
    lpstr='OMF'
 elif (loop=='anl'):
    lpstr='OMA'
-
-minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
-print(area,minlat,maxlat,minlon,maxlon,crosszero)
-
 if (useqc):
     qcflg='qc'
 else:
     qcflg='noqc'
+minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
+print(area,minlat,maxlat,minlon,maxlon,crosszero)
 
 zpltlst=[0,1,2,3,4,5,6,7,8]
 
@@ -170,7 +168,7 @@ for var in varlist:
             rlon1[rlon1>=maxlon]=rlon1[rlon1>=maxlon]-360.
             rlon2[rlon2>=maxlon]=rlon2[rlon2>=maxlon]-360.
       
-        if (sfcflag):
+        if (not sfcflag):
            pres1=ds1.Pressure
            pres2=ds2.Pressure
 
@@ -239,13 +237,13 @@ for var in varlist:
         fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
         fig.subplots_adjust(hspace=0.1)
         for a in np.arange(2):
-            ax[a].set_prop_cycle(color=['red','blue'])
+            ax[a].set_prop_cycle(color=['blue','red'])
             ax[a].grid()
         
         ax[1].plot_date(xdates,omg_mean,'-')
         ax[0].xaxis.set_major_locator(loc)
         ax[0].xaxis.set_major_formatter(formatter)
-        ax[0].xaxis.set_tick_params(rotation=30, labelsize=10)
+        ax[0].xaxis.set_tick_params(labelsize=10)
         ax[0].set_title('%s %s[%s]' %(area,var.upper(),unit))
         ax[0].plot_date(xdates,omg_rmsq,'--')
         ax[0].set_ylabel('RMS %s [%s]' %(lpstr,unitlist[uidx]))
@@ -264,8 +262,8 @@ for var in varlist:
     else:
         fig,ax=plt.subplots(1,3,sharey=True)
         fig.subplots_adjust(wspace=0.05)
-        ax[0].set_prop_cycle(color=['red','blue'])
-        ax[1].set_prop_cycle(color=['red','blue'])
+        ax[0].set_prop_cycle(color=['blue','red'])
+        ax[1].set_prop_cycle(color=['blue','red'])
         ax[2].set_prop_cycle(color=['k','k'],linestyle=['-','--'])
         biasplot=np.nanmean(omg_mean,axis=0)
         rmsplot=np.nanmean(omg_rmsq,axis=0)
@@ -286,23 +284,25 @@ for var in varlist:
         ax[1].grid()
         ax[2].grid()
         if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype,sdate,edate), dpi=quality)
+            fname=('%s/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'
+                   %(imgsavpath,area,loop,var,explist[0],explist[1],qcflg,bufrtype,sdate,edate))
+            print(fname)
+            fig.savefig(fname, dpi=quality)
             plt.close()
         
         for z in zpltlst:
             fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
             fig.subplots_adjust(hspace=0.1)
             for a in np.arange(2):
-                ax[a].set_prop_cycle(color=['red','blue'])
+                ax[a].set_prop_cycle(color=['blue','red'])
                 ax[a].grid()
         
-            ax[1].plot_date(dates,omg_mean[:,z,:],'-')
+            ax[1].plot_date(dates,omg_mean[:,z,:],'-o',ms=2)
             ax[0].xaxis.set_major_locator(loc)
             ax[0].xaxis.set_major_formatter(formatter)
-            ax[0].xaxis.set_tick_params(rotation=30, labelsize=10)
+            ax[0].xaxis.set_tick_params(labelsize=10)
             ax[0].set_title('%s %s [%s] %.1f %s %.1f [hPa]' %(area,var.upper(),unit,ptop[z],minussign,pbot[z]),loc='left')
-            ax[0].plot_date(dates,omg_rmsq[:,z,:],'--')
+            ax[0].plot_date(dates,omg_rmsq[:,z,:],'-o',ms=2)
             ax[0].set_ylabel('RMS %s [%s]'%(lpstr,unitlist[uidx]))
             ax[1].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
             lglist=np.zeros((2,2),dtype='<U30')
@@ -313,8 +313,10 @@ for var in varlist:
             ax[1].legend(lglist[1,:])
             
             if (fsave):
-                fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
-                            %(area,loop,var,explist[0],explist[1],pbot[z],qcflg,bufrtype,sdate,edate), dpi=quality)
+                fname=('%s/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
+                       %(imgsavpath,area,loop,var,explist[0],explist[1],pbot[z],qcflg,bufrtype,sdate,edate))
+                print(fname)
+                fig.savefig(fname, dpi=quality)
                 plt.close()
                 
     uidx=uidx+1
