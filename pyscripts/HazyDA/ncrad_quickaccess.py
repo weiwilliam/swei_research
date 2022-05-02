@@ -93,7 +93,7 @@ if (os.path.exists(infile1)):
        tmpds=tmpds.assign_coords({'naer':aero_name})
        tmpds=tmpds.assign({'aero_frac':(['obsloc','wavenumber','naer'],aero_frac)})
 
-    tmpds=tmpds.sel(wavenumber=chkwvn_list.data) 
+    #tmpds=tmpds.sel(wavenumber=chkwvn_list.data) 
 else:
     print('No such file: %s' %(infile1))
 
