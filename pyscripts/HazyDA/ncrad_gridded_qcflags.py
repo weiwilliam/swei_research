@@ -48,18 +48,21 @@ warnings.filterwarnings('ignore')
 degres=2.5
 #degres=1
 
-expset=2
+expset=3
 if (expset==1):
    explist=np.array(['hazyda_ctrl','hazyda_aero'])
    leglist=['CTL','AER']
 elif (expset==2):
    explist=np.array(['hazyda_aero','hazyda_aero_sea'])
    leglist=['AER','AERS']
+elif (expset==3):
+   explist=np.array(['hazyda_aero','hazyda_aero_v2qc'])
+   leglist=['AER','AERv2']
 
 sensor='iasi_metop-a'
 
-sdate=2020060106
-edate=2020060118
+sdate=2020062212
+edate=2020062212
 hint=6
 
 area='Glb'

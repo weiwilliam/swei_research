@@ -8,7 +8,6 @@ Aerosol detection based on CADS 3.1 from NWP SAF
 
 """
 import sys, os, platform
-machine='S4'
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -16,7 +15,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
-os_name=platform.system()
+machine='S4'
 if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
@@ -25,7 +24,7 @@ elif (machine=='Desktop'):
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
-    rootarch='/data/users/swei/Experiments'
+    rootarch='/data/users/swei/ResearchData/Prospectus/AeroObsStats/nc_diag'
     rootpath='/data/users/swei'
     rootgit='/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
@@ -49,24 +48,22 @@ axe_w=3 ; axe_h=3 ; quality=300
 
 # Plotting setup
 sdate=2020061000
-edate=2020092118
+edate=2020061018
 aertype='All'
 hint=6
-exp='aerqc_corR'
+exp='aero_v2qc'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
 binsize=0.1
-version='v4'
-n_seg=8
-seg=7
+version='v5'
 
 # Data path setup
-archpath=rootarch+'/AeroObsStats/OUTPUT'
+#archpath=rootarch+'/AeroObsStats/OUTPUT'
 fixpath=rootgit+'/GSI_exps/fix'
-outpath=rootarch+'/AeroObsStats'
-archdir=archpath+'/'+exp
-print(archpath)
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats'
+archdir=rootarch+'/'+exp
+#print(archpath)
 print(fixpath)
 print(outpath)
 print(archdir)
@@ -115,8 +112,6 @@ if (os.path.exists(infile1)):
     npts=int(ds1.nobs.size/ds1.nchans.size)
     nchs=ds1.nchans.size
     ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-    wavelength=1e+04/ds1.wavenumber
-    chkwvn_list=ds1.wavenumber.values
     ds_sensorinfo=xa.Dataset({'obserr':(['wavenumber'],err_array),
                               'nuchan':(['wavenumber'],nuch_array),
                               'iuse':(['wavenumber'],iuse_array)},
@@ -124,140 +119,121 @@ if (os.path.exists(infile1)):
 else:
     print('%s is not existing'%(raddfile),flush=1)
 
-l_seg=int(nchs/n_seg)
-seg_ptarr=np.arange(0,nchs,l_seg)
-seg_s=seg_ptarr[seg]
-if (seg+1==n_seg):
-   seg_e=nchs
-else:
-   seg_e=seg_ptarr[seg+1]
+#print('Processing for channel with wavenumber '+str(chkwvn)+' cm^-1',flush=1)
+for date in dlist:
+    raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
+    infile1=archdir+'/'+str(date)+'/'+raddfile
 
-icount=0
-for chkwvn in chkwvn_list[seg_s:seg_e]:
-#for chkwvn in [962.5]:
-    print('Processing for channel with wavenumber '+str(chkwvn)+' cm^-1',flush=1)
-    for date in dlist:
-        raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
-        infile1=archdir+'/'+str(date)+'/'+raddfile
+    if (os.path.exists(infile1)):
+        print('Processing Radfile: %s' %(raddfile),flush=1)
+        ds1=xa.open_dataset(infile1)
+        npts=int(ds1.nobs.size/ds1.nchans.size)
+        nchs=ds1.nchans.size
+        chkwvn_list=ds1.wavenumber[ds1.use_flag==1].data
+        #ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
+        #wavelength=1e+04/ds1.wavenumber
+    else:
+        print('%s is not existing'%(raddfile),flush=1)
+        continue
     
-        if (os.path.exists(infile1)):
-            #print('Processing Radfile: %s' %(raddfile),flush=1)
-            ds1=xa.open_dataset(infile1)
-            npts=int(ds1.nobs.size/ds1.nchans.size)
-            nchs=ds1.nchans.size
-            #ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-            #wavelength=1e+04/ds1.wavenumber
-        else:
-            #print('%s is not existing'%(raddfile),flush=1)
-            continue
-        
-        # Observation lat/lon
-        rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))[:,0]
-        rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))[:,0]
-        qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
-        # obs1=np.reshape(ds1.Observation.values,(npts,nchs))
-        sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
-        clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
-        varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
-        # omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
-        omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
-        obs1=omb_nbc1+sim1
-        tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1),
-                          'rlat1':(['obsloc'],rlat1),
-                          'qcflag':(['obsloc','wavenumber'],qcflags),
-                          'tb_obs':(['obsloc','wavenumber'],obs1),
-                          'tb_sim':(['obsloc','wavenumber'],sim1),
-                          'tb_clr':(['obsloc','wavenumber'],clr1),
-                          'varinv':(['obsloc','wavenumber'],varinv1),
-                          'omb_nbc':(['obsloc','wavenumber'],omb_nbc1)},
-                         coords={'obsloc':np.arange(npts),
-                                 'wavenumber':ds1.wavenumber.values})
-        tmpds=tmpds.sel(wavenumber=chkwvn)
-        
-        if (date==str(sdate)):
-            ds_chk=tmpds
-        else:
-            ds_chk=xa.concat((ds_chk,tmpds),dim='obsloc')
-
-    print('Finish loading data for channel with wavenumber '+str(chkwvn)+' cm^-1',flush=1)
-    #ds_chk=ds_all#.sel(wavenumber=chkwvn)
-    tb_sim=ds_chk.tb_sim
-    tb_clr=ds_chk.tb_clr
-    tb_obs=ds_chk.tb_obs
-    varinv=ds_chk.varinv
-    info_tmp=ds_sensorinfo.sel(wavenumber=chkwvn)
-    nuchrad=info_tmp.nuchan.values
-    iuserad=info_tmp.iuse.values
-    obserr=info_tmp.obserr.values
-
-    omb=ds_chk.omb_nbc
-    aereff_fg=tb_sim-tb_clr
-    aereff_obs=tb_obs-tb_clr
+    # Observation lat/lon
+    rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))[:,0]
+    rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))[:,0]
+    qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
+    # obs1=np.reshape(ds1.Observation.values,(npts,nchs))
+    sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
+    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
+    #varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
+    # omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
+    omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
+    obs1=omb_nbc1+sim1
+    aereff_fg=sim1-clr1
+    aereff_obs=obs1-clr1
     aereff=0.5*abs(aereff_fg)+0.5*abs(aereff_obs)
+    tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1),
+                      'rlat1':(['obsloc'],rlat1),
+                      'qcflag':(['obsloc','wavenumber'],qcflags),
+                      'SD_o':(['wavenumber'],ds_sensorinfo.obserr.data),
+                      'aereff':(['obsloc','wavenumber'],aereff),
+                      'omb_nbc':(['obsloc','wavenumber'],omb_nbc1)},
+                     coords={'obsloc':np.arange(npts),
+                             'wavenumber':ds1.wavenumber.data})
+    tmpds=tmpds.sel(wavenumber=chkwvn_list)
     
-    good_msk=(ds_chk.qcflag==0.)
-    gross_msk=(ds_chk.qcflag==3.)
-    cld_msk=(ds_chk.qcflag==7.)
-    tzr_msk=(ds_chk.qcflag==10.)
-    aer_msk=(ds_chk.qcflag==13.)
-    sfcir_msk=(ds_chk.qcflag==53.)
-    bust_msk=(ds_chk.qcflag==55.)
-    #bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
-
-    ori_msk=((good_msk)|(aer_msk)|(gross_msk)|(sfcir_msk)|(tzr_msk))
-    ori_total=np.count_nonzero(ori_msk)
-    final_qc_msk=(good_msk)|(aer_msk)
-
-    halfbin=0.5*binsize
-    hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
-    bin_center=(hist_x_edge+halfbin)[:-1]
-    
-    omb_mean2=np.zeros_like(bin_center,dtype='float')
-    omb_sd2=np.zeros_like(bin_center,dtype='float')
-    sd_noqc=omb[ori_msk==1].std()
-    sd_qc=omb[final_qc_msk==1].std()    
-
-    for i in np.arange(omb_mean2.size):
-        lb_aereff=hist_x_edge[i]
-        ub_aereff=hist_x_edge[i+1]
-        tmpmsk2=(final_qc_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-        omb_mean2[i]=omb[tmpmsk2==1].mean()
-        omb_sd2[i]=omb[tmpmsk2==1].std()
-
-    tmpsd2=xa.where(np.isnan(omb_sd2),-999,omb_sd2)
-    gtmask=(tmpsd2>obserr)
-    if (not any(gtmask)):
-        Aeff_1_idx=0
+    if (date==str(sdate)):
+        ds_chk=tmpds
     else:
-        Aeff_1_idx=np.where(gtmask)[0].min()
-    Aeff_2_idx=tmpsd2.argmax()
-    aereff_1=bin_center[Aeff_1_idx]
-    aereff_2=bin_center[Aeff_2_idx]
-    sd_min=omb_sd2[Aeff_1_idx]
-    sd_max=omb_sd2[Aeff_2_idx]
-    if (sd_max > obserr):
-        aero_sensitive=1
-    else:
-        aero_sensitive=0
+        ds_chk=xa.concat((ds_chk,tmpds),dim='obsloc')
 
-    tmpdf=pd.DataFrame(np.array([[chkwvn,nuchrad,iuserad,obserr,aereff_1,aereff_2,sd_min,sd_max,sd_noqc,sd_qc,aero_sensitive]]),
-                       columns=['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc','Aer_sen'])
+halfbin=0.5*binsize
+hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
+bin_center=(hist_x_edge+halfbin)[:-1]
 
-    if (icount==0):
-        df_all=tmpdf
-    else:
-        df_all=pd.concat((df_all,tmpdf))
-    icount+=1
+#omb=ds_chk.omb_nbc
 
-df_all.to_csv(savedir+'/'+sensor+'_'+str(nchs)+'_stats_new_seg'+str(seg)+'.'+version+'.csv')
+#good_msk=(ds_chk.qcflag==0.)
+#gross_msk=(ds_chk.qcflag==3.)
+#cld_msk=(ds_chk.qcflag==7.)
+#tzr_msk=(ds_chk.qcflag==10.)
+#aer_msk=(ds_chk.qcflag==13.)
+#sfcir_msk=(ds_chk.qcflag==53.)
+#bust_msk=(ds_chk.qcflag==55.)
+#aercld_msk=(ds_chk.qcflag==57.)
+##bust_msk=(aer_msk)&((abs(omb)>3)&(abs(omb)>1.8*aereff))
 
-#pr.disable()
-#s = io.StringIO()
-#sortby = SortKey.CUMULATIVE
-#ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-#ps.print_stats()
-#print(s.getvalue())
+##ori_msk=((good_msk)|(aer_msk)|(gross_msk)|(sfcir_msk)|(tzr_msk)|(aercld_msk)|(bust_msk))
+#ori_msk=(~cld_msk)
+#ori_total=np.count_nonzero(ori_msk)
+#final_qc_msk=(good_msk)|(aer_msk)
 
-# df_all.to_excel(savedir+'/'+sensor+'_616_stats.xlsx')
-# ds_all=ds_all.assign({'obserr':(['wavenumber'],err_array)})
-# ds_all=ds_all.sel(wavenumber=spectral_range)
+print('whole period of data is loaded', flush=1)
+
+ds_sinfo_chk=ds_sensorinfo.sel(wavenumber=chkwvn_list)
+df0=ds_chk.to_dataframe()
+df0=df0.reset_index()
+preqc_filter=((df0['qcflag']!=7.0))
+preqc_df=df0.loc[preqc_filter,:]
+aftqc_filter=((df0['qcflag']==0.0)|(df0['qcflag']==13.0))
+aftqc_df=df0.loc[aftqc_filter,:]
+
+print('preqc_df and aftqc_df have been created',flush=1)
+
+aftqc_df['Ae_bin']=pd.cut(aftqc_df['aereff'],bins=hist_x_edge,labels=bin_center)
+
+preqc_grp=preqc_df.groupby(['wavenumber']).agg({'omb_nbc':['std']}).reset_index()
+aftqc_grp=aftqc_df.groupby(['wavenumber']).agg({'omb_nbc':['std']}).reset_index()
+tmp_grp=aftqc_df.groupby(['wavenumber','Ae_bin']).agg({'omb_nbc':['std'],'SD_o':['min']}).reset_index()
+
+preqc_grp.columns=preqc_grp.columns.droplevel(1)
+preqc_grp=preqc_grp.rename(columns={'omb_nbc':'SD_noqc'})
+aftqc_grp.columns=aftqc_grp.columns.droplevel(1)
+aftqc_grp=aftqc_grp.rename(columns={'omb_nbc':'SD_qc'})
+tmp_grp.columns=tmp_grp.columns.droplevel(1)
+tmp_grp=tmp_grp.rename(columns={'omb_nbc':'SD_qc'})
+
+tmpdf=tmp_grp.loc[tmp_grp.SD_qc>tmp_grp.SD_o,:]
+ae1idx=tmpdf.groupby(['wavenumber'])['Ae_bin'].transform(min)==tmpdf['Ae_bin']
+Aeff1_df=tmpdf[ae1idx].set_index('wavenumber')
+Aeff1_df=Aeff1_df.rename(columns={'Ae_bin':'Aeff_1','SD_qc':'SD_min'})
+
+ae2idx=tmp_grp.groupby(['wavenumber'])['SD_qc'].transform(max)==tmp_grp['SD_qc']
+Aeff2_df=tmp_grp[ae2idx].set_index('wavenumber')
+Aeff2_df=Aeff2_df.rename(columns={'Ae_bin':'Aeff_2','SD_qc':'SD_max'})
+print('Aeff1_df and Aeff2_df have been created',flush=1)
+
+output_df=pd.concat((Aeff1_df,Aeff2_df),axis=1).sort_index()
+output_df=output_df[['Aeff_1','Aeff_2','SD_min','SD_max']]
+output_df=output_df.reset_index()
+output_df['nuchan']=ds_sinfo_chk.nuchan.data
+output_df['iuse']  =ds_sinfo_chk.iuse.data
+output_df['SD_o']  =ds_sinfo_chk.obserr.data
+output_df['SD_noqc']=preqc_grp['SD_noqc']
+output_df['SD_qc']=aftqc_grp['SD_qc']
+output_df['Aer_sen']=(output_df['SD_max']>output_df['SD_o']).astype(int)
+output_df=output_df[['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc','Aer_sen']]
+print('output_df has been created',flush=1)
+
+#
+outfile=savedir+'/'+sensor+'_'+str(nchs)+'_stats.'+version+'.csv'
+output_df.to_csv(outfile)
+print(outfile+' has been created',flush=1)

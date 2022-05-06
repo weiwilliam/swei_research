@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 # Plotting setup
 expname='hazyda_aero'
-cdate=2020060106
+cdate=2020062212
 hint=6
 sensor='iasi_metop-a'
 selwvn=962.5
@@ -43,10 +43,10 @@ degres=1
 
 raddfile='diag_'+sensor+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
-#tmppath='/data/users/swei/FTPdir/'
+tmppath='/data/users/swei/FTPdir/'
 # tmppath='/data/users/swei/Experiments/testing/OUTPUT/bc_check/2020062212'
 # tmppath='F:/ResearchData/Prospectus/HazyDA'
-tmppath='/scratch/users/swei/ncdiag/hazyda_aero/'+str(cdate)
+#tmppath='/scratch/users/swei/ncdiag/hazyda_aero/'+str(cdate)
 infile1=tmppath+'/'+raddfile
 
 if (os.path.exists(infile1)):
