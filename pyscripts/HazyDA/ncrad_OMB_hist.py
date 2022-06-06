@@ -83,7 +83,7 @@ elif (cbori=='horizontal'):
 # Data path setup
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir0=rootarch+'/'+exp
-savedir=outpath+'/DiagFiles/rad/pdf_norm/'+area+'/'+expname
+savedir=outpath+'/DiagFiles/rad/pdf/'+area+'/'+expname
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -158,7 +158,7 @@ ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
 
 binsize=0.1
 halfbin=0.5*binsize
-hist_x_edge=np.arange(-5,5.+binsize,binsize)
+hist_x_edge=np.arange(-10,10.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
 # for chkwvn in [652.0]:
@@ -186,14 +186,14 @@ for chkwvn in [962.5]:
     if (plthist):            
         bcflg1='bc'
         bcflg2='nobc'
-        x_label='Normalized OMB'
+        x_label='OMB'
         y_label='Data Count'
-        pltda_x1=omb_bc0[good_msk0]*varinv0[good_msk0]
-        pltda_x2=omb_bc0[aer_msk0]*varinv0[aer_msk0]
+        pltda_x1=omb_bc0[good_msk0]
+        pltda_x2=omb_bc0[aer_msk0]
         hdata1, tmpbins=np.histogram(pltda_x1, bins=hist_x_edge, density=0)
         hdata2, tmpbins=np.histogram(pltda_x2, bins=hist_x_edge, density=0)
-        pltda_x3=omb_nbc0[good_msk0]*varinv0[good_msk0]
-        pltda_x4=omb_nbc0[aer_msk0]*varinv0[aer_msk0]
+        pltda_x3=omb_nbc0[good_msk0]
+        pltda_x4=omb_nbc0[aer_msk0]
         hdata3, tmpbins=np.histogram(pltda_x3, bins=hist_x_edge, density=0)
         hdata4, tmpbins=np.histogram(pltda_x4, bins=hist_x_edge, density=0)
         tmpymax=np.nanmax((hdata1,hdata2,hdata3,hdata4)) 
@@ -221,7 +221,7 @@ for chkwvn in [962.5]:
         ax.legend(['Clear','Hazy'],loc=2)
         
         if (fsave):
-            fname=('%s/PDF_NormOMB_%s_%s_%s_%.2f_%s.%s_%s.%s'
+            fname=('%s/PDF_OMB_%s_%s_%s_%.2f_%s.%s_%s.%s'
                     %(savedir,area,expname,sensor,chkwvn,bcflg1,sdate,edate,ffmt))
             print(fname,flush=1)
             fig.savefig(fname,dpi=quality)
@@ -242,7 +242,7 @@ for chkwvn in [962.5]:
         ax.legend(['Clear','Hazy'],loc=2)
         
         if (fsave):
-            fname=('%s/PDF_NormOMB_%s_%s_%s_%.2f_%s.%s_%s.%s'
+            fname=('%s/PDF_OMB_%s_%s_%s_%.2f_%s.%s_%s.%s'
                     %(savedir,area,expname,sensor,chkwvn,bcflg2,sdate,edate,ffmt))
             print(fname,flush=1)
             fig.savefig(fname,dpi=quality)

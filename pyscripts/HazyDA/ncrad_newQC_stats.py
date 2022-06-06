@@ -48,7 +48,7 @@ axe_w=3 ; axe_h=3 ; quality=300
 
 # Plotting setup
 sdate=2020061000
-edate=2020061018
+edate=2020092118
 aertype='All'
 hint=6
 exp='aero_v2qc'
@@ -114,7 +114,9 @@ if (os.path.exists(infile1)):
     ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
     ds_sensorinfo=xa.Dataset({'obserr':(['wavenumber'],err_array),
                               'nuchan':(['wavenumber'],nuch_array),
-                              'iuse':(['wavenumber'],iuse_array)},
+                              'iuse':(['wavenumber'],iuse_array),
+                              'ich':(['wavenumber'],np.arange(nchs)+1),
+                              },
                              coords={'wavenumber':ds1.wavenumber.values})
 else:
     print('%s is not existing'%(raddfile),flush=1)
@@ -226,11 +228,12 @@ output_df=output_df[['Aeff_1','Aeff_2','SD_min','SD_max']]
 output_df=output_df.reset_index()
 output_df['nuchan']=ds_sinfo_chk.nuchan.data
 output_df['iuse']  =ds_sinfo_chk.iuse.data
+output_df['ich']   =ds_sinfo_chk.ich.data
 output_df['SD_o']  =ds_sinfo_chk.obserr.data
 output_df['SD_noqc']=preqc_grp['SD_noqc']
 output_df['SD_qc']=aftqc_grp['SD_qc']
 output_df['Aer_sen']=(output_df['SD_max']>output_df['SD_o']).astype(int)
-output_df=output_df[['wavenumber','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc','Aer_sen']]
+output_df=output_df[['wavenumber','ich','nuchan','iuse','SD_o','Aeff_1','Aeff_2','SD_min','SD_max','SD_noqc','SD_qc','Aer_sen']]
 print('output_df has been created',flush=1)
 
 #

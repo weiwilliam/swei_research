@@ -50,9 +50,9 @@ minussign=u'\u2212'
 proj=ccrs.PlateCarree(globe=None)
 
 # Plotting setup
-cdate=2020062200
+cdate=2020062412
 hint=6
-cnvvar='t'
+cnvvar='sst'
 loop='ges' #ges,anl
 area='NYS'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -67,7 +67,7 @@ cornerll=[minlat,maxlat,minlon,maxlon]
 #tmppath='/data/users/swei/FTPdir/'
 #tmppath='C:/Users/ck102/Downloads'
 #tmppath='/data/users/swei/archive/hazyda_aero/2020060112'
-tmppath='/scratch/users/swei/ncdiag/hazyda_aero/'+str(cdate)
+tmppath='/scratch/users/swei/ncdiag/hazyda_ctrl/'+str(cdate)
 cnvdfile='diag_conv_'+cnvvar+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
 infile1=tmppath+'/'+cnvdfile

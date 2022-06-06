@@ -14,8 +14,7 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
-import cartopy.crs as ccrs
-machine='Desktop'
+machine='S4'
 os_name=platform.system()
 if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
@@ -25,7 +24,7 @@ elif (machine=='Desktop'):
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
-    rootarch='/data/users/swei/Experiments'
+    rootarch='/data/users/swei'
     rootpath='/data/users/swei'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
@@ -34,8 +33,8 @@ elif (machine=='Hera'):
     rootgit='/home/Shih-wei.Wei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
-from utils import ndate,setup_cmap
+from plot_utils import set_size
+from utils import ndate
 from datetime import datetime, timedelta
 import scipy.stats
 
@@ -43,16 +42,14 @@ tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
 mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
-mpl.rc('legend',fontsize='large')
+mpl.rc('legend',fontsize='small')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=3 ; axe_h=3 ; quality=300
-
-# Projection setting
-proj=ccrs.PlateCarree(globe=None)
+minussign=u'\u2212'
 
 # Plotting setup
 sdate=2020061000
-edate=2020061018
+edate=2020071018
 aertype='Dust'
 hint=6
 exp='aerqc_corR'
@@ -63,7 +60,7 @@ loop='ges' #ges,anl
 #    tlstr='OMA'
 #elif loop=='ges':
 #    tlstr='OMF'
-plthist_mean_sd=1 
+lutver='v4'
 lutfmt='csv'
 
 area='Glb'
@@ -82,10 +79,14 @@ elif (cbori=='horizontal'):
    cb_pad=0.1
 
 # Data path setup
-archpath=rootarch+'/Prospectus/AeroObsStats/nc_diag'
+#archpath=rootarch+'/ResearchData/Prospectus/AeroObsStats/nc_diag'
+archpath='/scratch/users/swei/ncdiag'
 lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
-outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/images'
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir=archpath+'/'+exp
+savedir=outpath+'/aerstat/'+exp+'/hist/'+aertype
+if ( not os.path.exists(savedir) ):
+    os.makedirs(savedir)
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -111,7 +112,7 @@ for date in dlist:
     infile1=archdir+'/'+str(date)+'/'+raddfile
 
     if (os.path.exists(infile1)):
-        print('Processing Radfile: %s' %(raddfile))
+        print('Processing Radfile: %s' %(raddfile), flush=1)
         ds1=xa.open_dataset(infile1)
         npts=int(ds1.nobs.size/ds1.nchans.size)
         nchs=ds1.nchans.size
@@ -131,19 +132,20 @@ for date in dlist:
     sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
     clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
     varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
-    sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
-    obs1=sim_nbc1+sim1
+    omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
+    obs1=omb_nbc1+sim1
+    aereff_fg=sim1-clr1
+    aereff_obs=obs1-clr1
+    aereff=0.5*abs(aereff_fg)+0.5*abs(aereff_obs)
     tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1),
                       'rlat1':(['obsloc'],rlat1),
                       'qcflag':(['obsloc','wavenumber'],qcflags),
-                      'tb_obs':(['obsloc','wavenumber'],obs1),
-                      'tb_sim':(['obsloc','wavenumber'],sim1),
-                      'tb_clr':(['obsloc','wavenumber'],clr1),
-                      'varinv':(['obsloc','wavenumber'],varinv1)},
+                      'Ae':(['obsloc','wavenumber'],aereff),
+                      'OMF':(['obsloc','wavenumber'],omb_nbc1)},
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})
     
-    tmpds=tmpds.sel(wavenumber=spectral_range)
+    tmpds=tmpds.sel(wavenumber=chkwvn_list)
     
     if (date==str(sdate)):
         ds_all=tmpds
@@ -153,7 +155,7 @@ for date in dlist:
 total_obscounts=ds_all.obsloc.size
 ds_all=ds_all.assign_coords(obsloc=np.arange(total_obscounts))
 
-satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats_new.v4.'+lutfmt
+satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.'+lutver+'.'+lutfmt
 if (lutfmt=='xlsx'):
    lutdf=pd.read_excel(satstats_file)
 elif (lutfmt=='csv'):
@@ -163,26 +165,12 @@ chkwvn_list=lutdf.loc[chk_filter,:]['wavenumber'].tolist()
 
 binsize=0.1
 halfbin=0.5*binsize
-hist_x_edge=np.arange(-1*halfbin,50.+binsize,binsize)
+hist_x_edge=np.arange(-1*halfbin,20.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
-for chkwvn in [962.5]:
-#for chkwvn in chkwvn_list.values:
-#    ds_chk=ds_all.sel(wavenumber=chkwvn)
-#    tb_sim=ds_chk.tb_sim
-#    tb_clr=ds_chk.tb_clr
-#    tb_obs=ds_chk.tb_obs
-#    varinv=ds_chk.varinv
-#
+#for chkwvn in [962.5]:
+for chkwvn in chkwvn_list:
     df_chk=ds_all.sel(wavenumber=chkwvn).to_dataframe()
-    tb_sim=df_chk['tb_sim']
-    tb_clr=df_chk['tb_clr']
-    tb_obs=df_chk['tb_obs']
-    omb   =tb_obs-tb_sim 
-    aereff_fg=tb_sim-tb_clr
-    aereff_obs=tb_obs-tb_clr
-    aereff=0.5*abs(aereff_fg)+0.5*abs(aereff_obs)
-#
     tmpdf=lutdf.loc[lutdf['wavenumber']==chkwvn]
     sdmin=tmpdf.SD_min.values[0]
     sdmax=tmpdf.SD_max.values[0]
@@ -195,93 +183,54 @@ for chkwvn in [962.5]:
     for idx in np.where((bin_center<ae2)&(bin_center>ae1))[0]:
         aedepsd[idx]=sdmin+(sdmax-sdmin)/(ae2-ae1)*(bin_center[idx]-ae1)
 
-    wrk_df=df_chk[['rlat1','rlon1','qcflag']]
-    wrk_df.insert(3,'OMB',omb)
-    wrk_df.insert(4,'Ae',aereff)
+    filter_ori=(df_chk['qcflag']!=7.0)
+    #filter_bst=(abs(df_chk['OMF'])>3)&(abs(df_chk['OMF'])>1.8*df_chk['Ae'])
+    filter_fnl=(df_chk['qcflag']==0.0)|(df_chk['qcflag']==13.0)
+    
+    ori_df=df_chk.loc[filter_ori,:]
+    fnl_df=df_chk.loc[filter_fnl,:]
+    
+    ori_df['Ae_bin']=pd.cut(ori_df['Ae'],bins=hist_x_edge,labels=bin_center)
+    fnl_df['Ae_bin']=pd.cut(fnl_df['Ae'],bins=hist_x_edge,labels=bin_center)
+    
+    ori_bin_df=ori_df.groupby('Ae_bin').agg({'OMF':['count','mean','std']})
+    fnl_bin_df=fnl_df.groupby('Ae_bin').agg({'OMF':['count','mean','std']})
+    ori_bin_df=ori_bin_df.reset_index()
+    fnl_bin_df=fnl_bin_df.reset_index()
 
-    filter_ori=(wrk_df['qcflag']==0.0)|(wrk_df['qcflag']==13.0)
-    filter_bst=(abs(wrk_df['OMB'])>3)&(abs(wrk_df['OMB'])>1.8*wrk_df['Ae'])
-    filter_fnl=(filter_ori)&(~filter_bst)
+    ori_omb_mean=ori_bin_df['OMF','mean']
+    fnl_omb_mean=fnl_bin_df['OMF','mean']
+    ori_omb_std=ori_bin_df['OMF','std']
+    fnl_omb_std=fnl_bin_df['OMF','std']
+
+    x_label='Aerosol effect [K]'
     
-    ori_df=wrk_df.loc[filter_ori,:]
-    fnl_df=wrk_df.loc[filter_fnl,:]
+    tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
     
-    ori_df['Ae_cut']=pd.cut(ori_df['Ae'],bins=hist_x_edge)
-    fnl_df['Ae_cut']=pd.cut(fnl_df['Ae'],bins=hist_x_edge)
-    
-    ori_df['bin_mean']=(ori_df.groupby('Ae_cut')['OMB'].transform('mean'))
-    fnl_df['bin_mean']=(fnl_df.groupby('Ae_cut')['OMB'].transform('mean'))
-    
-    ori_df['bin_sd']=(ori_df.groupby('Ae_cut')['OMB'].transform(np.std))
-    fnl_df['bin_sd']=(fnl_df.groupby('Ae_cut')['OMB'].transform(np.std))
-    
-    ori_bin_df=ori_df[['Ae_cut','bin_mean','bin_sd']]
-    fnl_bin_df=fnl_df[['Ae_cut','bin_mean','bin_sd']]
-    
-#        
-#    qc0_msk=(ds_chk.qcflag==0.)
-#    # qc7_msk=(ds_chk.qcflag==7.)
-#    qc13_msk=(ds_chk.qcflag==13.)
-#
-#    ori_msk=((qc0_msk)|(qc13_msk))
-#    ori_total=np.count_nonzero(ori_msk)
-#    # lowbt_qc=(used_msk)&(abs(omb)<30.)
-#    final_qc_msk=(ori_msk)&(~((abs(omb)>3)&(abs(omb)>1.8*aereff)))&(abs(omb)<30.)
-#
-#    if (plthist_mean_sd):
-#        savedir=outpath+'/'+exp+'/hist/'+aertype
-#        if ( not os.path.exists(savedir) ):
-#            os.makedirs(savedir)
-#        
-#        pltda_x1=aereff[ori_msk==1]
-#        pltda_x2=aereff[final_qc_msk==1]
-#        x_label='Aerosol effect [K]'
-#        
-#        omb_mean1=np.zeros_like(bin_center,dtype='float')
-#        omb_sd1=np.zeros_like(bin_center,dtype='float')
-#        counts1=np.zeros_like(bin_center,dtype='int')
-#        omb_mean2=np.zeros_like(bin_center,dtype='float')
-#        omb_sd2=np.zeros_like(bin_center,dtype='float')
-#        counts2=np.zeros_like(bin_center,dtype='int')
-#        
-#        for i in np.arange(omb_mean1.size):
-#            lb_aereff=hist_x_edge[i]
-#            ub_aereff=hist_x_edge[i+1]
-#            tmpmsk1=(ori_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-#            omb_mean1[i]=omb[tmpmsk1==1].mean()
-#            omb_sd1[i]=omb[tmpmsk1==1].std()
-#            counts1[i]=np.count_nonzero(tmpmsk1)
-#            tmpmsk2=(final_qc_msk)&((aereff>=lb_aereff)&(aereff<ub_aereff))
-#            omb_mean2[i]=omb[tmpmsk2==1].mean()
-#            omb_sd2[i]=omb[tmpmsk2==1].std()
-#            counts2[i]=np.count_nonzero(tmpmsk2)
-#
-#        tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
-#        
-#        fig=plt.figure()
-#        ax=plt.subplot()
-#        set_size(axe_w,axe_h,l=0.15,r=0.85)
-#        ax.set_title(tistr,loc='left')
-#        ax.set_xlabel(x_label)
-#        hdata, bins, patches=ax.hist(pltda_x1,hist_x_edge,color='grey',
-#                                      density=0,alpha=0.3)
-#        hdata, bins, patches=ax.hist(pltda_x2,hist_x_edge,color='grey',
-#                                      density=0,alpha=0.7)
-#        ax.set_yscale("log")
-#        ax.set_ylabel("Counts")
-#        ax2=ax.twinx()
-#        ax2.plot(bin_center,omb_mean1,'tab:blue',linewidth=0.7)
-#        ax2.plot(bin_center,omb_sd1,'tab:red',linewidth=0.7)
-#        ax2.plot(bin_center,omb_mean2,'tab:blue')
-#        ax2.plot(bin_center,omb_sd2,'tab:red')
-#        ax2.plot(bin_center,aedepsd,'k',linewidth=1.)
-#        ax2.set_ylim(-40,10)
-#        ax2.set_ylabel('SD and Mean of O-B [K]')
-#        ax2.hlines(obserr,0,1,transform=ax2.get_yaxis_transform(),colors='k',linestyle='dashed',linewidth=0.7)
-#        ax2.hlines(0.,0,1,transform=ax2.get_yaxis_transform(),colors='grey',linewidth=0.4)
-#        
-#        if (fsave):
-#            fname=('PDF_MeanSD_%s_%s_%.2f.%s'
-#                    %(area,sensor,chkwvn,ffmt))
-#            fig.savefig(savedir+'/'+fname,dpi=quality)
-#            plt.close()
+    fig=plt.figure()
+    ax=plt.subplot()
+    set_size(axe_w,axe_h,l=0.15,r=0.85)
+    ax.set_title(tistr,loc='left')
+    ax.set_xlabel(x_label)
+    ax.bar(bin_center,ori_bin_df['OMF','count'],binsize,color='grey',alpha=0.3)
+    ax.bar(bin_center,fnl_bin_df['OMF','count'],binsize,color='grey',alpha=0.7)
+    ax.set_yscale("log")
+    ax.set_ylabel("Counts")
+    ax2=ax.twinx()
+    ax2.plot(bin_center,ori_omb_mean,'tab:blue',linewidth=0.7,label='Mean')
+    ax2.plot(bin_center,ori_omb_std,'tab:gray',linewidth=0.7,label='SD')
+    ax2.plot(bin_center,fnl_omb_mean,'tab:blue',label='Mean_QC')
+    ax2.plot(bin_center,fnl_omb_std,'tab:red',label='SD_QC')
+    ax2.plot(bin_center,aedepsd,'k',linewidth=1.,label='${A}_{e}$_dep_SD')
+    ax2.set_ylim(-40,10)
+    ax2.set_ylabel('SD and Mean of O%sF [K]'%(minussign))
+    ax2.hlines(obserr,0,1,transform=ax2.get_yaxis_transform(),colors='k',linestyle='dashed',linewidth=0.7)
+    ax2.hlines(0.,0,1,transform=ax2.get_yaxis_transform(),colors='grey',linewidth=0.4)
+    ax2.legend(loc=7)
+#    
+    if (fsave):
+        fname=('%s/PDF_MeanSD_%s_%s_%.2f.%s'
+                %(savedir,area,sensor,chkwvn,ffmt))
+        print(fname,flush=1)
+        fig.savefig(fname,dpi=quality)
+        plt.close()

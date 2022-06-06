@@ -3,6 +3,7 @@
 1. ./setup_expt.py --pslot hazyda_ctrl --configdir /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/Git/glbwkflow_develop/parm/config --idate 2020060100 --edate 2020060100 --comrot /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/HazyDA/wrktmp --expdir /home/Shih-wei.Wei/wrk --resdet 192 --resens 96 --gfs_cyc 0 --nens 80 --icsdir /scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/HazyDA/ICs --start cold
 
 On S4
+module load rocoto and miniconda/2.7-base
 2. 
 ./setup_expt.py --pslot hazyda_10ens --expdir ~/expdir --resdet 192 --resens 96 --comrot /scratch/users/swei/comrot --idate 2020060100 --edate 2020060100 --nens 10 --gfs_cyc 0 --partition s4 --start cold --configdir /data/users/swei/Git/glbwkflw_dhuber/parm/config
 ./setup_workflow.py --expdir ~/expdir/hazyda_10ctrl

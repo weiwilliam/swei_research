@@ -54,11 +54,11 @@ diagsuffix='nc4'
 outputpath=rootpath+'/DiagFiles/rad'
 inputpath=rootarch
 
-explist=np.array(['hazyda_ctrl','hazyda_aero'])
-expnlist=['CTL','AER']
+explist=np.array(['hazyda_ctrl','hazyda_aero_sea'])
+expnlist=['CTL','AERS']
 sensor='iasi_metop-a'
 chkwvn=962.5
-pltvar='BC_Constant'
+pltvar='BC_Emissivity'
 units='K'
 
 sdate=2020060106

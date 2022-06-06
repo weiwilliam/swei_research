@@ -51,8 +51,8 @@ proj=ccrs.PlateCarree(globe=None)
 outputpath=rootpath+'/grib'
 expsarch=rootarch+'/archive'
 
-explist=['hazyda_ctrl','hazyda_aero']
-expnlist=['CTL','AER']
+explist=['hazyda_ctrl','hazyda_aero_sea']
+expnlist=['CTL','AERS']
 #enum=explist.shape[0]
 
 sdate=2020061000

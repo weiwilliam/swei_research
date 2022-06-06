@@ -3,13 +3,14 @@ set -x
 #
 # Set experiment name and analysis date
 machine='s4'
-exp="aer_seaonly"
+exp="aerv2qc_test"
 expid=2 # 1: no aer 2: aer  
 VERBOSE='.false.'
 if_observer=Yes 
 if_iraerdet=Yes
 if_useaerir=Yes
 if_hybvar=Yes
+USE_CORRELATED_OBERRS=Yes
 #
 if [ $machine == 'hera' ]; then
    homedir=/scratch1/BMC/gsd-fv3-dev/Shih-wei.Wei/AeroObsStats
@@ -27,7 +28,7 @@ elif [ $machine == 's4' ]; then
    scrpts_home=/home/swei/research/GSI_exps
    aerpath=/data/users/swei/common/MERRA2_L64
    obsarch=/data/prod/glopara/dump
-   gesarch=/scratch/users/swei/comrot/hazyda_aero/
+   gesarch=/scratch/users/swei/comrot/hazyda_aero_v2qc/
    DMPDIR=/scratch/users/swei/runtmp
    module purge
    source /data/users/swei/Git/GSI/modulefiles/modulefile.ProdGSI.s4
@@ -75,14 +76,22 @@ case $expid in
   READEXTAER='.false.'
    MERRA2AER='.false.'
   satinfo=${scrpts_home}/dat/controlrun_satinfo.txt
- anavinfo=${scrpts_home}/dat/anavinfo_controlrun
- allskyinfo=$fixgsi/cloudy_radiance_info.txta ;;
+  if [[ $USE_CORRELATED_OBERRS == "Yes" ]]; then
+     anavinfo=${scrpts_home}/dat/anavinfo_controlrun
+  else
+     anavinfo=${scrpts_home}/dat/anavinfo_controlrun_nocorR
+  fi
+  allskyinfo=${scrpts_home}/dat/cloudy_radiance_info.txt ;;
 2)
   READEXTAER='.true.'
    MERRA2AER='.true.'
   satinfo=${scrpts_home}/dat/fv3aerorad_satinfo.txt
- anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad
- allskyinfo=${scrpts_home}/dat/all-sky_radiance_info.txt ;;
+  if [[ $USE_CORRELATED_OBERRS == "Yes" ]]; then
+     anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad
+  else
+     anavinfo=${scrpts_home}/dat/anavinfo_fv3aerorad_nocorR
+  fi
+  allskyinfo=${scrpts_home}/dat/all-sky_radiance_info.v5.txt ;;
 esac
 
 # Set the JCAP resolution which you want.
@@ -561,6 +570,22 @@ $ncp $anavinfo ./anavinfo
 $ncp $aeroinfo ./aeroinfo
 $ncp $hybens_info ./hybens_info
 $ncp $atmsbeaminfo ./atms_beamwidth.txt
+
+if [ $USE_CORRELATED_OBERRS == "Yes" ];  then
+  if grep -q "Rcov" $anavinfo ;  then
+     if ls ${fixgsi}/Rcov* 1> /dev/null 2>&1; then
+       $ncp ${fixgsi}/Rcov* $tmpdir
+       echo "using correlated obs error"
+     else
+       echo "FATAL ERROR: Satellite error covariance files (Rcov) are missing."
+       echo "Check for the required Rcov files in " $anavinfo
+       exit 1
+     fi
+  fi
+  export MKL_NUM_THREADS=1
+else
+  echo "not using correlated obs error"
+fi
 
 # Copy CRTM coefficient files
 for file in `awk '{if($1!~"!"){print $1}}' ./satinfo | sort | uniq` ;do

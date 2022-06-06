@@ -1,3 +1,5 @@
 paths:
 UFS-RAQMS Model half degree: /ships19/models2/lenzen/FV3GFS.9.0.2019/O3.CONTROL/C192/5DEGLL
 Satellite data: /ships19/aqda/bpierce/Satellite
+GEFS-Aerosol FIREX-AQ 2019: /ships19/aqda/lenzen/JPSS/GEFS_AER
+

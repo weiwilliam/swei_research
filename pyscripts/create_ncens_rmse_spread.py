@@ -53,12 +53,12 @@ if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
 sdate=2020060100
-edate=2020062318
+edate=2020062306
 hint=6
 pltvar='total'
 area='Glb'
-explist=['50ctrl']
-enumlist=[50]
+explist=['ctrl','aero_v2qc']
+enumlist=[50,50]
 evallist=['pressfc','dpres','tmp','spfh','ugrd','vgrd']
 
 #
@@ -134,31 +134,17 @@ for i in np.arange(tnum-1):
         sprd_exp=xa.open_dataset(enssprd)
         sprd_exp=sprd_exp.get(evallist)
 
-        #ratio_tmp=rmse/sprd
-        #ratio_tmp=sprd/rmse
-        #if (i==0):
-        #   rmse_exp=rmse
-        #   sprd_exp=sprd
-        #else:
-        #   rmse_exp=xa.concat((rmse_exp,rmse),dim='time')
-        #   sprd_exp=xa.concat((sprd_exp,sprd),dim='time')
-
         rmse_exp=rmse_exp.assign_coords({'exps':exp})
         sprd_exp=sprd_exp.assign_coords({'exps':exp})
-        if (eidx==0):
-           rmse=rmse_exp
-           sprd=sprd_exp
-        else:
-           rmse=xa.concat((rmse,rmse_exp),dim='exps')
-           sprd=xa.concat((sprd,sprd_exp),dim='exps')
-        eidx+=1
 
-    inputpath='/data/users/swei/archive'
-    outputpath=inputpath+'/Ens/'+exp
-    if ( not os.path.exists(outputpath) ):
-        os.makedirs(outputpath)
-    
-    rmse_fname=outputpath+'/rmse.'+adate+'.nc4'
-    rmse.to_netcdf(rmse_fname)
-    sprd_fname=outputpath+'/sprd.'+adate+'.nc4'
-    sprd.to_netcdf(sprd_fname)
+        inputpath='/data/users/swei/archive'
+        outputpath=inputpath+'/Ens/'+exp
+        if ( not os.path.exists(outputpath) ):
+            os.makedirs(outputpath)
+        
+        rmse_fname=outputpath+'/rmse.'+adate+'.nc4'
+        rmse_exp.to_netcdf(rmse_fname)
+        sprd_fname=outputpath+'/sprd.'+adate+'.nc4'
+        sprd_exp.to_netcdf(sprd_fname)
+
+        eidx+=1

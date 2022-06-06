@@ -17,17 +17,18 @@ if [ $machine == 'hera' ] ; then
 elif [ $machine == 's4' ] ; then
    gsisub=/data/users/swei/Git/GSI/ush/sub_s4
    account=star
-   queue=batch
+   queue=debug
+   #queue=batch
    gsirunscript=$1
    # nprocs per node / nodes
    procs='20/8'
    #procs='12/16'
-   wtime='00:30:00'
+   wtime='00:15:00'
    outfile=/data/users/swei/Experiments/runlogs/log.$gsirunscript
 fi
 
-SDATE=2020062212
-EDATE=2020062212
+SDATE=2020060112
+EDATE=2020060112
 CDATE=$SDATE
 
 until [ $CDATE -gt $EDATE ]; do

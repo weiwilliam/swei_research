@@ -60,9 +60,8 @@ inputpath=rootarch
 varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
 bufrtype='all' # SST: 181-199
-explist=np.array(['hazyda_ctrl','hazyda_aero'])
-expnlist=['CTL','AER']
-enum=explist.shape[0]
+explist=np.array(['hazyda_ctrl','hazyda_aero_sea'])
+expnlist=['CTL','AERS']
 
 sdate=2020061000
 edate=2020071018
@@ -119,7 +118,11 @@ print('Total cases number is %d' % tnum )
 
 ptop=np.array((1000.,900.,800.,600.,400.,300.,250.,200.,150.,100.,50.,0.))
 pbot=np.array((1200.,1000.,900.,800.,600.,400.,300.,250.,200.,150.,100.,50.))
+pmid=0.5*(ptop+pbot)
 znum=ptop.size
+zlabels=[]
+for z in np.arange(znum):
+    zlabels.append('%.0i-%.0i'%(ptop[z],pbot[z]))
 
 uidx=0
 for var in varlist:
@@ -133,7 +136,6 @@ for var in varlist:
     d=0
     for date in dlist:
         cnvdfile='diag_conv_'+var+'_'+loop+'.'+date+'.'+diagsuffix
-        print('File: %s' % cnvdfile)
         infile1=inputpath+'/'+explist[0]+'/'+date+'/'+cnvdfile
         infile2=inputpath+'/'+explist[1]+'/'+date+'/'+cnvdfile
         if (os.path.exists(infile1) and os.path.exists(infile2)):
@@ -240,12 +242,12 @@ for var in varlist:
             ax[a].set_prop_cycle(color=['blue','red'])
             ax[a].grid()
         
-        ax[1].plot_date(xdates,omg_mean,'-')
+        ax[1].plot_date(xdates,omg_mean,'-o',lw=1,ms=1.5)
         ax[0].xaxis.set_major_locator(loc)
         ax[0].xaxis.set_major_formatter(formatter)
         ax[0].xaxis.set_tick_params(labelsize=10)
-        ax[0].set_title('%s %s[%s]' %(area,var.upper(),unit))
-        ax[0].plot_date(xdates,omg_rmsq,'--')
+        ax[0].set_title('%s %s[%s]' %(area,var.upper(),unit),loc='left')
+        ax[0].plot_date(xdates,omg_rmsq,'--o',lw=1,ms=1.5)
         ax[0].set_ylabel('RMS %s [%s]' %(lpstr,unitlist[uidx]))
         ax[1].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
         lglist=np.zeros((2,2),dtype='<U30')
@@ -256,36 +258,40 @@ for var in varlist:
         ax[1].legend(lglist[1,:])
         if (fsave):
             fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png' 
-                        %(area,loop,var,explist[0],explist[1],qcflg,bufrtype,sdate,edate), dpi=quality)
+                        %(area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate), dpi=quality)
             plt.close()
         
     else:
         fig,ax=plt.subplots(1,3,sharey=True)
-        fig.subplots_adjust(wspace=0.05)
-        ax[0].set_prop_cycle(color=['blue','red'])
-        ax[1].set_prop_cycle(color=['blue','red'])
-        ax[2].set_prop_cycle(color=['k','k'],linestyle=['-','--'])
+        fig.subplots_adjust(left=0.2,right=0.95,wspace=0.05)
+        ax[0].set_prop_cycle(color=['blue','red'],linestyle=['-','-'],marker=['o','o'])
+        ax[1].set_prop_cycle(color=['blue','red'],linestyle=['--','--'],marker=['o','o'])
+        ax[2].set_prop_cycle(color=['k','k'],linestyle=['-','--'],marker=['o','o'])
         biasplot=np.nanmean(omg_mean,axis=0)
         rmsplot=np.nanmean(omg_rmsq,axis=0)
         diffplot=np.zeros_like(biasplot)
         diffplot[:,0]=np.diff(biasplot,axis=1)[:,0]
         diffplot[:,1]=np.diff(rmsplot,axis=1)[:,0]
-        ax[0].plot(biasplot,pbot,'-')
+        ax[0].plot(biasplot,pmid,lw=1,ms=1.5)
         ax[0].set_title('Mean %s [%s]'%(lpstr,unitlist[uidx]))
-        ax[1].plot(rmsplot,pbot,'--')
+        ax[1].plot(rmsplot,pmid,lw=1,ms=1.5)
         ax[1].set_title('RMS %s [%s]'%(lpstr,unitlist[uidx]))
-        ax[2].plot(diffplot,pbot)
-        ax[2].set_title(expnlist[1]+minussign+expnlist[0])
+        ax[2].plot(diffplot,pmid,lw=1,ms=1.5)
+        ax[2].set_title('%s%s%s [%s]'%(expnlist[1],minussign,expnlist[0],unit))
         ax[0].invert_yaxis()
+        ax[0].set_yscale('log')
+        ax[0].set_yticks(pmid[::2])
+        ax[0].set_yticklabels(zlabels[::2])
+        ax[0].set_ylabel('Pressure [hPa]')
         fig.suptitle('%s [%s]' %(var.upper(),unit))
         ax[0].legend(expnlist)
-        ax[2].legend(['Mean %s'%(lpstr),'RMS %s'%(lpstr)])
+        ax[2].legend(['Mean','RMS'],loc=2)
         ax[0].grid()
         ax[1].grid()
         ax[2].grid()
         if (fsave):
             fname=('%s/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'
-                   %(imgsavpath,area,loop,var,explist[0],explist[1],qcflg,bufrtype,sdate,edate))
+                   %(imgsavpath,area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate))
             print(fname)
             fig.savefig(fname, dpi=quality)
             plt.close()
@@ -294,30 +300,30 @@ for var in varlist:
             fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
             fig.subplots_adjust(hspace=0.1)
             for a in np.arange(2):
-                ax[a].set_prop_cycle(color=['blue','red'])
-                ax[a].grid()
+               ax[a].set_prop_cycle(color=['blue','red'])
+               ax[a].grid()
         
-            ax[1].plot_date(dates,omg_mean[:,z,:],'-o',ms=2)
+            ax[1].plot_date(dates,omg_mean[:,z,:],'-o',ms=1.5,lw=1)
             ax[0].xaxis.set_major_locator(loc)
             ax[0].xaxis.set_major_formatter(formatter)
             ax[0].xaxis.set_tick_params(labelsize=10)
             ax[0].set_title('%s %s [%s] %.1f %s %.1f [hPa]' %(area,var.upper(),unit,ptop[z],minussign,pbot[z]),loc='left')
-            ax[0].plot_date(dates,omg_rmsq[:,z,:],'-o',ms=2)
+            ax[0].plot_date(dates,omg_rmsq[:,z,:],'--o',ms=1.5,lw=1)
             ax[0].set_ylabel('RMS %s [%s]'%(lpstr,unitlist[uidx]))
             ax[1].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
             lglist=np.zeros((2,2),dtype='<U30')
             for ex in np.arange(2):
-                lglist[0,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_rmsq[:,z,ex]))
-                lglist[1,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_mean[:,z,ex]))
+               lglist[0,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_rmsq[:,z,ex]))
+               lglist[1,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_mean[:,z,ex]))
             ax[0].legend(lglist[0,:])
             ax[1].legend(lglist[1,:])
             
             if (fsave):
-                fname=('%s/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
-                       %(imgsavpath,area,loop,var,explist[0],explist[1],pbot[z],qcflg,bufrtype,sdate,edate))
-                print(fname)
-                fig.savefig(fname, dpi=quality)
-                plt.close()
+               fname=('%s/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
+                      %(imgsavpath,area,loop,var,expnlist[0],expnlist[1],pbot[z],qcflg,bufrtype,sdate,edate))
+               print(fname)
+               fig.savefig(fname, dpi=quality)
+               plt.close()
                 
     uidx=uidx+1
     

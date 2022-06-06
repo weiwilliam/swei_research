@@ -49,16 +49,15 @@ mrkrlst=[' ',' ',' ']
 
 inputpath='/data/users/swei/archive'
 
-sdate=2020060300
-edate=2020062312
+sdate=2020060106
+edate=2020062300
 hint=6
-pltvar='total'
 area='Glb'
-explist=['ctrl'] #,'10ens','30ens']
+explist=['ctrl','aero_v2qc']
 levlist=[850.,500.,250.]
 varlist=['tmp','spfh','ugrd','vgrd']
 
-outputpath=rootpath+'/Ens/'+explist[0]+'/Timeseries/RMSEvsSPRD'
+outputpath=rootpath+'/Ens/'+explist[0]+'.vs.'+explist[1]+'/Timeseries/RMSEvsSPRD'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 #
@@ -130,8 +129,8 @@ for var in varlist:
                sprd_mean=xa.concat((sprd_mean,sprd_mean_exp),dim='time')
     
         outname='%s/TS_%s_%s_%s.png' %(outputpath,area,lev,var)
-        pltrmse=rmse_mean.values #.swapaxes(0,1)
-        pltsprd=sprd_mean.values #.swapaxes(0,1)
+        pltrmse=rmse_mean.values.swapaxes(0,1)
+        pltsprd=sprd_mean.values.swapaxes(0,1)
         pltdates=rmse_mean.time
         fig,ax=plt.subplots()
         set_size(axe_w,axe_h,b=0.13)

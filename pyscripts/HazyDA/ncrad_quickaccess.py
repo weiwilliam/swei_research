@@ -34,19 +34,20 @@ import matplotlib.pyplot as plt
 
 # Plotting setup
 expname='hazyda_aero'
-cdate=2020062212
+cdate=2020060112
 hint=6
 sensor='iasi_metop-a'
-selwvn=962.5
+selwvn=1022
 loop='ges' #ges,anl
 degres=1
 
 raddfile='diag_'+sensor+'_'+loop+'.'+str(cdate)+'.nc4'
 #infile1=inputpath+'/'+expname+'/'+str(cdate)+'/'+raddfile
-tmppath='/data/users/swei/FTPdir/'
-# tmppath='/data/users/swei/Experiments/testing/OUTPUT/bc_check/2020062212'
+#tmppath='/data/users/swei/FTPdir/'
 # tmppath='F:/ResearchData/Prospectus/HazyDA'
-#tmppath='/scratch/users/swei/ncdiag/hazyda_aero/'+str(cdate)
+tmppath='/scratch/users/swei/ncdiag/hazyda_aero/'+str(cdate)
+#tmppath='/data/users/swei/ResearchData/Prospectus/AeroObsStats/nc_diag/aero_v2qc/'+str(cdate)
+#tmppath='/data/users/swei/Experiments/aerv2qc_test/OUTPUT/aerv2qc_test/'+str(cdate)#+'_noall-sky'
 infile1=tmppath+'/'+raddfile
 
 if (os.path.exists(infile1)):
@@ -65,11 +66,14 @@ if (os.path.exists(infile1)):
     rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
     rlon1=(rlon1+180)%360-180
     qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
+    varinv=np.reshape(ds1.Inverse_Observation_Error.values,(npts,nchs))
     sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
     clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
     sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
     obs1=sim_nbc1+sim1
     bcemiss=np.reshape(ds1.BC_Emissivity.values,(npts,nchs))
+    waterfrac=np.reshape(ds1.Water_Fraction.values,(npts,nchs))
+    landfrac=np.reshape(ds1.Land_Fraction.values,(npts,nchs))
     #bcpredemiss=np.reshape(ds1.BCPred_Emissivity.values,(npts,nchs))
     if (aerdiag):
         aero_load=np.reshape(ds1.aero_load.values,(npts,nchs))#[:,0]
@@ -83,7 +87,10 @@ if (os.path.exists(infile1)):
                       'tb_obs':(['obsloc','wavenumber'],obs1),
                       'tb_sim':(['obsloc','wavenumber'],sim1),
                       'tb_clr':(['obsloc','wavenumber'],clr1),
+                      'varinv':(['obsloc','wavenumber'],varinv),
                       'bc_emiss':(['obsloc','wavenumber'],bcemiss),
+                      'waterfrac':(['obsloc','wavenumber'],waterfrac),
+                      'landfrac':(['obsloc','wavenumber'],landfrac),
                       },
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds1.wavenumber.values})

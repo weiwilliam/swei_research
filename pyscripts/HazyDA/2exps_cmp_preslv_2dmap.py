@@ -31,7 +31,7 @@ from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
-from utils import ndate,setup_cmap
+from utils import ndate,setup_cmap,find_cnlvs
 from datetime import datetime, timedelta
 import cartopy.crs as ccrs
 
@@ -51,9 +51,13 @@ proj=ccrs.PlateCarree(globe=None)
 outputpath=rootpath+'/grib'
 expsarch=rootarch+'/archive'
 
-explist=['hazyda_ctrl','hazyda_aero']
-expnlist=['CTL','AER']
-#enum=explist.shape[0]
+expset=2
+if (expset==1):
+   explist=['hazyda_ctrl','hazyda_aero']
+   expnlist=['CTL','AER']
+elif (expset==2):
+   explist=['hazyda_ctrl','hazyda_aero_sea']
+   expnlist=['CTL','AERS']
 
 sdate=2020061000
 edate=2020071018
@@ -144,12 +148,9 @@ for pres in [850,500]:
 
     diff_da=exp_diff_mean.sel(isobaricInhPa=pres)
 
-    melv_max=np.ceil( np.quantile(abs(diff_da),0.9) )
-    melv_int=melv_max/10
-    metcks=np.arange(-melv_max,melv_max+melv_int,melv_int)
-    me_lvs=metcks
+    me_lvs=find_cnlvs(diff_da,ntcks=21,eqside=0)
     clridx=[]
-    for idx in np.linspace(2,254,metcks.size):
+    for idx in np.linspace(2,254,me_lvs.size):
         clridx.append(int(idx))
     meclrmap=setup_cmap('BlueYellowRed',clridx)
     menorm = mpcrs.BoundaryNorm(me_lvs,len(clridx)+1,extend='both')
@@ -161,7 +162,7 @@ for pres in [850,500]:
     cn=ax.contourf(pltdata.longitude,pltdata.latitude,pltdata,levels=me_lvs,
                    cmap=meclrmap,norm=menorm,extend='both')
     plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,ticks=me_lvs[::tkfreq],aspect=40,label=cblabel)
+                 pad=cb_pad,aspect=40,label=cblabel)
     outname='%s/%s_%s_%s_%s_Diff.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],pltvar,pres,sdate,edate,ffmt)
     if (fsave):
        print(outname)

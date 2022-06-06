@@ -35,16 +35,15 @@ import xarray as xa
 import pandas as pd
 
 # Plotting setup
-exp='aerqc_corR'
 sensor='iasi_metop-a'
 lutfmt='csv'
-ver='v4'
+ver='v5'
 nchs=616
 
 # Data path setup
 lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
 
-satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats_new.'+ver+'.'+lutfmt
+satstats_file=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.'+ver+'.'+lutfmt
 if (lutfmt=='xlsx'):
    lutdf=pd.read_excel(satstats_file)
 elif (lutfmt=='csv'):
@@ -53,7 +52,7 @@ elif (lutfmt=='csv'):
 filter = (lutdf.Aer_sen==1.)&(lutdf.iuse==1.)
 
 nrows=lutdf.shape[0]
-lutdf['ich']=np.arange(1,nrows+1)
+#lutdf['ich']=np.arange(1,nrows+1)
 
 tmpdf=lutdf[['ich','Aeff_1','Aeff_2','SD_max']]
 tmpdf=tmpdf.loc[filter,:]

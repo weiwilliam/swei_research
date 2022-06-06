@@ -58,13 +58,9 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
             'mhs_metop-a','mhs_metop-b','mhs_n18','mhs_n19','saphir_meghat',
             'seviri_m08','seviri_m10','sndrd1_g15','sndrd2_g15','sndrd3_g15',
             'sndrd4_g15','ssmis_f17','ssmis_f18']
-#hsensorlist=['airs_aqua','iasi_metop-a','iasi_metop-b','cris_npp']
-#lsensor1list=['hirs4_metop-a','hirs4_metop-b','hirs4_n19']
-#lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
-#lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-pltvar='qc0_count'
-varlb='clear-sky'
+pltvar='qc57_count'
+varlb='rejected hazy-sky (cloud QC)'
 sdate=2020061000
 edate=2020071018
 hint=6
@@ -74,8 +70,7 @@ chkwvn=962.5
 degres=2.5
 units='%'
 
-explist=np.array(['hazyda_ctrl','hazyda_aero'])
-expnlist=['CTL','AER']
+expnlist=['CTL','QCv2']
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
