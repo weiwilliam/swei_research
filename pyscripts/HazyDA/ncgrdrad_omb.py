@@ -63,9 +63,9 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-pltvar='omb_nbc_mean'
-varlb='OMB w/o BC'
-sdate=2020061000
+pltvar='omb_bc_mean'
+varlb='OMB w/ BC'
+sdate=2020060106
 edate=2020071018
 hint=6
 
@@ -113,8 +113,8 @@ imgsavpath=outputpath+'/2dmap/omb/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
-grdfile1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
 ds1=xa.open_dataset(grdfile1)

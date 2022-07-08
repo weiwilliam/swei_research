@@ -59,8 +59,8 @@ pres_list=[850,700,500,200]
 sdate=2020061000
 edate=2020071018
 hint=6
-pltvar='t' # z, r, q, t, u, v
-units='K'  # m,'K','%','g/kg','K','m/s','mb'
+pltvar='v' # z, r, q, t, u, v
+units='m/s'  # m,'%','g/kg','K','m/s','mb'
 grav=9.80665e+0
 
 if (pltvar=='z'):

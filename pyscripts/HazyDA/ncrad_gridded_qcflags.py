@@ -48,8 +48,8 @@ warnings.filterwarnings('ignore')
 degres=2.5
 #degres=1
 
-explist=['hazyda_aero_sea']
-leglist=['AERS']
+explist=['hazyda_ctrl']
+leglist=['CTL']
 qclist=[0., 3., 7., 10., 13., 51., 53., 55., 57.]
 
 sensor='iasi_metop-a'

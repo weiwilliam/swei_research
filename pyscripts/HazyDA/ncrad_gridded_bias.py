@@ -79,8 +79,8 @@ def get_bc_terms(ds):
 degres=2.5
 #degres=1
 
-explist=['hazyda_aero_sea']
-leglist=['AERS']
+explist=['hazyda_ctrl']
+leglist=['CTL']
 
 sensor='iasi_metop-a'
 

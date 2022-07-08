@@ -60,8 +60,8 @@ degres=2.5
 #degres=1
 statslist=['mean','count','var','max','min']
 
-explist=['hazyda_aero_sea']
-leglist=['AERS']
+explist=['hazyda_ctrl']
+leglist=['CTL']
 
 sensor='iasi_metop-a'
 

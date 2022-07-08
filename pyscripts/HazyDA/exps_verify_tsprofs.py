@@ -55,8 +55,8 @@ expnlist=['CTL','AER']
 sdate=2020061000
 edate=2020071018
 hint=6
-pltvar='t' # z, r, q, t, u, v
-units='K'  # m,'K','%','g/kg','K','m/s','mb'
+pltvar='v' # z, r, q, t, u, v
+units='m/s'  # m,'K','%','g/kg','K','m/s','mb'
 grav=9.80665e+0
 
 if (pltvar=='z'):
@@ -64,7 +64,7 @@ if (pltvar=='z'):
 else:
     expvar=pltvar
 
-area='TRO'
+area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
 if (area=='Glb'):

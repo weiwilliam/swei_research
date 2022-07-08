@@ -53,8 +53,8 @@ axe_w=3 ; axe_h=3 ; quality=300
 sdate=2020061000
 edate=2020071018
 hint=6
-exp='hazyda_aero_sea'
-expname='AERS'
+exp='hazyda_aero'
+expname='AER'
 sensor='iasi_metop-a'
 spectral_range=slice(600,1300)
 loop='ges' #ges,anl

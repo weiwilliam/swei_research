@@ -52,7 +52,7 @@ statslist=['mean','count','var']#,'max','min']
 explist=['hazyda_ctrl']
 leglist=['CTL']
 
-cnvvar='u'
+cnvvar='t'
 if (cnvvar in ['u','v']):
    cnvtype='uv'
 else:
@@ -77,7 +77,7 @@ if loop=='anl':
 elif loop=='ges':
     tlstr='OMF'
 
-useqc=0
+useqc=1
 if (useqc):
    qcflg='qc'
 else:
@@ -160,7 +160,6 @@ for date in dlist:
     else:
        omb_bc0 =ds0.Obs_Minus_Forecast_adjusted.data
        omb_nbc0=ds0.Obs_Minus_Forecast_unadjusted.data
-    aggdict={'omb_bc':statslist,'omb_nbc':statslist}
     varlist=['omb_bc','omb_nbc']
 
     tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0),
@@ -173,53 +172,53 @@ for date in dlist:
                        },
                       coords={'obsloc':npts0})
 
-#    tmpdf0=tmpds0.to_dataframe()
-#    if (useqc):
-#       tmpdf0_qcfilter=(tmpdf0['qcflag']==1.)
-#       tmpoutdf0=tmpdf0.loc[tmpdf0_qcfilter,:]
-#    else:
-#       tmpoutdf0=tmpdf0
-#    tmpoutdf0=tmpoutdf0.reset_index()
-#    tmpoutdf0['lat']=pd.cut(tmpoutdf0['rlat'],bins=latbin,labels=latgrd)
-#    tmpoutdf0['lon']=pd.cut(tmpoutdf0['rlon'],bins=lonbin,labels=longrd)
-#    if (is_sfc):
-#       tmpgrp0 = tmpoutdf0.groupby(['obstype','lat','lon']).agg({'omb_bc':statslist,
-#                                                                 'omb_nbc':statslist})
-#    else:
-#       tmpoutdf0['lev']=pd.cut(tmpoutdf0['pres'],bins=levbin,labels=levgrd)
-#       tmpgrp0 = tmpoutdf0.groupby(['obstype','lev','lat','lon']).agg({'omb_bc':statslist,
-#                                                                       'omb_nbc':statslist})
-#
-#    tmpgrdds0=tmpgrp0.to_xarray()
+    tmpdf0=tmpds0.to_dataframe()
+    if (useqc):
+       tmpdf0_qcfilter=(tmpdf0['qcflag']==1.)
+       tmpoutdf0=tmpdf0.loc[tmpdf0_qcfilter,:]
+    else:
+       tmpoutdf0=tmpdf0
+    tmpoutdf0=tmpoutdf0.reset_index()
+    tmpoutdf0['lat']=pd.cut(tmpoutdf0['rlat'],bins=latbin,labels=latgrd)
+    tmpoutdf0['lon']=pd.cut(tmpoutdf0['rlon'],bins=lonbin,labels=longrd)
+    if (is_sfc):
+       tmpgrp0 = tmpoutdf0.groupby(['obstype','lat','lon']).agg({'omb_bc':statslist,
+                                                                 'omb_nbc':statslist})
+    else:
+       tmpoutdf0['lev']=pd.cut(tmpoutdf0['pres'],bins=levbin,labels=levgrd)
+       tmpgrp0 = tmpoutdf0.groupby(['obstype','lev','lat','lon']).agg({'omb_bc':statslist,
+                                                                       'omb_nbc':statslist})
 
-#    for var in varlist:
-#       for stats in statslist:
-#          newname='%s_%s'%(var,stats)
-#          tmpgrdds0=tmpgrdds0.rename({(var,stats):(newname)})
+    tmpgrdds0=tmpgrp0.to_xarray()
+
+    for var in varlist:
+       for stats in statslist:
+          newname='%s_%s'%(var,stats)
+          tmpgrdds0=tmpgrdds0.rename({(var,stats):(newname)})
 
     if (date==dlist[0]):
         outds0=tmpds0
-#        tsgrd0=tmpgrdds0
+        tsgrd0=tmpgrdds0
     else:
         outds0=xa.concat((outds0,tmpds0),dim='obsloc')
-#        tsgrd0=xa.concat((tsgrd0,tmpgrdds0),dim='time')
-    #print('%s End' %(datetime.now().strftime('%c')),flush=1)
+        tsgrd0=xa.concat((tsgrd0,tmpgrdds0),dim='time')
+print('%s End' %(datetime.now().strftime('%c')),flush=1)
 
-#tsgrd0=tsgrd0.assign_coords({'time':avaldates})
-#
-#fname0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.time.%s_%s.nc' %(outpath,leglist[0],cnvvar,loop,qcflg,degres,degres,sdate,edate)
-#print(fname0,flush=1)
-#tsgrd0.to_netcdf(fname0)
+tsgrd0=tsgrd0.assign_coords({'time':avaldates})
+
+fname0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.time.%s_%s.nc' %(outpath,leglist[0],cnvvar,loop,qcflg,degres,degres,sdate,edate)
+print(fname0,flush=1)
+tsgrd0.to_netcdf(fname0)
 
 print('%s Processing gridded data for whole period'%(datetime.now().strftime('%c')),flush=1)
 
 total_obscounts0=outds0.obsloc.size
 outds0=outds0.assign_coords(obsloc=np.arange(total_obscounts0))
 
-#if (is_sfc):
-#   base_vars=['rlon','rlat','qcflag','obstype']
-#else:
-#   base_vars=['rlon','rlat','pres','qcflag','obstype']
+if (is_sfc):
+   base_vars=['rlon','rlat','qcflag','obstype']
+else:
+   base_vars=['rlon','rlat','pres','qcflag','obstype']
 
 #vidx=0
 #tmp_vars=base_vars[:]
@@ -248,8 +247,7 @@ grdds0=grp0.to_xarray()
 for var in varlist:
    for stats in statslist:
       newname='%s_%s'%(var,stats)
-      tmpgrdds0=tmpgrdds0.rename({(var,stats):(newname)})
-
+      grdds0=grdds0.rename({(var,stats):(newname)})
 #   if (vidx==0):
 #      grdds0=tmpgrdds0
 #   else:

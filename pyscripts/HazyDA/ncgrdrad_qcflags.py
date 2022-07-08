@@ -59,9 +59,21 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
             'seviri_m08','seviri_m10','sndrd1_g15','sndrd2_g15','sndrd3_g15',
             'sndrd4_g15','ssmis_f17','ssmis_f18']
 
-pltvar='qc57_count'
-varlb='rejected hazy-sky (cloud QC)'
-sdate=2020061000
+plt_dict={'qcid':[0,3,7,10,13,53,55,57],
+          'qcstr':['assimilated clear-sky',
+                   'rejected gross error',
+                   'rejected cloudy-sky',
+                   'rejected phys. temp. retrieval',
+                   'assimilated hazy-sky',
+                   'rejected surface IR emissivity',
+                   'rejected busty hazy-sky',
+                   'rejected hazy-sky w/ clouds',],
+         }
+
+pltid=7
+pltvar='qc%i_count' %(plt_dict['qcid'][pltid])
+varlb=plt_dict['qcstr'][pltid]
+sdate=2020060106
 edate=2020071018
 hint=6
 
@@ -70,7 +82,7 @@ chkwvn=962.5
 degres=2.5
 units='%'
 
-expnlist=['CTL','QCv2']
+expnlist=['CTL','AER']
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -109,8 +121,8 @@ imgsavpath=outputpath+'/2dmap/qcfrac/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_qcflags_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,degres,degres,sdate,edate)
-grdfile1='%s/%s_%s_%s_qcflags_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,degres,degres,sdate,edate)
+grdfile0='%s/%s_%s_%s_qcflags_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,degres,degres,sdate,edate)
+grdfile1='%s/%s_%s_%s_qcflags_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
 ds1=xa.open_dataset(grdfile1)

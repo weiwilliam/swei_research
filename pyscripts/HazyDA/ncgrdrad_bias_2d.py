@@ -66,23 +66,16 @@ biasterm=5
 degres=2.5
 #degres=1
 
-expset=3
-if (expset==1):
-   explist=np.array(['hazyda_ctrl','hazyda_aero'])
-   expnlist=['CTL','AER']
-elif (expset==2):
-   explist=np.array(['hazyda_ctrl','hazyda_aero_sea'])
-   expnlist=['CTL','AERS']
-elif (expset==3):
-   explist=np.array(['hazyda_ctrl','hazyda_aero_v2qc'])
-   expnlist=['CTL','AERv2']
+explist=np.array(['hazyda_ctrl','hazyda_aero'])
+expnlist=['CTL','AER']
 
 sensor='iasi_metop-a'
 
 sdate=2020060106
-edate=2020060118
+edate=2020071018
 hint=6
 chkwvn=962.5
+nterm=0
 pltvar='bcterm_mean'
 units='K'
 
@@ -117,20 +110,20 @@ elif (cbori=='horizontal'):
    cb_pad=0.1
     
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
-outputpath=rootpath+'/DiagFiles/expset3/gridded'
+outputpath=rootpath+'/DiagFiles/gridded'
 imgsavpath=outputpath+'/2dmap/bcterm/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_%s_bcterm%s_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,biasterm,degres,degres,sdate,edate)
-grdfile1='%s/%s_%s_%s_%s_bcterm%s_%.1fx%.1f.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,biasterm,degres,degres,sdate,edate)
+grdfile0='%s/%s_%s_%s_%s_bcterm_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile1='%s/%s_%s_%s_%s_bcterm_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
 ds1=xa.open_dataset(grdfile1)
-bctermname=ds0.bcterm
+bctermname=ds0.nbcterm.data[nterm]
 
-pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
-pltda1=ds1[pltvar].sel(wavenumber=chkwvn)
+pltda0=ds0[pltvar].sel(nbcterm=bctermname,wavenumber=chkwvn)
+pltda1=ds1[pltvar].sel(nbcterm=bctermname,wavenumber=chkwvn)
 
 tmpda=xa.concat((pltda0,pltda1),dim='exps')
 

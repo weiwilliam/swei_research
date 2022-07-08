@@ -51,19 +51,15 @@ proj=ccrs.PlateCarree(globe=None)
 outputpath=rootpath+'/grib'
 expsarch=rootarch+'/archive'
 
-expset=2
-if (expset==1):
-   explist=['hazyda_ctrl','hazyda_aero']
-   expnlist=['CTL','AER']
-elif (expset==2):
-   explist=['hazyda_ctrl','hazyda_aero_sea']
-   expnlist=['CTL','AERS']
+explist=['hazyda_ctrl','hazyda_aero']
+expnlist=['CTL','AER']
 
 sdate=2020061000
 edate=2020071018
 hint=6
 pltvar='t' # z, r, q, t, u, v
 units='K'  # m,'K','%','g/kg','K','m/s','mb'
+plt_preslst=[850,700,500]
 grav=9.80665e+0
 
 if (pltvar=='z'):
@@ -144,7 +140,7 @@ for date in dlist:
 
 exp_diff_mean=exp_diff.mean(dim='time')
 
-for pres in [850,500]:
+for pres in plt_preslst:
 
     diff_da=exp_diff_mean.sel(isobaricInhPa=pres)
 

@@ -59,8 +59,8 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 degres=2.5
 #degres=1
 
-explist=['hazyda_aero_sea']
-leglist=['AERS']
+explist=['hazyda_ctrl']
+leglist=['CTL']
 
 sensor='iasi_metop-a'
 
