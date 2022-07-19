@@ -60,8 +60,8 @@ degres=2.5
 #degres=1
 statslist=['mean','count','var','max','min']
 
-explist=['hazyda_ctrl']
-leglist=['CTL']
+explist=['hazyda_aero']
+leglist=['AER']
 
 sensor='iasi_metop-a'
 
@@ -85,19 +85,11 @@ if (useqc):
 else:
    qcflg='noqc'
     
-syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
-sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
-eyy=int(str(edate)[:4]); emm=int(str(edate)[4:6])
-edd=int(str(edate)[6:8]); ehh=int(str(edate)[8:10])
-
-date1 = datetime(syy,smm,sdd,shh)
-date2 = datetime(eyy,emm,edd,ehh)
+date1 = pd.to_datetime(sdate,format='%Y%m%d%H')
+date2 = pd.to_datetime(edate,format='%Y%m%d%H')
 delta = timedelta(hours=hint)
 
 dates = pd.date_range(start=date1, end=date2, freq=delta)
-
-xdate2= date2+delta
-xdates= mdates.drange(date1, xdate2, delta)
 
 outpath=rootpath+'/archive/HazyDA/gridded_diag'
 archdir0=rootarch+'/'+explist[0]
@@ -146,14 +138,11 @@ for date in dlist:
     rlon0=(rlon0+180)%360-180
     qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
     varinv0=np.reshape(ds0.Inverse_Observation_Error.values,(npts0,nchs0))
-    omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
-    omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
 
     tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0),
                        'rlat':(['obsloc'],rlat0),
                        'qcflag':(['obsloc','wavenumber'],qcflags0),
-                       'omb_bc':(['obsloc','wavenumber'],omb_bc0),
-                       'omb_nbc':(['obsloc','wavenumber'],omb_nbc0),
+                       'varinv':(['obsloc','wavenumber'],varinv0)
                        },
                       coords={'obsloc':np.arange(npts0),
                               'wavenumber':ds0.wavenumber.values})
@@ -169,15 +158,13 @@ for date in dlist:
     tmpoutdf0['lat']=pd.cut(tmpoutdf0['rlat'],bins=latbin,labels=latgrd)
     tmpoutdf0['lon']=pd.cut(tmpoutdf0['rlon'],bins=lonbin,labels=longrd)
 
-    tmpgrp0 = tmpoutdf0.groupby(['wavenumber','lat','lon']).agg({'omb_bc':statslist,
-                                                                 'omb_nbc':statslist})
+    tmpgrp0 = tmpoutdf0.groupby(['wavenumber','lat','lon']).agg({'varinv':statslist,})
 
     tmpgrdds0=tmpgrp0.to_xarray()
 
-    for var in ['omb_bc','omb_nbc']:
-       for stats in statslist:
-          newname='%s_%s'%(var,stats)
-          tmpgrdds0=tmpgrdds0.rename({(var,stats):(newname)})
+    for stats in statslist:
+       newname='%s_%s'%('varinv',stats)
+       tmpgrdds0=tmpgrdds0.rename({('varinv',stats):(newname)})
 
     if (date==dlist[0]):
         outds0=tmpds0
@@ -188,7 +175,7 @@ for date in dlist:
 
 tsgrd0=tsgrd0.assign_coords({'time':avaldates})
 
-fname0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.time.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+fname0='%s/%s_%s_%s_%s_varinv_%.1fx%.1f.time.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
 print(fname0,flush=1)
 tsgrd0.to_netcdf(fname0)
 
@@ -206,15 +193,14 @@ else:
 outdf0['lat']=pd.cut(outdf0['rlat'],bins=latbin,labels=latgrd)
 outdf0['lon']=pd.cut(outdf0['rlon'],bins=lonbin,labels=longrd)
 
-grp0 = outdf0.groupby(['wavenumber','lat','lon']).agg({'omb_bc':statslist,
-                                                       'omb_nbc':statslist})
+grp0 = outdf0.groupby(['wavenumber','lat','lon']).agg({'varinv':statslist,})
+
 grdds0=grp0.to_xarray()
 
-for var in ['omb_bc','omb_nbc']:
-   for stats in statslist:
-      newname='%s_%s'%(var,stats)
-      grdds0=grdds0.rename({(var,stats):(newname)})
+for stats in statslist:
+   newname='%s_%s'%('varinv',stats)
+   grdds0=grdds0.rename({('varinv',stats):(newname)})
 
-fname1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.mean.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+fname1='%s/%s_%s_%s_%s_varinv_%.1fx%.1f.mean.%s_%s.nc' %(outpath,leglist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
 print(fname1,flush=1)
 grdds0.to_netcdf(fname1)

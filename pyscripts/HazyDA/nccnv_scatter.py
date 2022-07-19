@@ -40,10 +40,10 @@ import matplotlib.cbook as cbook
 import numpy as np
 import scipy.io as io
 from scipy import stats
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 import xarray as xa
 import seaborn as sns
+import pandas as pd
 
 axe_w=6 ; axe_h=6
 mpl.rc('axes',titlesize=16,labelsize=16)
@@ -53,9 +53,9 @@ mpl.rc('legend',fontsize='x-large')
 fsave=1; ffmt='png'; quality=300
 
 sfctype_list=['180','181','182','183','187']
-varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
-unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
-colorlist=['r','b']
+varlist=['tcp'] #['ps','sst','gps','q','t','uv','tcp']
+unitlist=['mb'] #['mb','K','%','g/kg','K','m/s','mb']
+colorlist=['b','r']
 markerlist=['*','o']
 
 explist=['hazyda_ctrl','hazyda_aero']
@@ -64,10 +64,10 @@ expnlist=['CTL','AER']
 sdate=2020061000
 edate=2020071018
 hint=6
-bufrtype='181'
-loop='anl' #ges,anl
+bufrtype='all'
+loop='ges' #ges,anl
 useqc=0
-area='NAfr'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
+area='Glb'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
 
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/scatter'
 inputpath=rootarch
@@ -124,17 +124,10 @@ def scatterplot_x2y2(xdata1,xdata2,xlb,ydata1,ydata2,ylb,stat1,stat2,lglst,clrls
     #sns.regplot(x=xdata1,y=ydata1,color=clrlst[0],marker=mkrlst[0],scatter_kws={"alpha":0.7},ax=ax)
     #sns.regplot(x=xdata2,y=ydata2,color=clrlst[1],marker=mkrlst[1],scatter_kws={"alpha":0.7},ax=ax)
 
-syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
-sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
-eyy=int(str(edate)[:4]); emm=int(str(edate)[4:6])
-edd=int(str(edate)[6:8]); ehh=int(str(edate)[8:10])
-
-date1 = datetime(syy,smm,sdd,shh)
-date2 = datetime(eyy,emm,edd,ehh)
+date1 = pd.to_datetime(sdate,format='%Y%m%d%H')
+date2 = pd.to_datetime(edate,format='%Y%m%d%H')
 delta = timedelta(hours=6)
-date2 = date2+delta
-
-dates = mdates.drange(date1, date2, delta)
+dates = pd.date_range(start=date1, end=date2, freq=delta)
 
 rule = rrulewrapper(DAILY, byhour=6, interval=5)
 loc = RRuleLocator(rule)
@@ -262,11 +255,11 @@ for var in varlist:
         stat_res1=stats.linregress(pltobs1,pltmdl1)
         stat_res2=stats.linregress(pltobs2,pltmdl2)
         
-        xlb='Observed %s [K]' %(var.upper())
+        xlb='Observed %s [%s]' %(var.upper(),unit)
         if (loop=='ges'):
-           ylb='First-guess %s [K]'%(var.upper())
+           ylb='First-guess %s [%s]'%(var.upper(),unit)
         elif (loop=='anl'):
-           ylb='Analyzed %s [K]'%(var.upper())
+           ylb='Analyzed %s [%s]'%(var.upper(),unit)
 
         title='RMS %s:%.2f %s:%.2f Mean %s:%.2f %s:%.2f' %(expnlist[0], pltrms1,expnlist[1], pltrms2,
                                                            expnlist[0],pltmean1,expnlist[1],pltmean2)

@@ -27,10 +27,7 @@ elif (machine=='Cheyenne'):
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/glade/u/home/swei/research'
 sys.path.append(rootgit+'/pyscripts/functions')
-import setuparea as setarea
 import numpy as np
-from datetime import datetime
-from datetime import timedelta
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
@@ -42,7 +39,7 @@ from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import setup_cmap,find_cnlvs
 import cartopy.crs as ccrs
 
-tlsize=12 ; txsize=10
+tlsize=10 ; txsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=txsize)
 mpl.rc('xtick',labelsize=txsize)
 mpl.rc('ytick',labelsize=txsize)
@@ -61,21 +58,24 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
             'mhs_metop-a','mhs_metop-b','mhs_n18','mhs_n19','saphir_meghat',
             'seviri_m08','seviri_m10','sndrd1_g15','sndrd2_g15','sndrd3_g15',
             'sndrd4_g15','ssmis_f17','ssmis_f18']
+#hsensorlist=['airs_aqua','iasi_metop-a','iasi_metop-b','cris_npp']
+#lsensor1list=['hirs4_metop-a','hirs4_metop-b','hirs4_n19']
+#lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
+#lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-degres=2.5
-
-explist=np.array(['hazyda_ctrl','hazyda_aero'])
-expnlist=['CTL','AER']
-
-sensor='iasi_metop-a'
-
+pltvar='varinv_mean'
+varlb='Inversion of Observation Error'
 sdate=2020060106
 edate=2020071018
 hint=6
+
+sensor='iasi_metop-a'
 chkwvn=962.5
-nterm=5
-pltvar='bcterm_mean'
+degres=2.5
 units='K'
+
+explist=np.array(['hazyda_ctrl','hazyda_aero'])
+expnlist=['CTL','AER']
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -106,34 +106,32 @@ if (cbori=='vertical'):
 elif (cbori=='horizontal'):
    cb_frac=0.04
    cb_pad=0.1
-    
+
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded_rad'
-imgsavpath=outputpath+'/2dmap/bcterm/'+area
+imgsavpath=outputpath+'/2dmap/varinv/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_%s_bcterm_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
-grdfile1='%s/%s_%s_%s_%s_bcterm_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile0='%s/%s_%s_%s_%s_varinv_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile1='%s/%s_%s_%s_%s_varinv_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
 ds1=xa.open_dataset(grdfile1)
-bctermname=ds0.nbcterm.data[nterm]
-print('Plotting %s term of estimated biases' %(bctermname), flush=1)
 
-pltda0=ds0[pltvar].sel(nbcterm=bctermname,wavenumber=chkwvn)
-pltda1=ds1[pltvar].sel(nbcterm=bctermname,wavenumber=chkwvn)
+pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
+pltda1=ds1[pltvar].sel(wavenumber=chkwvn)
 
 tmpda=xa.concat((pltda0,pltda1),dim='exps')
 
-cnlvs=find_cnlvs(tmpda,ntcks=21,eqside=1)
+cnlvs=find_cnlvs(tmpda,ntcks=21,eqside=0)
 clridx=[]
-for idx in np.linspace(2,254,cnlvs.size):
+for idx in np.linspace(2,128,cnlvs.size):
     clridx.append(int(idx))
-clrmap=setup_cmap('BlueYellowRed',clridx)
+clrmap=setup_cmap('MPL_Blues',clridx)
 norm = mpcrs.BoundaryNorm(cnlvs,len(clridx)+1,extend='both')
 
-diff_lvs=find_cnlvs(pltda1-pltda0,ntcks=21,eqside=0)
+diff_lvs=find_cnlvs(pltda1-pltda0,ntcks=21,eqside=1)
 clridx=[]
 for idx in np.linspace(2,254,diff_lvs.size):
     clridx.append(int(idx))
@@ -143,12 +141,16 @@ diffnorm = mpcrs.BoundaryNorm(diff_lvs,len(clridx)+1,extend='both')
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda0
-cblabel='%s %s [%s]' %(expnlist[0],bctermname,units)
+cblabel='%s %s [%s]' %(expnlist[0],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
                cmap=clrmap,norm=norm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
              pad=cb_pad,aspect=40,label=cblabel)
-outname='%s/%s_%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,area,expnlist[0],sensor,chkwvn,bctermname,sdate,edate,ffmt)
+outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
@@ -157,12 +159,16 @@ if (fsave):
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda1
-cblabel='%s %s [%s]' %(expnlist[1],bctermname,units)
+cblabel='%s %s [%s]' %(expnlist[1],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
                cmap=clrmap,norm=norm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
              pad=cb_pad,aspect=40,label=cblabel)
-outname='%s/%s_%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,area,expnlist[1],sensor,chkwvn,bctermname,sdate,edate,ffmt)
+outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
@@ -171,13 +177,19 @@ if (fsave):
 fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
 set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
 pltdata=pltda1-pltda0
-cblabel='%s%s%s %s [%s]' %(expnlist[1],minussign,expnlist[0],bctermname,units)
+cblabel='%s%s%s %s [%s]' %(expnlist[1],minussign,expnlist[0],varlb,units)
 cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=diff_lvs,
                cmap=diffclrmap,norm=diffnorm,extend='both')
+titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
+                                                    pltdata.max(),units,
+                                                    pltdata.min(),units)
+ax.set_title(titlestr,loc='left')
 plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
              pad=cb_pad,aspect=40,label=cblabel)
-outname='%s/%s_%s-%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,area,expnlist[1],expnlist[0],sensor,chkwvn,bctermname,sdate,edate,ffmt)
+outname='%s/%s-%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
 if (fsave):
    print(outname)
    fig.savefig(outname,dpi=quality)
    plt.close()
+
+

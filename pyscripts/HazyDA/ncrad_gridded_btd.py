@@ -59,8 +59,8 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 degres=2.5
 #degres=1
 
-explist=['hazyda_ctrl']
-leglist=['CTL']
+explist=['hazyda_aero']
+leglist=['AER']
 
 sensor='iasi_metop-a'
 
@@ -162,7 +162,7 @@ for date in dlist:
        tmpdf0_qcfilter=((tmpdf0['qcflag']==0.0)|(tmpdf0['qcflag']==13.0))
        tmpoutdf0=tmpdf0.loc[tmpdf0_qcfilter,:]
     else:
-       tmpoutdf0=df0
+       tmpoutdf0=tmpdf0
     tmpoutdf0=tmpoutdf0.reset_index()
     tmpoutdf0['lat']=pd.cut(tmpoutdf0['rlat'],bins=latbin,labels=latgrd)
     tmpoutdf0['lon']=pd.cut(tmpoutdf0['rlon'],bins=lonbin,labels=longrd)
@@ -194,7 +194,7 @@ outds0=outds0.assign_coords(obsloc=np.arange(total_obscounts0))
 
 df0=outds0.to_dataframe()
 if (useqc):
-   df0_qcfilter=((df0['qcflag']==0.0))
+   df0_qcfilter=((df0['qcflag']==0.0)|(df0['qcflag']==13.0))
    outdf0=df0.loc[df0_qcfilter,:]
 else:
    outdf0=df0

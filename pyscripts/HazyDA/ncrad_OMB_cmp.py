@@ -63,7 +63,7 @@ if loop=='anl':
 elif loop=='ges':
     tlstr='OMF'
 plthist=1 # plot histogram
-usebc=0
+usebc=1
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -203,7 +203,7 @@ hist_x_edge=np.arange(-3-halfbin,3.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
 # for chkwvn in [652.0]:
-for chkwvn in [962.5]:
+for chkwvn in [962.5,1096]:
 # for chkwvn in chkwvn_list:
     ds_chk0=ds_all0.sel(wavenumber=chkwvn)
     tb_sim0=ds_chk0.tb_sim
@@ -239,7 +239,6 @@ for chkwvn in [962.5]:
     bust_msk0=(ds_chk0.qcflag==55.)
     passed_msk0=(good_msk0)|(aer_msk0)
     ori_msk0=(good_msk0)|(aer_msk0)|(bust_msk0)|(tzr_msk0)|(gross_msk0)
-    pltmsk0=passed_msk0
     
     good_msk1=(ds_chk1.qcflag==0.)
     gross_msk1=(ds_chk1.qcflag==3.)
@@ -250,7 +249,11 @@ for chkwvn in [962.5]:
     bust_msk1=(ds_chk1.qcflag==55.)
     passed_msk1=(good_msk1)|(aer_msk1)
     ori_msk1=(good_msk1)|(aer_msk1)|(bust_msk1)|(tzr_msk1)|(gross_msk1)
-    pltmsk1=passed_msk1
+
+    pltmsk0=aer_msk1
+    pltmsk1=aer_msk1
+    #pltmsk0=passed_msk0
+    #pltmsk1=passed_msk1
 
     if (plthist):            
         pltda_x1=omb0[pltmsk0==1]
@@ -266,9 +269,8 @@ for chkwvn in [962.5]:
         
         tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
         
-        fig=plt.figure()
-        ax=plt.subplot()
-        set_size(axe_w,axe_h,l=0.15,r=0.85)
+        fig,ax=plt.subplots()
+        set_size(axe_w,axe_h,l=0.20)
         ax.set_title(tistr,loc='left')
         ax.set_xlabel(x_label)
         ax.plot(bin_center,hdata1,'b')
@@ -281,8 +283,8 @@ for chkwvn in [962.5]:
         ax.legend(expnlist,loc=2)
         
         if (fsave):
-            fname=('PDF_%s_%s_%s_%.2f_%s.%s_%s.%s'
-                    %(area,tlstr,sensor,chkwvn,bcflg,sdate,edate,ffmt))
+            fname=('PDF_%s_%s_%s_%.2f_%s_%s.%s_%s.%s'
+                    %(area,tlstr,sensor,chkwvn,bcflg,'aermsk_cmp',sdate,edate,ffmt))
             print(fname,flush=1)
             fig.savefig(savedir+'/'+fname,dpi=quality)
             plt.close()

@@ -34,7 +34,7 @@ import matplotlib.pyplot as plt
 
 # Plotting setup
 expname='hazyda_aero'
-cdate=2020060112
+cdate=2020061812
 hint=6
 sensor='iasi_metop-a'
 selwvn=1022

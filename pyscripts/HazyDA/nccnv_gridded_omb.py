@@ -36,10 +36,6 @@ import matplotlib.dates as mdates
 import xarray as xa
 import pandas as pd
 import scipy.stats as ss
-import itertools
-import multiprocessing as mp
-#from multiprocessing import Pool #  Process pool
-from multiprocessing import sharedctypes
 import warnings
 
 #
@@ -49,10 +45,10 @@ degres=2.5
 #degres=1
 statslist=['mean','count','var']#,'max','min']
 
-explist=['hazyda_ctrl']
-leglist=['CTL']
+explist=['hazyda_aero']
+leglist=['AER']
 
-cnvvar='t'
+cnvvar='q'
 if (cnvvar in ['u','v']):
    cnvtype='uv'
 else:

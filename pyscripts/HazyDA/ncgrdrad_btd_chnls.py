@@ -63,8 +63,8 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-pltvar='btd_mean'
-varlb='BTD Mean'
+pltvar='btd_max'
+varlb='BTD Maximum'
 data_sdate=2020060106
 data_edate=2020071018
 check_sdate=2020060106
@@ -72,7 +72,7 @@ check_edate=2020071018
 hint=6
 
 sensor='iasi_metop-a'
-chkwvn_lst=[962.5,1096]
+chkwvn=962.5
 degres=2.5
 units='K'
 
@@ -116,7 +116,7 @@ elif (cbori=='horizontal'):
 
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded_rad'
-imgsavpath=outputpath+'/2dmap/btd/'+area
+imgsavpath=outputpath+'/spectrum/btd/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
@@ -126,35 +126,25 @@ ds0=xa.open_dataset(grdfile0)
 if grdtype == 'time':
    select_time_slice=slice(pd.to_datetime(check_sdate,format="%Y%m%d%H"),
                            pd.to_datetime(check_edate,format="%Y%m%d%H"))
-   tmpds0=ds0.sel(time=select_time_slice)
+   tmpds0=ds0.sel(time=select_time_slice).mean(dim=['lat','lon'])
 else:
-   tmpds0=ds0
+   tmpds0=ds0.mean(dim=['lat','lon'])
 
-pltda0=tmpds0[pltvar].sel(wavenumber=chkwvn_lst)
+pltdf0=tmpds0.to_dataframe()
 
-cnlvs=find_cnlvs(pltda0,ntcks=21,eqside=0)
-clridx=[]
-for idx in np.linspace(2,127,cnlvs.size):
-    clridx.append(int(idx))
-clrmap=setup_cmap('BlueYellowRed',clridx)
-norm = mpcrs.BoundaryNorm(cnlvs,len(clridx)+1,extend='both')
 
-for chkwvn in chkwvn_lst:
-    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95)
-    pltdata=pltda0.sel(wavenumber=chkwvn)
-    cblabel='%s %s [%s]' %(expn,varlb,units)
-    cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,
-                   cmap=clrmap,norm=norm,extend='both')
-    titlestr='Mean=%.2f %s, Max=%.2f %s, Min=%.2f %s' %(pltdata.mean(),units,
-                                                        pltdata.max(),units,
-                                                        pltdata.min(),units)
-    ax.set_title(titlestr,loc='left')
-    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-                 pad=cb_pad,aspect=40,label=cblabel)
-    outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expn,sensor,chkwvn,pltvar,check_sdate,check_edate,ffmt)
-    if (fsave):
-       print(outname)
-       fig.savefig(outname,dpi=quality)
-       plt.close()
+fig,ax=plt.subplots()
+set_size(axe_w,axe_h,b=0.15)
+#ax.set_prop_cycle(linestyle=['-','--','--'])
+pltdf0[['btd_mean','btd_max','btd_min']].plot(ax=ax,marker='o',alpha=0.8,ms=2,zorder=4)
+ax.legend(['Mean','Max','Min'])
+ax.set_xlabel('%s [%s]' %(pltdf0.index.name.capitalize(),'$\mathrm{cm^{-1}}$'))
+ax.set_ylabel('BT Differences [%s]' %(units))
+xmin,xmax=ax.get_xbound()
+ax.hlines(0.,xmin,xmax,colors='k',lw=0.8,ls='--',zorder=3)
+ax.set_xlim(xmin,xmax)
+#ax.hlines(0.,0,1,transform=ax.get_yaxis_transform(),colors='k',lw=0.8,ls='--',zorder=3)
+
+outname='%s/%s_%s_%s.%s_%s.%s' %(imgsavpath,expn,sensor,pltvar,check_sdate,check_edate,ffmt)
+if (fsave): print(outname,flush=1) ; fig.savefig(outname,dpi=quality); plt.close()
 

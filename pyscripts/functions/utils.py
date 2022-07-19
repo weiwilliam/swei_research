@@ -47,7 +47,7 @@ def setup_cmap(name,idxlst):
     b=a[-clnum:]
     c=[]
     selidx=np.array(idxlst,dtype='int')
-    if ('MPL' in name):
+    if ('MPL' in name or 'GMT' in name):
        for i in selidx[:]:
           if (i==0):
              c.append(tuple(float(y) for y in [1,1,1]))

@@ -57,17 +57,17 @@ sfctype_list=['180','181','182','183','187']
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/biasrms'
 inputpath=rootarch
 
-varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
-unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
+varlist=['q'] #['ps','sst','gps','q','t','uv','tcp']
+unitlist=['g/kg'] #['mb','K','%','g/kg','K','m/s','mb']
 bufrtype='all' # SST: 181-199
-explist=np.array(['hazyda_ctrl','hazyda_aero_sea'])
-expnlist=['CTL','AERS']
+explist=np.array(['hazyda_ctrl','hazyda_aero'])
+expnlist=['CTL','AER']
 
 sdate=2020061000
 edate=2020071018
 hint=6
 
-loop='anl' #ges,anl
+loop='ges' #ges,anl
 area='Glb'
 useqc=1
 
@@ -257,8 +257,9 @@ for var in varlist:
         ax[0].legend(lglist[0,:])
         ax[1].legend(lglist[1,:])
         if (fsave):
-            fig.savefig(imgsavpath+'/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png' 
-                        %(area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate), dpi=quality)
+            fname='%s/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'%(imgsavpath,area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate)
+            print(fname,flush=1)
+            fig.savefig(fname, dpi=quality)
             plt.close()
         
     else:
@@ -292,7 +293,7 @@ for var in varlist:
         if (fsave):
             fname=('%s/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'
                    %(imgsavpath,area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate))
-            print(fname)
+            print(fname,flush=1)
             fig.savefig(fname, dpi=quality)
             plt.close()
         
@@ -321,7 +322,7 @@ for var in varlist:
             if (fsave):
                fname=('%s/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
                       %(imgsavpath,area,loop,var,expnlist[0],expnlist[1],pbot[z],qcflg,bufrtype,sdate,edate))
-               print(fname)
+               print(fname,flush=1)
                fig.savefig(fname, dpi=quality)
                plt.close()
                 

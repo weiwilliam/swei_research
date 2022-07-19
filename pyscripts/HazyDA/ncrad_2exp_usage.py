@@ -49,7 +49,7 @@ mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
 mpl.rc('legend',fontsize='large')
 fsave=1 ; ffmt='png' ; ptsize=4
-axe_w=6 ; axe_h=3 ; quality=300
+axe_w=8 ; axe_h=3 ; quality=300
 
 # Projection setting
 proj=ccrs.PlateCarree(globe=None)
@@ -89,17 +89,19 @@ archdir0=rootarch+'/'+explist[0]
 archdir1=rootarch+'/'+explist[1]
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/rad'
 
-syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
-sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
-eyy=int(str(edate)[:4]); emm=int(str(edate)[4:6])
-edd=int(str(edate)[6:8]); ehh=int(str(edate)[8:10])
+ts_savedir=outpath+'/datausage/ts/'+area
+if ( not os.path.exists(ts_savedir) ):
+    os.makedirs(ts_savedir)
+sp_savedir=outpath+'/datausage/sp/'+area
+if ( not os.path.exists(sp_savedir) ):
+    os.makedirs(sp_savedir)
 
-date1 = datetime(syy,smm,sdd,shh)
-date2 = datetime(eyy,emm,edd,ehh)
+date1 = pd.to_datetime(sdate,format='%Y%m%d%H')
+date2 = pd.to_datetime(edate,format='%Y%m%d%H')
 delta = timedelta(hours=hint)
 dates = pd.date_range(start=date1, end=date2, freq=delta)
 
-rule = rrulewrapper(DAILY, byhour=6, interval=4)
+rule = rrulewrapper(DAILY, byhour=6, interval=8)
 loc = RRuleLocator(rule)
 formatter = DateFormatter('%Y %h %n %d %Hz')
 
@@ -221,21 +223,17 @@ for date in dlist:
 
 usedcnts_all=usedcnts_all.assign_coords(dates=('dates',dates))
 
-savedir=outpath+'/'+expnlist[1]+'/datausage/timeseries/'+aertag
-if ( not os.path.exists(savedir) ):
-    os.makedirs(savedir)
-# for chkwvn in [906.25]:
-for chkwvn in chkwvn_list:
+for chkwvn in [962.5,1096]:
+#for chkwvn in chkwvn_list:
     qc_chk=usedcnts_all.sel(wavenumber=chkwvn)
     
     fig,ax=plt.subplots()
     set_size(axe_w,axe_h,b=0.2)
-    ax.plot_date(dates,qc_chk.exp0cnts,'.-',color='red',linewidth=0.8)
-    ax.plot_date(dates,qc_chk.exp1cnts,'.-',color='blue',linewidth=0.8)
+    ax.plot_date(dates,qc_chk.exp0cnts,'.-',color='b',linewidth=0.8)
+    ax.plot_date(dates,qc_chk.exp1cnts,'.-',color='r',linewidth=0.8)
     
     ax.xaxis.set_major_locator(loc)
     ax.xaxis.set_major_formatter(formatter)
-    ax.xaxis.set_tick_params(rotation=20)
     
     tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
     ax.set_title(tistr,loc='left')
@@ -245,18 +243,14 @@ for chkwvn in chkwvn_list:
             
     if (fsave):
         fname=('TS_%s_%s_%.2f.%s' %(area,sensor,chkwvn,ffmt))
-        fig.savefig(savedir+'/'+fname,dpi=quality)
+        fig.savefig(ts_savedir+'/'+fname,dpi=quality)
         plt.close()
-
-savedir=outpath+'/'+expnlist[1]+'/datausage/spec/'+aertag
-if ( not os.path.exists(savedir) ):
-    os.makedirs(savedir)
 
 wvn=usedcnts_all.wavenumber.data
 wvl=1e4/wvn
 wvnlb='Wavenumber [$cm^{-1}$]' 
 wvllb='Wavelength [µm]'
-colorlst=['red','blue']
+colorlst=['b','r']
 lstylelst=[' ',' ']
 mrklst=['o','^']
 lglst=expnlist
@@ -274,7 +268,7 @@ plt_x2y(pltda,cntsyaxlb,wvn,wvnlb,wvl,wvllb,colorlst,lstylelst,mrklst,tistr,lgls
 
 fname=('Spec_%s_%s_cnts.%s-%s.%s' %(area,sensor,spectral_range.start,spectral_range.stop,ffmt))
 if (fsave):
-    fig.savefig(savedir+'/'+fname,dpi=quality)
+    fig.savefig(sp_savedir+'/'+fname,dpi=quality)
     plt.close()
 
 aerp0_mean=usedcnts_all.exp0aerp.mean(dim='dates')*100.
@@ -287,5 +281,5 @@ plt_x2y(pltda,aerpyaxlb,wvn,wvnlb,wvl,wvllb,colorlst,lstylelst,mrklst,tistr,lgls
 
 fname=('Spec_%s_%s_aerp.%s-%s.%s' %(area,sensor,spectral_range.start,spectral_range.stop,ffmt))
 if (fsave):
-    fig.savefig(savedir+'/'+fname,dpi=quality)
+    fig.savefig(sp_savedir+'/'+fname,dpi=quality)
     plt.close()
