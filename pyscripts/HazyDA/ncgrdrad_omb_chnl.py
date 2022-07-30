@@ -42,12 +42,10 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-pltvar='btd_max'
-varlb='BTD Maximum'
-data_sdate=2020060106
-data_edate=2020071018
-check_sdate=2020060106
-check_edate=2020071018
+pltvar='omb_bc_mean'
+varlb='OMB w/ BC'
+sdate=2020060106
+edate=2020071018
 hint=6
 
 sensor='iasi_metop-a'
@@ -55,13 +53,8 @@ chkwvn=962.5
 degres=2.5
 units='K'
 
-exp='hazyda_aero'
-expn='AER'
-
-if check_sdate==data_sdate and check_edate==data_edate:
-   grdtype='mean'
-else:
-   grdtype='time'
+explist=np.array(['hazyda_ctrl','hazyda_aero'])
+expnlist=['CTL','AER']
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -94,36 +87,25 @@ elif (cbori=='horizontal'):
    cb_pad=0.1
 
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
-outputpath=rootpath+'/DiagFiles/gridded_rad'
-imgsavpath=outputpath+'/spectrum/btd/'+area
+outputpath=rootpath+'/DiagFiles/gridded'
+imgsavpath=outputpath+'/2dmap/omb/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-grdfile0='%s/%s_%s_%s_%s_btd_%.1fx%.1f.%s.%s_%s.nc' %(inpath,expn,sensor,loop,qcflg,degres,degres,grdtype,data_sdate,data_edate)
+grdfile0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
+grdfile1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.mean.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
 
 ds0=xa.open_dataset(grdfile0)
-if grdtype == 'time':
-   select_time_slice=slice(pd.to_datetime(check_sdate,format="%Y%m%d%H"),
-                           pd.to_datetime(check_edate,format="%Y%m%d%H"))
-   tmpds0=ds0.sel(time=select_time_slice).mean(dim=['lat','lon'])
-else:
-   tmpds0=ds0.mean(dim=['lat','lon'])
+ds1=xa.open_dataset(grdfile1)
 
-pltdf0=tmpds0.to_dataframe()
+pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
+pltda1=ds1[pltvar].sel(wavenumber=chkwvn)
 
+tmpda=xa.concat((pltda0,pltda1),dim='exps')
 
-fig,ax=plt.subplots()
-set_size(axe_w,axe_h,b=0.15)
-#ax.set_prop_cycle(linestyle=['-','--','--'])
-pltdf0[['btd_mean','btd_max','btd_min']].plot(ax=ax,marker='o',alpha=0.8,ms=2,zorder=4)
-ax.legend(['Mean','Max','Min'])
-ax.set_xlabel('%s [%s]' %(pltdf0.index.name.capitalize(),'$\mathrm{cm^{-1}}$'))
-ax.set_ylabel('BT Differences [%s]' %(units))
-xmin,xmax=ax.get_xbound()
-ax.hlines(0.,xmin,xmax,colors='k',lw=0.8,ls='--',zorder=3)
-ax.set_xlim(xmin,xmax)
-#ax.hlines(0.,0,1,transform=ax.get_yaxis_transform(),colors='k',lw=0.8,ls='--',zorder=3)
+if (fsave):
+   print(outname)
+   fig.savefig(outname,dpi=quality)
+   plt.close()
 
-outname='%s/%s_%s_%s.%s_%s.%s' %(imgsavpath,expn,sensor,pltvar,check_sdate,check_edate,ffmt)
-if (fsave): print(outname,flush=1) ; fig.savefig(outname,dpi=quality); plt.close()
 
