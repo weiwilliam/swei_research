@@ -31,7 +31,7 @@ def read_rad_ncdiag(infile,select_wavenumber=None):
 
     return tmpds
 
-def read_cnv_ncdiag(infile)
+def read_cnv_ncdiag(infile):
     ds=xa.open_dataset(infile)
     npts=ds.nobs.size
     rlat=ds.Latitude.data
