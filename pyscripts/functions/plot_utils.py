@@ -82,14 +82,20 @@ def setupax_2dmap(cornerlatlon,area,proj,lbsize=None):
 
     return fig,ax,gl
 
-def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,clrlst,styllst,marker_lst,title,lglst,yinvert,xrefs,fig=None,ax=None,lgloc=None):
+def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,fig=None,ax=None,lgloc=None):
     if not fig: fig=plt.gcf()
     if not ax: ax=plt.gca()
     if not lgloc: lgloc=0
     xaxis=np.arange(x1val.size)
     if (yinvert):
        ax.invert_yaxis()
-    ax.set_prop_cycle(color=clrlst,linestyle=styllst,marker=marker_lst)
+    color_list=prop_dict['color']
+    lnsty_list=prop_dict['line_style']
+    lnwid_list=prop_dict['line_width']
+    mrker_list=prop_dict['marker']
+    mksiz_list=prop_dict['mark_size']
+    lgend_list=prop_dict['legend']
+    ax.set_prop_cycle(color=color_list,linestyle=lnsty_list,linewidth=lnwid_list,marker=mrker_list,markersize=mksiz_list)
     ax.set_xlabel(x1lb)
     ax.set_ylabel(ylb)
     ax.set_title(title,loc='left')
@@ -104,7 +110,7 @@ def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,clrlst,styllst,marker_lst,title,lglst
         if (n>x1val.size):
            n=x1val.size-n
         x1labels.append('%.2f'%(x1val[int(n)]))   
-    ax.legend(lglst,loc=lgloc)
+    ax.legend(lgend_list,loc=lgloc)
     ax.set_xticklabels(x1labels)
     x2labels=[]
     for n in xtickspos:

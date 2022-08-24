@@ -66,7 +66,7 @@ def main(avhrr_in,ncdiag_in,outimgname,check_wavenumber=None):
     lat = avhrr.lat.data ; lon=avhrr.lon.data
     minlon=lon.min(); maxlon=lon.max()
     minlat=lat.min(); maxlat=lat.max()
-    #print(minlon,maxlon,minlat,maxlat)
+    print(minlon,maxlon,minlat,maxlat)
 
     solar_za = CalAll_ZA(avhrr.solar_zenith_first,avhrr.solar_zenith,avhrr.solar_zenith_last)
     across_trk_sample_idx=np.zeros(solar_za.shape[1],dtype='int')
@@ -140,7 +140,10 @@ if __name__ == "__main__":
                       help='Location of input nc diag file')
     parser.add_option('-c', '--check-wavenum', dest='check_wavenum',
                       action='store', type=str, default=None,
-                      help='Location of input nc diag file')
+                      help='wavenumber of target channel')
+    parser.add_option('-l', '--exp-label', dest='explabel',
+                      action='store', type=str, default=None,
+                      help='label of experiment')
     parser.add_option('-d', '--cdtg', dest='cdtg',
                       action='store', type=str, default=None,
                       help='10-digit date time group yyyymmddhh')
@@ -171,7 +174,7 @@ if __name__ == "__main__":
     time_tag=fn_lst[n]; scan_id=fn_lst[n+1]
     print(time_tag,scan_id)
 
-    imgname='%s_%s.%s_%s.png' %('avhrr_iasi',options.check_wavenum,options.cdtg,scan_id)
+    imgname='%s_%s_%s.%s_%s.png' %('avhrr_iasi',options.explabel,options.check_wavenum,options.cdtg,scan_id)
     outfilename=os.path.join(options.image_dir,imgname)
     print(outfilename)
 
