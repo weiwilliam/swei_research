@@ -8,30 +8,26 @@ Aerosol detection based on CADS 3.1 from NWP SAF
 
 """
 import sys, os, platform
-os_name=platform.system()
-if (os_name=='Darwin'):
+machine='S4'
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-        machine='Cheyenne'
-    elif (os.path.exists('/cardinal')):
-        rootpath='/data/users/swei/Images'
-        rootarch='/scratch/users/swei'
-        rootgit='/home/swei/research'
-        machine='S4'
-sys.path.append(rootgit+'/pyscripts/functions')
+elif (machine=='S4'):
+    rootpath='/data/users/swei/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
+    rootarch='/data/users/swei/ResearchData/Prospectus/AeroObsStats/nc_diag'
+    rootgit='/home/swei/research'
+elif (machine=='Hera'):
+    rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/home/Shih-wei.Wei/research'
+elif (machine=='Cheyenne'):
+    rootpath='/glade/work/swei/output/images'
+    rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
+    rootgit='/glade/u/home/swei/research'
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -43,6 +39,7 @@ from datetime import datetime, timedelta
 import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
+from gsi_ncdiag import read_rad_ncdiag
 
 tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
@@ -56,9 +53,9 @@ axe_w=6 ; axe_h=3 ; quality=300
 proj=ccrs.PlateCarree(globe=None)
 
 # Plotting setup
-exp='hazyda_aero'
-sdate=2020060112
-edate=2020060112
+exp='observer_v2qc'
+sdate=2020062212
+edate=2020062212
 aertype='Dust'
 hint=6
 sensor='iasi_metop-a'
@@ -88,9 +85,8 @@ elif (cbori=='horizontal'):
    cb_pad=0.1
 
 # Data path setup
-archpath=rootarch+'/ncdiag'
-outpath=rootpath+'/HazyDA/Diag/Rad'
-archdir=archpath+'/'+exp
+archdir=rootarch+'/'+exp
+outpath=rootpath+'/DiagFiles/rad/observer'
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -114,43 +110,16 @@ naer=14
 dates_count=0
 for date in dlist:
     raddfile='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
-    infile1=archdir+'/'+str(date)+'/'+raddfile
+    infile=archdir+'/'+str(date)+'/'+raddfile
 
-    if (os.path.exists(infile1)):
+    if (os.path.exists(infile)):
         print('Processing Radfile: %s' %(raddfile))
-        ds1=xa.open_dataset(infile1)
-        npts=int(ds1.nobs.size/ds1.nchans.size)
-        nchs=ds1.nchans.size
-        ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-        wavelength=1e+04/ds1.wavenumber
-        chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
         dates_count+=1
     else:
         print('%s is not existing'%(raddfile))
         continue
     
-    # Observation lat/lon
-    rlat1=np.reshape(ds1.Latitude.values,(npts,nchs))
-    rlon1=np.reshape(ds1.Longitude.values,(npts,nchs))
-    qcflags=np.reshape(ds1.QC_Flag.values,(npts,nchs))
-    #obs1=np.reshape(ds1.Observation.values,(npts,nchs))
-    sim1=np.reshape(ds1.Simulated_Tb.values,(npts,nchs))
-    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts,nchs))
-    sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
-    obs1=sim_nbc1+sim1
-    aeroload=np.reshape(ds1.aero_load.values,(npts,nchs))[:,0]
-    #aerofrac=np.reshape(ds1.aero_frac.values,(npts,nchs,naer))[:,0,:]
-    tmpds=xa.Dataset({'rlon1':(['obsloc'],rlon1[:,0]),
-                      'rlat1':(['obsloc'],rlat1[:,0]),
-                      'qcflag':(['obsloc','wavenumber'],qcflags),
-                      'tb_obs':(['obsloc','wavenumber'],obs1),
-                      'tb_sim':(['obsloc','wavenumber'],sim1),
-                      'tb_clr':(['obsloc','wavenumber'],clr1),
-                      'aero_load':(['obsloc'],aeroload)},
-                     coords={'obsloc':np.arange(npts),
-                             'wavenumber':ds1.wavenumber.values})
-
-    tmpds=tmpds.sel(wavenumber=chkwvn)
+    tmpds=read_rad_ncdiag(infile,chkwvn=chkwvn)
     
     tb_sim=tmpds.tb_sim
     tb_clr=tmpds.tb_clr
@@ -163,14 +132,18 @@ for date in dlist:
    
     all_msk=(~np.isnan(tmpds.obsloc))
     good_msk=(tmpds.qcflag==0.)
+    hazy_msk=(tb_sim!=tb_clr)
     #cld_msk=(tmpds.qcflag==7.)
     aer_msk=(tmpds.qcflag==13.)
+    aergrs_msk=(tmpds.qcflag==55.)
+    aercld_msk=(tmpds.qcflag==57.)
 
-    pltmask=all_msk
-    #pltmask=(good_msk)|(aer_msk)               
+    #pltmask=all_msk
+    #pltmask=(good_msk)|(aer_msk)|(aergrs_msk)|(aercld_msk)             
+    pltmask=(good_msk)|(hazy_msk)
     
     if (plt2d_ae):
-        savedir=outpath+'/'+exp+'/2d_Ae/'+aertype
+        savedir=outpath+'/2d_Ae'
         if ( not os.path.exists(savedir) ):
             os.makedirs(savedir)
         
@@ -187,17 +160,18 @@ for date in dlist:
        
         tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
         
-        fig,ax=setupax_2dmap(cornll,area,proj,12)
+        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
         set_size(axe_w,axe_h)
         ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon1[pltmask],tmpds.rlat1[pltmask],c=pltda,
+        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
                    s=ptsize,cmap=clrmap,norm=norm)
         plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
                      pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
         
         if (fsave):
-            fname=('%s_%s_%.2f.%s.%s' %(area,sensor,chkwvn,str(date),ffmt))
-            fig.savefig(savedir+'/'+fname,dpi=quality)
+            fname=('%s/%s_%s_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+            print(fname)
+            fig.savefig(fname,dpi=quality)
             plt.close()
 
         cbtcks=np.arange(-10,11,1)
@@ -213,17 +187,18 @@ for date in dlist:
 
         tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
 
-        fig,ax=setupax_2dmap(cornll,area,proj,12)
+        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
         set_size(axe_w,axe_h)
         ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon1[pltmask],tmpds.rlat1[pltmask],c=pltda,
+        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
                    s=ptsize,cmap=clrmap,norm=norm)
         plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
                      pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
 
         if (fsave):
-            fname=('%s_%s_AeFG_%.2f.%s.%s' %(area,sensor,chkwvn,str(date),ffmt))
-            fig.savefig(savedir+'/'+fname,dpi=quality)
+            fname=('%s/%s_%s_AeFG_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+            print(fname)
+            fig.savefig(fname,dpi=quality)
             plt.close()
 
         pltda=aereff_obs[pltmask==1]
@@ -231,21 +206,22 @@ for date in dlist:
 
         tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
 
-        fig,ax=setupax_2dmap(cornll,area,proj,12)
+        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
         set_size(axe_w,axe_h)
         ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon1[pltmask],tmpds.rlat1[pltmask],c=pltda,
+        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
                    s=ptsize,cmap=clrmap,norm=norm)
         plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
                      pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
 
         if (fsave):
-            fname=('%s_%s_AeOBS_%.2f.%s.%s' %(area,sensor,chkwvn,str(date),ffmt))
-            fig.savefig(savedir+'/'+fname,dpi=quality)
+            fname=('%s/%s_%s_AeOBS_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+            print(fname)
+            fig.savefig(fname,dpi=quality)
             plt.close()
 
     if (plt2d_omb):
-        savedir=outpath+'/'+exp+'/2d_OMB/'+aertype
+        savedir=outpath+'/2d_OMB'
         if ( not os.path.exists(savedir) ):
             os.makedirs(savedir)
         
@@ -262,14 +238,15 @@ for date in dlist:
        
         tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
         
-        fig,ax=setupax_2dmap(cornll,area,proj,12)
+        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
         set_size(axe_w,axe_h)
         ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon1[pltmask],tmpds.rlat1[pltmask],c=pltda,
+        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
                    s=ptsize,cmap=clrmap,norm=norm)
         plt.colorbar(sc,orientation=cbori,fraction=cb_frac,pad=cb_pad,ticks=lvs,aspect=40)
         
         if (fsave):
-            fname=('%s_%s_%.2f.%s.%s' %(area,sensor,chkwvn,str(date),ffmt))
-            fig.savefig(savedir+'/'+fname,dpi=quality)
+            fname=('%s/%s_%s_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+            print(fname)
+            fig.savefig(fname,dpi=quality)
             plt.close()

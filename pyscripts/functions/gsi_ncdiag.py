@@ -3,7 +3,9 @@ __all__ = ['read_rad_ncdiag','read_cnv_ncdiag']
 import numpy as np
 import xarray as xa
 
-def read_rad_ncdiag(infile,select_wavenumber=None):
+def read_rad_ncdiag(infile,**kwargs):
+    select_wavenumber = kwargs.get('chkwvn',None)
+
     ds=xa.open_dataset(infile)
     npts=int(ds.nobs.size/ds.nchans.size)
     nchs=ds.nchans.size
@@ -15,7 +17,8 @@ def read_rad_ncdiag(infile,select_wavenumber=None):
     sim=np.reshape(ds.Simulated_Tb.values,(npts,nchs))
     clr=np.reshape(ds.Clearsky_Tb.values,(npts,nchs))
     varinv=np.reshape(ds.Inverse_Observation_Error.values,(npts,nchs))
-    sim_nbc=np.reshape(ds.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
+    omb_bc=np.reshape(ds.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
+    omb_nbc=np.reshape(ds.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
     tmpds=xa.Dataset({'rlon':(['obsloc'],rlon[:,0]),
                       'rlat':(['obsloc'],rlat[:,0]),
                       'qcflag':(['obsloc','wavenumber'],qcflags),
@@ -23,10 +26,13 @@ def read_rad_ncdiag(infile,select_wavenumber=None):
                       'tb_sim':(['obsloc','wavenumber'],sim),
                       'tb_clr':(['obsloc','wavenumber'],clr),
                       'varinv':(['obsloc','wavenumber'],varinv),
+                      'omb_bc':(['obsloc','wavenumber'],omb_bc),
+                      'omb_nbc':(['obsloc','wavenumber'],omb_nbc),
                       },
                      coords={'obsloc':np.arange(npts),
                              'wavenumber':ds.wavenumber.values})
-    if select_wavenumber != None:
+    
+    if type(select_wavenumber)==list or type(select_wavenumber)==float:
        tmpds=tmpds.sel(wavenumber=select_wavenumber)
 
     return tmpds

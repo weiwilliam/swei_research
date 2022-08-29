@@ -18,7 +18,8 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive'
+    #rootarch='/scratch/users/swei/ncdiag'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -28,7 +29,6 @@ elif (machine=='Cheyenne'):
     rootpath='/glade/work/swei/output/images'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/glade/u/home/swei/research'
-sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -39,6 +39,7 @@ import setuparea as setarea
 from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
+from gsi_ncdiag import read_rad_ncdiag
 
 tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
@@ -53,12 +54,13 @@ minussign=u'\u2212'
 sdate=2020061000
 edate=2020071018
 hint=6
-exp='hazyda_aero'
+exp='observer_v2qc'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
 usebc=0
 plthist2d=1 # plot 2d histogram
+chkwvn_list=[906.25,962.5,1096.0,]
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -83,7 +85,7 @@ else:
 # Data path setup
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir=rootarch+'/'+exp
-savedir=outpath+'/DiagFiles/rad/hist2d'
+savedir=outpath+'/DiagFiles/rad/observer/hist2d'
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -112,41 +114,19 @@ for date in dlist:
 
     if (os.path.exists(infile)):
         print('Processing Radfile: %s' %(raddfile))
-        ds=xa.open_dataset(infile)
-        npts=int(ds.nobs.size/ds.nchans.size)
-        nchs=ds.nchans.size
-        ds=ds.assign_coords(nuchan=('wavenumber',ds.wavenumber.data))
-        ds=ds.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-        wavelength=1e+04/ds.wavenumber
-        chkwvn_list=ds.wavenumber.sel(wavenumber=spectral_range)[ds.use_flag.sel(wavenumber=spectral_range)==1]
+        if dates_count==0:
+           ds=xa.open_dataset(infile)
+           ds=ds.swap_dims({"nchans":"wavenumber"})
+           wavelength=1e+04/ds.wavenumber
+           chkwvn_list=ds.wavenumber.sel(wavenumber=spectral_range)[ds.use_flag.sel(wavenumber=spectral_range)==1]
+           del(ds)
+
         dates_count+=1
     else:
         print('%s is not existing'%(raddfile))
         continue
     
-    # Observation lat/lon
-    rlat=np.reshape(ds.Latitude.values,(npts,nchs))
-    rlon=np.reshape(ds.Longitude.values,(npts,nchs))
-    qcflags=np.reshape(ds.QC_Flag.values,(npts,nchs))
-    #obs=np.reshape(ds.Observation.values,(npts,nchs))
-    sim=np.reshape(ds.Simulated_Tb.values,(npts,nchs))
-    clr=np.reshape(ds.Clearsky_Tb.values,(npts,nchs))
-    omb_bc=np.reshape(ds.Obs_Minus_Forecast_adjusted.values,(npts,nchs))
-    omb_nbc=np.reshape(ds.Obs_Minus_Forecast_unadjusted.values,(npts,nchs))
-    obs=omb_nbc+sim
-    tmpds=xa.Dataset({'rlon':(['obsloc'],rlon[:,0]),
-                      'rlat':(['obsloc'],rlat[:,0]),
-                      'qcflag':(['obsloc','wavenumber'],qcflags),
-                      'tb_obs':(['obsloc','wavenumber'],obs),
-                      'tb_sim':(['obsloc','wavenumber'],sim),
-                      'tb_clr':(['obsloc','wavenumber'],clr),
-                      'omb_bc':(['obsloc','wavenumber'],omb_bc),
-                      'omb_nbc':(['obsloc','wavenumber'],omb_nbc),
-                      },
-                     coords={'obsloc':np.arange(npts),
-                             'wavenumber':ds.wavenumber.values})
-    
-    tmpds=tmpds.sel(wavenumber=chkwvn_list)
+    tmpds=read_rad_ncdiag(infile,chkwvn_list)
     
     if (date==str(sdate)):
         ds_all=tmpds
@@ -171,6 +151,8 @@ for chkwvn in chkwvn_list:
     qc0_msk=(ds_chk.qcflag==0.)
     qc7_msk=(ds_chk.qcflag==7.)
     qc13_msk=(ds_chk.qcflag==13.)
+    qc55_msk=(ds_chk.qcflag==55.)
+    qc57_msk=(ds_chk.qcflag==57.)
 
     pltmask=(qc0_msk)|(qc13_msk)
     if (plthist2d):

@@ -52,8 +52,8 @@ inputpath=rootarch
 # Plotting setup
 expname='hazyda_ctrl'
 sensor='iasi_metop-a'
-sdate=2020082200
-edate=2020092118
+sdate=2020061000
+edate=2020071018
 hint=6
 sensor='iasi_metop-a'
 selwvn=962.5
@@ -216,7 +216,7 @@ if (gen_file):
 
 if (gen_plot):
     print('Generate plot')
-    imgsavpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/gridded/2dmap/aermsk/'+area
+    imgsavpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/gridded_rad/2dmap/aermsk/'+area
     if ( not os.path.exists(imgsavpath) ):
         os.makedirs(imgsavpath)
 
