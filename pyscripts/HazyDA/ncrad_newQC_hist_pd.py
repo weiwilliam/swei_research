@@ -55,6 +55,7 @@ aertype='All'
 hint=6
 exp='observer_v2qc'
 sensor='iasi_metop-a'
+nchs=616
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
 #if loop=='anl':
@@ -125,7 +126,7 @@ for date in dlist:
         print('%s is not existing'%(raddfile))
         continue
     
-    tmpds=read_rad_ncdiag(infile)
+    tmpds=read_rad_ncdiag(infile,cal_ae=1)
     
     if (date==str(sdate)):
         ds_all=tmpds
@@ -164,7 +165,7 @@ for chkwvn in chkwvn_list:
         aedepsd[idx]=sdmin+(sdmax-sdmin)/(ae2-ae1)*(bin_center[idx]-ae1)
 
     filter_ori=(df_chk['qcflag']!=7.0)
-    #filter_bst=(abs(df_chk['OMF'])>3)&(abs(df_chk['OMF'])>1.8*df_chk['Ae'])
+    #filter_bst=(abs(df_chk['omb_nbc'])>3)&(abs(df_chk['omb_nbc'])>1.8*df_chk['Ae'])
     filter_fnl=(df_chk['qcflag']==0.0)|(df_chk['qcflag']==13.0)
     
     ori_df=df_chk.loc[filter_ori,:]
@@ -173,15 +174,15 @@ for chkwvn in chkwvn_list:
     ori_df['Ae_bin']=pd.cut(ori_df['Ae'],bins=hist_x_edge,labels=bin_center)
     fnl_df['Ae_bin']=pd.cut(fnl_df['Ae'],bins=hist_x_edge,labels=bin_center)
     
-    ori_bin_df=ori_df.groupby('Ae_bin').agg({'OMF':['count','mean','std']})
-    fnl_bin_df=fnl_df.groupby('Ae_bin').agg({'OMF':['count','mean','std']})
+    ori_bin_df=ori_df.groupby('Ae_bin').agg({'omb_nbc':['count','mean','std']})
+    fnl_bin_df=fnl_df.groupby('Ae_bin').agg({'omb_nbc':['count','mean','std']})
     ori_bin_df=ori_bin_df.reset_index()
     fnl_bin_df=fnl_bin_df.reset_index()
 
-    ori_omb_mean=ori_bin_df['OMF','mean']
-    fnl_omb_mean=fnl_bin_df['OMF','mean']
-    ori_omb_std=ori_bin_df['OMF','std']
-    fnl_omb_std=fnl_bin_df['OMF','std']
+    ori_omb_mean=ori_bin_df['omb_nbc','mean']
+    fnl_omb_mean=fnl_bin_df['omb_nbc','mean']
+    ori_omb_std=ori_bin_df['omb_nbc','std']
+    fnl_omb_std=fnl_bin_df['omb_nbc','std']
 
     x_label='Aerosol effect [K]'
     
@@ -192,8 +193,8 @@ for chkwvn in chkwvn_list:
     set_size(axe_w,axe_h,l=0.15,r=0.85)
     ax.set_title(tistr,loc='left')
     ax.set_xlabel(x_label)
-    ax.bar(bin_center,ori_bin_df['OMF','count'],binsize,color='grey',alpha=0.3)
-    ax.bar(bin_center,fnl_bin_df['OMF','count'],binsize,color='grey',alpha=0.7)
+    ax.bar(bin_center,ori_bin_df['omb_nbc','count'],binsize,color='grey',alpha=0.3)
+    ax.bar(bin_center,fnl_bin_df['omb_nbc','count'],binsize,color='grey',alpha=0.7)
     ax.set_yscale("log")
     ax.set_ylabel("Counts")
     ax2=ax.twinx()
