@@ -26,11 +26,11 @@ elif (machine=='Cheyenne'):
     rootpath='/glade/work/swei/output/images'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/glade/u/home/swei/research'
-sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
+from matplotlib.dates import DateFormatter
 import xarray as xa
 import pandas as pd
 
@@ -49,6 +49,10 @@ axe_w=6 ; axe_h=3 ; quality=300
 tkfreq=2
 minussign=u'\u2212'
 
+pltcolor=['blue', 'red', 'black', 'grey']
+pltstyle= ['-','-','-','-']
+date_fmt= DateFormatter('%Y %h %n %d %Hz')
+
 # Projection setting
 proj=ccrs.PlateCarree(globe=None)
 
@@ -59,7 +63,8 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
             'seviri_m08','seviri_m10','sndrd1_g15','sndrd2_g15','sndrd3_g15',
             'sndrd4_g15','ssmis_f17','ssmis_f18']
 plt_map=0
-plt_spec=1
+plt_spec=0
+plt_ts=1
 pltvar='omb_bc_mean'
 varlb='OMB w/ BC'
 data_sdate=2020060106
@@ -76,7 +81,7 @@ units='K'
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
 
-if check_sdate!=data_sdate and check_edate!=data_edate:
+if check_sdate!=data_sdate and check_edate!=data_edate and not plt_ts:
    grdtype='mean'
 else:
    grdtype='time'
@@ -113,9 +118,9 @@ elif (cbori=='horizontal'):
 
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded_rad'
-imgsavpath=outputpath+'/2dmap/omb/'+area
-if ( not os.path.exists(imgsavpath) ):
-   os.makedirs(imgsavpath)
+mapsavpath=outputpath+'/2dmap/omb/'+area
+ts_savpath=outputpath+'/1ch/omb/'+area
+sp_savpath=outputpath+'/spectrum/omb/'+area
 
 grdfile0='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,grdtype,data_sdate,data_edate)
 grdfile1='%s/%s_%s_%s_%s_omb_%.1fx%.1f.%s.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,grdtype,data_sdate,data_edate)
@@ -140,6 +145,9 @@ if (plt_spec):
    
 
 if (plt_map):
+   if ( not os.path.exists(mapsavpath) ):
+      os.makedirs(mapsavpath)
+
    pltda0=ds0[pltvar].sel(wavenumber=chkwvn)
    pltda1=ds1[pltvar].sel(wavenumber=chkwvn)
    
@@ -171,7 +179,7 @@ if (plt_map):
    ax.set_title(titlestr,loc='left')
    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
                 pad=cb_pad,aspect=40,label=cblabel)
-   outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
+   outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(mapsavpath,expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
    if (fsave):
       print(outname)
       fig.savefig(outname,dpi=quality)
@@ -189,7 +197,7 @@ if (plt_map):
    ax.set_title(titlestr,loc='left')
    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
                 pad=cb_pad,aspect=40,label=cblabel)
-   outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],sensor,chkwvn,pltvar,sdate,edate,ffmt)
+   outname='%s/%s_%s_%.2f_%s.%s_%s.%s' %(mapsavpath,expnlist[1],sensor,chkwvn,pltvar,sdate,edate,ffmt)
    if (fsave):
       print(outname)
       fig.savefig(outname,dpi=quality)
@@ -207,10 +215,44 @@ if (plt_map):
    ax.set_title(titlestr,loc='left')
    plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
                 pad=cb_pad,aspect=40,label=cblabel)
-   outname='%s/%s-%s_%s_%.2f_%s.%s_%s.%s' %(imgsavpath,expnlist[1],expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
+   outname='%s/%s-%s_%s_%.2f_%s.%s_%s.%s' %(mapsavpath,expnlist[1],expnlist[0],sensor,chkwvn,pltvar,sdate,edate,ffmt)
    if (fsave):
       print(outname)
       fig.savefig(outname,dpi=quality)
       plt.close()
 
+if (plt_ts):
+   if ( not os.path.exists(ts_savpath) ):
+      os.makedirs(ts_savpath)
+
+   tmpds0=ds0.sel(wavenumber=chkwvn)
+   tmpds1=ds1.sel(wavenumber=chkwvn)
+
+   ts_sum_dims=['lat','lon']
+   ts0=(tmpds0['omb_bc_mean']*tmpds0['omb_bc_count']).sum(dim=ts_sum_dims)/(tmpds0['omb_bc_count'].sum(dim=ts_sum_dims))
+   ts1=(tmpds1['omb_bc_mean']*tmpds1['omb_bc_count']).sum(dim=ts_sum_dims)/(tmpds1['omb_bc_count'].sum(dim=ts_sum_dims))
+   ts0=ts0.rename(pltvar)
+   ts1=ts1.rename(pltvar)
+
+   df0=ts0.to_dataframe().rename(columns={pltvar:expnlist[0]})
+   df1=ts1.to_dataframe().rename(columns={pltvar:expnlist[1]})
+
+   tmpdf=pd.concat((df0,df1),axis=1)[expnlist]
+
+   fig,ax=plt.subplots()
+   set_size(axe_w,axe_h,b=0.12)
+   ax.set_prop_cycle(color=pltcolor, linestyle=pltstyle)
+   tmpdf.plot(ax=ax,marker='o',ms=4)
+   ax.xaxis.set_major_formatter(date_fmt)
+   ax.grid(axis='x')
+   tistr='%s %.2f $\mathrm{cm^{-1}}$'%(sensor,chkwvn)
+   ax.set_title(tistr,loc='left')
+   ax.set_ylabel('%s [%s]'%(varlb,units))
+   ax.set_xlabel('')
+   
+   if (fsave):
+      outname='%s/%s_%s_%s_%s_%.2f.png' %(ts_savpath,sensor,pltvar,expnlist[0],expnlist[1],chkwvn)
+      print(outname,flush=1)
+      fig.savefig(outname,dpi=quality)
+      plt.close()
 

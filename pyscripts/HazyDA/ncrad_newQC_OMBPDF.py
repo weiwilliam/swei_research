@@ -18,7 +18,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/ResearchData/Prospectus/AeroObsStats/nc_diag'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -41,6 +41,7 @@ from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 import scipy.stats
+from gsi_ncdiag import read_rad_ncdiag,read_rad_ncdiag0
 
 tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
@@ -50,21 +51,21 @@ mpl.rc('legend',fontsize='small')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=3 ; axe_h=3 ; quality=300
 
-# Projection setting
-proj=ccrs.PlateCarree(globe=None)
-
 # Plotting setup
 sdate=2020061000
-edate=2020071018
-aertype='Dust'
+edate=2020092118
+aertype='All'
 hint=6
-explist=['hazyda_ctrl','hazyda_aero']
-expnlist=['CTL','AER']
+explist=['ncepgdas','observer_v2qc']
+expnlist=['GDAS','w/o CldQC']
+saved_suffix='v1qc'
 sensor='iasi_metop-a'
-spectral_range=slice(600,1300)
+chkwvn_list=[906.25,943.25,962.5,1096.0]
+nchs=616
+lutver='v5'
 loop='ges' #ges,anl
 usebc=0
-plthist=1 # plot 2d histogram
+pltpdf=1 # plot pdf
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -88,11 +89,11 @@ else:
 
 # Data path setup
 lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
-outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/rad'
+outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/rad/observer'
 archdir0=rootarch+'/'+explist[0]
 archdir1=rootarch+'/'+explist[1]
 
-savedir=outpath+'/'+explist[1]+'/dep_pdf/'+aertype
+savedir=outpath+'/pdf_'+saved_suffix
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -116,81 +117,21 @@ while (cdate<=edate):
 
 dates_count=0
 for date in dlist:
-    raddfile0='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
+    raddfile0='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc'
     raddfile1='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
     infile0=archdir0+'/'+str(date)+'/'+raddfile0
     infile1=archdir1+'/'+str(date)+'/'+raddfile1
 
     if (os.path.exists(infile0) and 
         os.path.exists(infile1)):
-        print('Processing Radfile: %s' %(raddfile1))
-        ds0=xa.open_dataset(infile0)
-        ds1=xa.open_dataset(infile1)
-        npts0=int(ds0.nobs.size/ds0.nchans.size)
-        npts1=int(ds1.nobs.size/ds1.nchans.size)
-        nchs0=ds0.nchans.size
-        nchs1=ds1.nchans.size
-        ds0=ds0.assign_coords(nuchan=('wavenumber',ds0.wavenumber.data))
-        ds0=ds0.swap_dims({"nchans":"wavenumber"})
-        ds1=ds1.assign_coords(nuchan=('wavenumber',ds1.wavenumber.data))
-        ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-        wavelength=1e+04/ds1.wavenumber
-        chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
+        print('Processing Radfile: %s' %(raddfile1),flush=1)
         dates_count+=1
     else:
-        print('%s is not existing'%(raddfile1))
+        print('%s is not existing'%(raddfile1),flush=1)
         continue
 
-    # Observation lat/lon from exp 0 (baseline)
-    rlat0=np.reshape(ds0.Latitude.values,(npts0,nchs0))[:,0]
-    rlon0=np.reshape(ds0.Longitude.values,(npts0,nchs0))[:,0]
-    qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
-    # obs0=np.reshape(ds0.Observation.values,(npts0,nchs0))
-    sim0=np.reshape(ds0.Simulated_Tb.values,(npts0,nchs0))
-    clr0=np.reshape(ds0.Clearsky_Tb.values,(npts0,nchs0))
-    varinv0=np.reshape(ds0.Inverse_Observation_Error.values,(npts0,nchs0))
-    omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
-    omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
-    obs0=omb_nbc0+sim0
-    arrshape=['obsloc','wavenumber']
-    tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0),
-                      'rlat':(['obsloc'],rlat0),
-                      'qcflag':(arrshape,qcflags0),
-                      'tb_obs':(arrshape,obs0),
-                      'tb_sim':(arrshape,sim0),
-                      'tb_clr':(arrshape,clr0),
-                      'varinv':(arrshape,varinv0),
-                      'omb_bc':(arrshape,omb_bc0),
-                      'omb_nbc':(arrshape,omb_nbc0)},
-                      coords={'obsloc':np.arange(npts0),
-                             'wavenumber':ds0.wavenumber.values})
-    tmpds0=tmpds0.sel(wavenumber=spectral_range)
-   
-      
-    # Observation lat/lon from exp 1 (test)
-    rlat1=np.reshape(ds1.Latitude.values,(npts1,nchs1))[:,0]
-    rlon1=np.reshape(ds1.Longitude.values,(npts1,nchs1))[:,0]
-    qcflags1=np.reshape(ds1.QC_Flag.values,(npts1,nchs1))
-    # obs1=np.reshape(ds1.Observation.values,(npts1,nchs1))
-    sim1=np.reshape(ds1.Simulated_Tb.values,(npts1,nchs1))
-    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts1,nchs1))
-    varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts1,nchs1))
-    omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts1,nchs1))
-    omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts1,nchs1))
-    obs1=omb_nbc1+sim1
-    arrshape=['obsloc','wavenumber']
-    tmpds1=xa.Dataset({'rlon':(['obsloc'],rlon1),
-                      'rlat':(['obsloc'],rlat1),
-                      'qcflag':(arrshape,qcflags1),
-                       'tb_obs':(arrshape,obs1),
-                       'tb_sim':(arrshape,sim1),
-                       'tb_clr':(arrshape,clr1),
-                      'varinv':(arrshape,varinv1),
-                      'omb_bc':(arrshape,omb_bc1),
-                      'omb_nbc':(arrshape,omb_nbc1)},
-                      coords={'obsloc':np.arange(npts1),
-                             'wavenumber':ds1.wavenumber.values})
-    tmpds1=tmpds1.sel(wavenumber=spectral_range)
+    tmpds0=read_rad_ncdiag0(infile0,chkwvn=chkwvn_list,cal_ae=1,get_water_frac=1)
+    tmpds1=read_rad_ncdiag(infile1, chkwvn=chkwvn_list,cal_ae=1,get_water_frac=1)
     
     if (date==str(sdate)):
         ds_all0=tmpds0
@@ -202,20 +143,19 @@ for date in dlist:
 total_obscounts=ds_all1.obsloc.size
 ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
 
-satinfo_csv=lutpath+'/'+sensor+'_'+str(nchs1)+'_stats_new.v4.csv'
-lutdf=pd.read_csv(satinfo_csv)
-filter = ((lutdf.Aer_sen==1.)&(lutdf.iuse==1.)&
-          (lutdf.wavenumber>=spectral_range.start)&
-          (lutdf.wavenumber<=spectral_range.stop))
-tmpdf=lutdf.loc[filter,:]
-chkwvn_list=tmpdf.wavenumber.values
+#satinfo_csv=lutpath+'/'+sensor+'_'+str(nchs)+'_stats.'+lutver+'.csv'
+#lutdf=pd.read_csv(satinfo_csv)
+#filter = ((lutdf.Aer_sen==1.)&(lutdf.iuse==1.)&
+#          (lutdf.wavenumber>=spectral_range.start)&
+#          (lutdf.wavenumber<=spectral_range.stop))
+#tmpdf=lutdf.loc[filter,:]
+#chkwvn_list=tmpdf.wavenumber.values
 
 binsize=0.1
 halfbin=0.5*binsize
-hist_x_edge=np.arange(-10-halfbin,10.+binsize,binsize)
+hist_x_edge=np.arange(-6.-halfbin,6.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
-# for chkwvn in [962.5]:
 for chkwvn in chkwvn_list:
     ds_chk0=ds_all0.sel(wavenumber=chkwvn)
     tb_obs0=ds_chk0.tb_obs
@@ -223,15 +163,20 @@ for chkwvn in chkwvn_list:
     
     ds_chk1=ds_all1.sel(wavenumber=chkwvn)
     tb_obs1=ds_chk1.tb_obs
-    # varinv1=ds_chk1.varinv
+    tb_sim1=ds_chk1.tb_sim
+    tb_clr1=ds_chk1.tb_clr
+    #varinv1=ds_chk1.varinv
     
     if (usebc):
         omb0=ds_chk0.omb_bc
         omb1=ds_chk1.omb_bc
+        omb_clr1=(tb_obs1-tb_clr1)-(omb1-tb_obs1+tb_sim1)
     else:
         omb0=ds_chk0.omb_nbc
         omb1=ds_chk1.omb_nbc
+        omb_clr1=tb_obs1-tb_clr1
     
+    water_msk0=(ds_chk0.water_frac>0.999)
     good_msk0=(ds_chk0.qcflag==0.)
     gross_msk0=(ds_chk0.qcflag==3.)
     cld_msk0=(ds_chk0.qcflag==7.)
@@ -240,26 +185,41 @@ for chkwvn in chkwvn_list:
     passed_msk0=(good_msk0)
     # ori_msk=(good_msk)|(aer_msk)|(bust_msk)|(tzr_msk)
 
+    water_msk1=(ds_chk1.water_frac>0.999)
     good_msk1=(ds_chk1.qcflag==0.)
     gross_msk1=(ds_chk1.qcflag==3.)
     cld_msk1=(ds_chk1.qcflag==7.)
     tzr_msk1=(ds_chk1.qcflag==10.)
-    aer_msk1=(ds_chk1.qcflag==13.)
     sfcir_msk1=(ds_chk1.qcflag==53.)
     bust_msk1=(ds_chk1.qcflag==55.)
+    aercld_msk1=(ds_chk1.qcflag==57.)
+    if (saved_suffix=='v1qc'):
+       bustqc=(abs(omb1)>3.)&(abs(omb1)>1.8*ds_chk1.Ae)
+       tmpmsk1=(aercld_msk1)&(~bustqc)
+       omb1=xa.where(tmpmsk1,omb_clr1,omb1)
+       aer_msk1=(ds_chk1.qcflag==13.)|(tmpmsk1)
+    else:
+       aer_msk1=(ds_chk1.qcflag==13.)
     passed_msk1=(good_msk1)|(aer_msk1)
     # ori_msk=(good_msk)|(aer_msk)|(bust_msk)|(tzr_msk)
     
-    pltmsk0=passed_msk0
-    pltmsk1=passed_msk1
+    pltmsk0=passed_msk0 ; cnts0=np.count_nonzero(pltmsk0)
+    pltmsk1=passed_msk1 ; cnts1=np.count_nonzero(pltmsk1)
 
-    if (plthist):            
+    cntslist=[cnts0,cnts1]
+    leglist=[]
+    for lg in zip(expnlist,cntslist):
+        cntstr="{:,}".format(lg[1])
+        lgstr='%s (%s)' %(lg[0],cntstr)
+        leglist.append(lgstr)
+
+    if (pltpdf):            
         pltda_x0=omb0[pltmsk0==1]
         pltda_x1=omb1[pltmsk1==1]
         
         x_label='OMB [K]'
-        hdata0, tmpbins=np.histogram(pltda_x0, bins=hist_x_edge, density=1)
-        hdata1, tmpbins=np.histogram(pltda_x1, bins=hist_x_edge, density=1)
+        hdata0, tmpbins=np.histogram(pltda_x0, bins=hist_x_edge, density=0)
+        hdata1, tmpbins=np.histogram(pltda_x1, bins=hist_x_edge, density=0)
     
         omb_mean=np.zeros_like(bin_center,dtype='float')
         omb_sd=np.zeros_like(bin_center,dtype='float')
@@ -269,20 +229,18 @@ for chkwvn in chkwvn_list:
         
         fig=plt.figure()
         ax=plt.subplot()
-        set_size(axe_w,axe_h,l=0.15,r=0.85)
+        set_size(axe_w,axe_h,l=0.18,r=0.88)
         ax.set_title(tistr,loc='left')
         ax.set_xlabel(x_label)
-        ax.plot(bin_center,hdata0*binsize,'tab:blue')
-        ax.plot(bin_center,hdata1*binsize,'tab:red')
-        # ax.plot(normbin,normdis,'k--')
-        ax.set_yscale("log")
-        ax.set_ylabel("PDF")
-        ax.set_ylim(1e-4,1.4e0)
+        ax.plot(bin_center,hdata0,'tab:blue')
+        ax.plot(bin_center,hdata1,'tab:red')
+        ax.set_ylabel("Counts")
         ax.vlines(0.,0,1,transform=ax.get_xaxis_transform(),colors='grey',linestyle='dashed',linewidth=0.7)
-        ax.legend(lglst,loc=2)
+        ax.legend(leglist,loc=2)
         
         if (fsave):
-            fname=('PDF_OMB_%s_%s_%s.%.2f.%s'
-                    %(area,sensor,bcflg,chkwvn,ffmt))
-            fig.savefig(savedir+'/'+fname,dpi=quality)
+            fname=('%s/PDF_OMB_%s_%s_%s.%.2f.%s'
+                    %(savedir,area,sensor,bcflg,chkwvn,ffmt))
+            print(fname,flush=1)
+            fig.savefig(fname,dpi=quality)
             plt.close()

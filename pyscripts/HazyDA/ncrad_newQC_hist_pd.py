@@ -162,7 +162,7 @@ for chkwvn in chkwvn_list:
     aedepsd[:]=obserr
     aedepsd=np.where(bin_center>=ae2,sdmax,aedepsd)
     for idx in np.where((bin_center<ae2)&(bin_center>ae1))[0]:
-        aedepsd[idx]=sdmin+(sdmax-sdmin)/(ae2-ae1)*(bin_center[idx]-ae1)
+        aedepsd[idx]=obserr+(sdmax-obserr)/(ae2-ae1)*(bin_center[idx]-ae1)
 
     filter_ori=(df_chk['qcflag']!=7.0)
     #filter_bst=(abs(df_chk['omb_nbc'])>3)&(abs(df_chk['omb_nbc'])>1.8*df_chk['Ae'])

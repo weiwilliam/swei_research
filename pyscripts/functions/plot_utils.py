@@ -125,6 +125,7 @@ def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,fig=Non
     ax2.xaxis.set_label_position('bottom')
     ax2.spines['bottom'].set_position(('outward', 48))
     ax2.set_xlabel(x2lb)
+    return fig,ax,ax2
 
 def plt_x2cf(zval,yval,ylb,x1val,x1lb,x2val,x2lb,cnlvs,clrmap,cnnorm,cbasp,cblb,title,outname,yinvert,fig=None,ax=None):
     if not fig: fig=plt.gcf()

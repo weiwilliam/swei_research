@@ -44,7 +44,7 @@ tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
 mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
-mpl.rc('legend',fontsize='large')
+mpl.rc('legend',fontsize='medium')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=3 ; axe_h=3 ; quality=300
 minussign=u'\u2212'
@@ -54,12 +54,13 @@ sdate=2020061000
 edate=2020092118
 hint=6
 exp='observer_v2qc'
-saved_suffix='v1qc'
+saved_suffix='v2qc'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
 usebc=0
-plthist2d=1 # plot 2d histogram
+pltline=1 # plot 2d histogram
+#chkwvn_list=[906.25]
 chkwvn_list=[906.25,943.25,962.5,1096.0,]
 
 area='Glb'
@@ -85,7 +86,7 @@ else:
 # Data path setup
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir=rootarch+'/'+exp
-savedir=outpath+'/DiagFiles/rad/observer/hist2d_'+saved_suffix
+savedir=outpath+'/DiagFiles/rad/observer/aelines_'+saved_suffix
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -164,76 +165,70 @@ for chkwvn in chkwvn_list:
     # ori_msk=(good_msk)|(aer_msk)|(bust_msk)|(tzr_msk)
 
     pltmask=passed_msk
+    
+    qced_flg=np.zeros_like(passed_msk)
+    qced_flg[passed_msk]=1.
+    wrkds=xa.Dataset({'ae_fg':(['obsloc'],abs(aereff_fg).data),
+                      'ae_obs':(['obsloc'],abs(aereff_obs).data),
+                      'ae_sym':(['obsloc'],aereff.data),
+                      'pltflg':(['obsloc'],qced_flg),
+                      'omb':(['obsloc'],omb.data),
+                      },coords={'obsloc':np.arange(aereff.size)})
 
-    if (plthist2d):
+    if (pltline):
         counts=np.count_nonzero(pltmask)
         print('%.2f cm-1: %i' %(chkwvn,counts))
-        for pltset in [1,2]:
-            if (pltset==1):
-                pltda_x=tb_sim[pltmask==1]
-                pltda_y=tb_obs[pltmask==1]
-                x_label='Background BT [K]'
-                y_label='Observation BT [K]'
-                hist_x_edge=np.arange(200,300.5,0.5)
-                hist_y_edge=hist_x_edge
-            elif (pltset==2):
-                pltda_x=aereff[pltmask==1]
-                pltda_y=omb[pltmask==1]
-                x_label='Aerosol effect [K]'
-                if (usebc):
-                   y_label='OMB w/ BC [K]'
-                else:
-                   y_label='OMB w/o BC [K]'
-                hist_x_edge=np.arange(0.,20.5,0.5)
-                hist_y_edge=np.arange(-14.75,15.25,0.5)
-         
-        # weights_arr=np.zeros((hist_x_edge.size),dtype='float')
-        # weights_arr[:]=np.count_nonzero(pltmask)
+
+        x_label='Aerosol effect [K]'
+        if (usebc):
+           y_label='Mean OMFs w/ BC [K]'
+        else:
+           y_label='Mean OMFs w/o BC [K]'
+
+        binsize=0.1
+        halfbin=0.5*binsize
+        hist_x_edge=np.arange(-1*halfbin,10.+binsize,binsize)
+        bin_center=(hist_x_edge+halfbin)[:-1]
+
+        tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
+
+        df0=wrkds.to_dataframe()
+        df0=df0.reset_index()
+        filter=((df0['pltflg']==1.))
+        wrkdf=df0.loc[filter,:]
         
-        # print('%s used %i of %i' %(sensor,usedchidx.size,ds1.channel.size))
-        
-        #tistr=('%s %s %s %s: AOD>%.2f %s>%.2f (%.2fµm)'
-        #       %(imidx,tlstr,sensor,area,aodmin,aersp,aerfracmin,wavelength[chkwvlidx]))
-            tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
-            
-            cbtcks=np.arange(0,5.1,0.1)
-            lvs=np.power(10,cbtcks)
-            clridx=[0]
-            for idx in np.linspace(2,128,cbtcks.size-1):
-                clridx.append(int(idx))
-            clrmap=setup_cmap('MPL_jet',clridx)
-            norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
-            
-            fig=plt.figure()
-            ax=plt.subplot()
-            set_size(axe_w,axe_h,l=0.15)
-            ax.set_title(tistr,loc='left')
-            # hdata,xedgs,yedgs,im=ax.hist2d(pltda_x,pltda_y,[hist_x_edge,hist_y_edge],cmap=clrmap,norm=norm)
-            hdata,xedgs,yedgs,im=ax.hist2d(pltda_x,pltda_y,
-                                           [hist_x_edge,hist_y_edge],
-                                           density=0,cmap=clrmap,
-                                           norm=norm)
-            # cbar=plt.colorbar(im,orientation=cbori,fraction=0.05,ticks=lvs,label=r'Probability[%]',pad=0.02)
-            cbar=plt.colorbar(im,orientation=cbori,ticks=lvs[::10],fraction=cb_frac,pad=cb_pad,aspect=30)
-            if (cbori=='horizontal'):
-                cbar.ax.set_xticklabels(cbtcks[::10])
+        wrkdf['ae_fg_bin']=pd.cut(wrkdf['ae_fg'],bins=hist_x_edge,labels=bin_center)
+        wrkdf['ae_obs_bin']=pd.cut(wrkdf['ae_obs'],bins=hist_x_edge,labels=bin_center)
+        wrkdf['ae_sym_bin']=pd.cut(wrkdf['ae_sym'],bins=hist_x_edge,labels=bin_center)
+      
+        b=0
+        for bin in ['ae_fg_bin','ae_obs_bin','ae_sym_bin']:
+            tmpgrp=wrkdf.groupby([bin]).agg({'omb':['mean']}).reset_index()
+            tmpgrp=tmpgrp.droplevel(1,axis=1)
+            newcol=bin[:-4]+'_omb'
+            tmpgrp=tmpgrp.rename(columns={'omb':newcol})
+            if b==0:
+               pltgrp=tmpgrp
             else:
-                cbar.ax.set_yticklabels(cbtcks[::10])
-                
-            #if (pltset==2):
-            #    bndry_line_ny=np.arange(-30,-2)
-            #    bndry_line_nx=bndry_line_ny/1.8
-            #    bndry_line_py=np.arange(3,31)
-            #    bndry_line_px=bndry_line_py/1.8
-            #    plt.plot(abs(bndry_line_nx),bndry_line_ny,'k',linestyle='dashed')
-            #    plt.plot(bndry_line_px,bndry_line_py,'k',linestyle='dashed')
-                
-            ax.set_xlabel(x_label)
-            ax.set_ylabel(y_label)
-            
-            if (fsave):
-                fname=('%s/2DPDF_%s_%s_%.2f_%s.set%s.%s_%s.%s'
-                        %(savedir,area,sensor,chkwvn,bcflg,pltset,sdate,edate,ffmt))
-                print(fname,flush=1)
-                fig.savefig(fname,dpi=quality)
-                plt.close()
+               pltgrp[newcol]=tmpgrp[newcol]
+            b+=1
+
+        fig,ax=plt.subplots()
+        set_size(axe_w,axe_h,l=0.15,b=0.15)
+        ax.set_prop_cycle(color=['r','b','k'])
+        pltgrp.plot(x='ae_fg_bin',ax=ax,alpha=0.8,ms=2,zorder=4)
+        #pltgrp[['ae_fg_omb','ae_obs_omb','ae_sym_omb']].plot(x='ae_fg_bin',ax=ax,alpha=0.8,ms=2,zorder=4)
+        ax.legend(['Ae_FG','Ae_OBS','Ae_Sym'])
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
+        ax.set_title(tistr)
+        xmin,xmax=ax.get_xbound()
+        #ax.hlines(0.,xmin,xmax,colors='k',lw=0.8,ls='--',zorder=3)
+        ax.set_xlim(xmin,xmax)
+
+        if (fsave):
+            fname=('%s/Lines_%s_%s_%.2f_%s.%s_%s.%s'
+                    %(savedir,area,sensor,chkwvn,bcflg,sdate,edate,ffmt))
+            print(fname,flush=1)
+            fig.savefig(fname,dpi=quality)
+            plt.close()

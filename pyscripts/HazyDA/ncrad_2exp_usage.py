@@ -28,7 +28,6 @@ elif (machine=='Cheyenne'):
     rootpath='/glade/work/swei/output/images'
     rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
     rootgit='/glade/u/home/swei/research'
-sys.path.append(rootgit+'/pyscripts/functions')
 import numpy as np
 import xarray as xa
 import pandas as pd
@@ -42,6 +41,7 @@ from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
+from gsi_ncdiag import read_rad_ncdiag
 
 tlsize=12 ; lbsize=12
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
@@ -50,6 +50,7 @@ mpl.rc('ytick',labelsize=lbsize)
 mpl.rc('legend',fontsize='large')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=8 ; axe_h=3 ; quality=300
+minussign=u'\u2212'
 
 # Projection setting
 proj=ccrs.PlateCarree(globe=None)
@@ -123,69 +124,15 @@ for date in dlist:
 
     if (os.path.exists(infile0) and
         os.path.exists(infile1)):
-        print('Processing Radfile: %s' %(raddfile))
-        ds0=xa.open_dataset(infile0)
-        ds1=xa.open_dataset(infile1)
-        npts0=int(ds0.nobs.size/ds0.nchans.size)
-        npts1=int(ds1.nobs.size/ds1.nchans.size)
-        nchs0=ds0.nchans.size
-        nchs1=ds1.nchans.size
-        ds0=ds0.assign_coords(nuchan=('wavenumber',ds0.wavenumber.data))
-        ds0=ds0.swap_dims({"nchans":"wavenumber"})
-        ds1=ds1.assign_coords(nuchan=('wavenumber',ds1.wavenumber.data))
-        ds1=ds1.swap_dims({"nchans":"wavenumber"}) #replace the dimension of channel by channel indices
-        wavelength=1e+04/ds1.wavenumber
-        chkwvn_list=ds1.wavenumber.sel(wavenumber=spectral_range)[ds1.use_flag.sel(wavenumber=spectral_range)==1]
-
-        # Observation lat/lon from exp 0 (baseline)
-        rlat0=np.reshape(ds0.Latitude.values,(npts0,nchs0))[:,0]
-        rlon0=np.reshape(ds0.Longitude.values,(npts0,nchs0))[:,0]
-        qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
-        # obs0=np.reshape(ds0.Observation.values,(npts0,nchs0))
-        sim0=np.reshape(ds0.Simulated_Tb.values,(npts0,nchs0))
-        clr0=np.reshape(ds0.Clearsky_Tb.values,(npts0,nchs0))
-        varinv0=np.reshape(ds0.Inverse_Observation_Error.values,(npts0,nchs0))
-        omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
-        omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
-        obs0=omb_nbc0+sim0
-        arrshape=['obsloc','wavenumber']
-        tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0),
-                           'rlat':(['obsloc'],rlat0),
-                           'qcflag':(arrshape,qcflags0),
-                           'tb_obs':(arrshape,obs0),
-                           'tb_sim':(arrshape,sim0),
-                           'tb_clr':(arrshape,clr0),
-                           'varinv':(arrshape,varinv0),
-                           'omb_bc':(arrshape,omb_bc0),
-                           'omb_nbc':(arrshape,omb_nbc0)},
-                           coords={'obsloc':np.arange(npts0),
-                                   'wavenumber':ds0.wavenumber.values})
-        tmpds0=tmpds0.sel(wavenumber=chkwvn_list)
-
-        # Observation lat/lon from exp 1 (test)
-        rlat1=np.reshape(ds1.Latitude.values,(npts1,nchs1))[:,0]
-        rlon1=np.reshape(ds1.Longitude.values,(npts1,nchs1))[:,0]
-        qcflags1=np.reshape(ds1.QC_Flag.values,(npts1,nchs1))
-        # obs1=np.reshape(ds1.Observation.values,(npts1,nchs1))
-        sim1=np.reshape(ds1.Simulated_Tb.values,(npts1,nchs1))
-        clr1=np.reshape(ds1.Clearsky_Tb.values,(npts1,nchs1))
-        varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts1,nchs1))
-        omb_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts1,nchs1))
-        omb_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts1,nchs1))
-        obs1=omb_nbc1+sim1
-        arrshape=['obsloc','wavenumber']
-        tmpds1=xa.Dataset({'rlon':(['obsloc'],rlon1),
-                           'rlat':(['obsloc'],rlat1),
-                           'qcflag':(arrshape,qcflags1),
-                           'tb_obs':(arrshape,obs1),
-                           'tb_sim':(arrshape,sim1),
-                           'tb_clr':(arrshape,clr1),
-                           'varinv':(arrshape,varinv1),
-                           'omb_bc':(arrshape,omb_bc1),
-                           'omb_nbc':(arrshape,omb_nbc1)},
-                           coords={'obsloc':np.arange(npts1),
-                                   'wavenumber':ds1.wavenumber.values})
-        tmpds1=tmpds1.sel(wavenumber=chkwvn_list)
+        print('Processing Radfile: %s' %(raddfile),flush=1)
+        
+        if 'chkwvn_list' not in locals():
+           ds0=xa.open_dataset(infile0)
+           ds0=ds0.swap_dims({"nchans":"wavenumber"})
+           chkwvn_list=ds0.wavenumber.sel(wavenumber=spectral_range)[ds0.use_flag.sel(wavenumber=spectral_range)==1]
+       
+        tmpds0=read_rad_ncdiag(infile0,chkwvn=chkwvn_list)
+        tmpds1=read_rad_ncdiag(infile1,chkwvn=chkwvn_list)
         
         good_cnts0=np.count_nonzero((tmpds0.qcflag==0),axis=0)
         aero_cnts0=np.count_nonzero((tmpds0.qcflag==13),axis=0)
@@ -242,8 +189,9 @@ for chkwvn in [962.5,1096]:
     ax.legend(expnlist)
             
     if (fsave):
-        fname=('TS_%s_%s_%.2f.%s' %(area,sensor,chkwvn,ffmt))
-        fig.savefig(ts_savedir+'/'+fname,dpi=quality)
+        fname=('%s/TS_%s_%s_%.2f.%s' %(ts_savedir,area,sensor,chkwvn,ffmt))
+        print(fname,flush=1)
+        fig.savefig(fname,dpi=quality)
         plt.close()
 
 wvn=usedcnts_all.wavenumber.data
@@ -257,6 +205,13 @@ lglst=expnlist
 cntsyaxlb='Number of observations'
 aerpyaxlb='Aerosol-affected [%]'
 tistr=''
+prop_dict={'color'     :['b','r'],
+           'line_style':[' ',' '],
+           'line_width':[1.5,1.5],
+           'marker'    :['o','^'],
+           'mark_size' :[5.,5.],
+           'legend'    :expnlist,
+           }
 
 used0_mean=usedcnts_all.exp0cnts.mean(dim='dates')
 used1_mean=usedcnts_all.exp1cnts.mean(dim='dates')
@@ -264,11 +219,17 @@ pltda=xa.concat((used0_mean,used1_mean),dim='lines').T
 
 fig,ax=plt.subplots()
 set_size(axe_w,axe_h,ax=ax,b=0.25)
-plt_x2y(pltda,cntsyaxlb,wvn,wvnlb,wvl,wvllb,colorlst,lstylelst,mrklst,tistr,lglst,0,[],ax=ax)
+fig,ax,ax2=plt_x2y(pltda,cntsyaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],ax=ax,lgloc=3)
+pltdiff=(used1_mean-used0_mean)/used0_mean*100.
+ax3=ax.twinx()
+ax3.set_ylabel('Counts Differences [%]')
+ax3.plot(pltdiff,'k',zorder=0)
+ax3.legend(['%s%s%s'%(expnlist[1],minussign,expnlist[0])],loc=1)
 
-fname=('Spec_%s_%s_cnts.%s-%s.%s' %(area,sensor,spectral_range.start,spectral_range.stop,ffmt))
+fname=('%s/Spec_%s_%s_cnts.%s-%s.%s' %(sp_savedir,area,sensor,spectral_range.start,spectral_range.stop,ffmt))
 if (fsave):
-    fig.savefig(sp_savedir+'/'+fname,dpi=quality)
+    print(fname,flush=1)
+    fig.savefig(fname,dpi=quality)
     plt.close()
 
 aerp0_mean=usedcnts_all.exp0aerp.mean(dim='dates')*100.
@@ -277,9 +238,10 @@ pltda=xa.concat((aerp0_mean,aerp1_mean),dim='lines').T
         
 fig,ax=plt.subplots()
 set_size(axe_w,axe_h,ax=ax,b=0.25)
-plt_x2y(pltda,aerpyaxlb,wvn,wvnlb,wvl,wvllb,colorlst,lstylelst,mrklst,tistr,lglst,0,[],ax=ax)
+plt_x2y(pltda,aerpyaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],ax=ax)
 
-fname=('Spec_%s_%s_aerp.%s-%s.%s' %(area,sensor,spectral_range.start,spectral_range.stop,ffmt))
+fname=('%s/Spec_%s_%s_aerp.%s-%s.%s' %(sp_savedir,area,sensor,spectral_range.start,spectral_range.stop,ffmt))
 if (fsave):
-    fig.savefig(sp_savedir+'/'+fname,dpi=quality)
+    print(fname,flush=1)
+    fig.savefig(fname,dpi=quality)
     plt.close()

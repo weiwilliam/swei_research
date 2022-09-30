@@ -75,7 +75,7 @@ sdate=2020060106
 edate=2020071018
 hint=6
 chkwvn=962.5
-nterm=0
+nterm=6
 pltvar='bcterm_mean'
 units='K'
 
@@ -104,7 +104,7 @@ elif loop=='ges':
     tlstr='OMF'
 
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
-outputpath=rootpath+'/DiagFiles/gridded'
+outputpath=rootpath+'/DiagFiles/gridded_rad'
 imgsavpath=outputpath+'/1ch/bcterm'
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)

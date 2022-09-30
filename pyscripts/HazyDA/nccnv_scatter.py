@@ -44,6 +44,7 @@ from datetime import datetime, timedelta
 import xarray as xa
 import seaborn as sns
 import pandas as pd
+from gsi_ncdiag import read_cnv_ncdiag
 
 axe_w=6 ; axe_h=6
 mpl.rc('axes',titlesize=16,labelsize=16)
@@ -52,25 +53,26 @@ mpl.rc('ytick',labelsize=16)
 mpl.rc('legend',fontsize='x-large')
 fsave=1; ffmt='png'; quality=300
 
-sfctype_list=['180','181','182','183','187']
-varlist=['tcp'] #['ps','sst','gps','q','t','uv','tcp']
-unitlist=['mb'] #['mb','K','%','g/kg','K','m/s','mb']
+sfctype_list=['180','181','182','183','187','189','196','197','198','199']
+varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
+unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
 colorlist=['b','r']
 markerlist=['*','o']
 
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
 
-sdate=2020061000
-edate=2020071018
+sdate=2020062200
+edate=2020062418
 hint=6
 bufrtype='all'
 loop='ges' #ges,anl
-useqc=0
-area='Glb'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
+useqc=1
+usebc=0
+area='TRO'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
 
-outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/scatter'
 inputpath=rootarch
+outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/scatter'
 imgsavpath=outputpath+'/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
@@ -86,6 +88,11 @@ else:
 
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero, cyclic)
+if (crosszero):
+    minlon=minlon-360.
+if (cyclic):
+    minlon=-180.
+    maxlon=180.
 
 def scatterplot_x2y2(xdata1,xdata2,xlb,ydata1,ydata2,ylb,stat1,stat2,lglst,clrlst,mkrlst,title,fname,fig=None,ax=None):
     from utils import gen_eqs_by_stats
@@ -161,59 +168,15 @@ for var in varlist:
             infile2=inputpath+'/'+explist[1]+'/'+date+'/'+cnvdfile
             if (os.path.exists(infile1) and os.path.exists(infile2)):
                 print('Processing Cnvfile: %s' %(cnvdfile))
-                ds1=xa.open_dataset(infile1)
-                ds2=xa.open_dataset(infile2)
+                #ds1=xa.open_dataset(infile1)
+                #ds2=xa.open_dataset(infile2)
             else:
                 print('%s is not existing'%(cnvdfile))
                 d=d+1
                 continue
 
-            npts1=ds1.nobs.size
-            stid1=ds1.Station_ID.data
-            rlat1=ds1.Latitude.data
-            rlon1=ds1.Longitude.data
-
-            npts2=ds2.nobs.size
-            stid2=ds2.Station_ID.data
-            rlat2=ds2.Latitude.data
-            rlon2=ds2.Longitude.data
-
-            if (crosszero):
-                rlon1[rlon1>=maxlon]=rlon1[rlon1>=maxlon]-360.
-                rlon2[rlon2>=maxlon]=rlon2[rlon2>=maxlon]-360.
-
-            iuse1=ds1.Analysis_Use_Flag.data
-            iuse2=ds2.Analysis_Use_Flag.data
-            type1=ds1.Observation_Type.data
-            type2=ds2.Observation_Type.data
-
-            dpar1=ds1.Obs_Minus_Forecast_adjusted.data
-            dpar2=ds2.Obs_Minus_Forecast_adjusted.data
-
-            obs1=ds1.Observation.data
-            obs2=ds2.Observation.data
-            mdl1=obs1-dpar1
-            mdl2=obs2-dpar2
-
-            tmpds1=xa.Dataset({'rlon':(['obsloc'],rlon1),
-                               'rlat':(['obsloc'],rlat1),
-                               'iuse':(['obsloc'],iuse1),
-                               'obs':(['obsloc'],obs1),
-                               'mdl':(['obsloc'],mdl1),
-                               'stid':(['obsloc'],stid1),
-                               'obstype':(['obsloc'],type1),
-                               },
-                               coords={'obsloc':np.arange(npts1)})
-
-            tmpds2=xa.Dataset({'rlon':(['obsloc'],rlon2),
-                               'rlat':(['obsloc'],rlat2),
-                               'iuse':(['obsloc'],iuse2),
-                               'obs':(['obsloc'],obs2),
-                               'mdl':(['obsloc'],mdl2),
-                               'stid':(['obsloc'],stid2),
-                               'obstype':(['obsloc'],type2),
-                               },
-                               coords={'obsloc':np.arange(npts2)})
+            tmpds1=read_cnv_ncdiag(infile1)
+            tmpds2=read_cnv_ncdiag(infile2)
             
             if (date==dlist[0]):
                 scatda1=tmpds1
@@ -232,8 +195,8 @@ for var in varlist:
                            &(scatda2.rlat>minlat)&(scatda2.rlat<maxlat))
         
         if (useqc):
-            mask1=(mask1)&(scatda1.iuse==1)
-            mask2=(mask2)&(scatda2.iuse==1)
+            mask1=(mask1)&(scatda1.qcflag==1)
+            mask2=(mask2)&(scatda2.qcflag==1)
 
         if (bufrtype!='all'):
             mask1=(mask1)&(scatda1.obstype==int(bufrtype))
@@ -241,11 +204,15 @@ for var in varlist:
         
         cnts1=np.count_nonzero(mask1)
         cnts2=np.count_nonzero(mask2)
-         
+        
         pltobs1=scatda1.obs[mask1]
         pltobs2=scatda2.obs[mask2]
-        pltmdl1=scatda1.mdl[mask1]
-        pltmdl2=scatda2.mdl[mask2]
+        if (usebc):
+           pltmdl1=(scatda1.obs-scatda1.omb_bc)[mask1]
+           pltmdl2=(scatda2.obs-scatda2.omb_bc)[mask2]
+        else:
+           pltmdl1=(scatda1.obs-scatda1.omb_nbc)[mask1]
+           pltmdl2=(scatda2.obs-scatda2.omb_nbc)[mask2]
 
         pltmean1=np.mean(pltobs1-pltmdl1)
         pltmean2=np.mean(pltobs2-pltmdl2)
@@ -265,6 +232,7 @@ for var in varlist:
                                                            expnlist[0],pltmean1,expnlist[1],pltmean2)
         fname='%s/%s_%s_%s_%s_bufr%s.%s_%s.%s_%s.%s'%(imgsavpath,area,var.upper(),tlstr,qcflg,
                                                    bufrtype,cnts1,cnts2,sdate,edate,ffmt)
+        print(fname,flush=1)
 
         fig,ax=plt.subplots()
         set_size(axe_w,axe_h,ax=ax,l=0.15)
