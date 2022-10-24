@@ -2,6 +2,6 @@
 __all__ = ['read_dms']
 import numpy as np
 
-def read_dms(dmskey)
+def read_dms(dmskey):
     tmp=np.fromfile(dmskey,dtype='<d')
     return tmp

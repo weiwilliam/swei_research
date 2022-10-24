@@ -25,6 +25,7 @@ def setup_cmap(name,idxlst):
     elif (os_name=='Windows'):
         rootpath='F:\GoogleDrive_NCU\Albany'
     elif (os_name=='Linux'):
+        rootpath=os.getenv('GitHome')+'/pyscripts'
         if (os.path.exists('/glade')):
             rootpath='/glade/u/home/swei/research/pyscripts'
         if (os.path.exists('/scratch')):

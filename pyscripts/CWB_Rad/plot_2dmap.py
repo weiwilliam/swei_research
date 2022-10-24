@@ -13,6 +13,7 @@ import cartopy.feature as cft
 from utils import setup_cmap, ndate
 from plot_utils import setupax_2dmap,set_size
 from TCo_latlon_def import define_latlon
+from read_dms import read_dms
 import setuparea as setarea
 
 # Plotting setup
@@ -24,25 +25,40 @@ mpl.rc('legend',fontsize='large')
 axe_w=6; axe_h=4
 quality=300
 
-inputpath='/glade/work/dfgrogan/UFS/WM_DTAER/AER'
+rootpath='/nwpr/gfs/xa30/data'
+dmspath=rootpath+'/dmsdb/TCo383L72.ufs'
 
-sdate=2020082200
-edate=2020092118
-hint=6
-pltvar='AODANA'
-area='NAmer'
+expdms=['STOC','NAER']
+expjcap=[383,383]
+
+dmstag='GIMG'
+if dmstag=='GIMG':
+   keytag='GI0G'
+   grdtag='H1191936'
+   
+sdate=2022050100
+edate=2022050100
+cycint=6
+fhmax=24
+fhint=6
+
+pltvar='S00300'
+area='Glb'
 pltave=0 # 0: single cycle only 1: time average
 tkfreq=1
 
-#outputpath=rootpath+'/Dataset/MERRA-2/2dmap/AOD_new/'+area
-#if ( not os.path.exists(outputpath) ):
-#    os.makedirs(outputpath)
-#
+outputpath=rootpath+'/Images/2dmap/'+area
+if ( not os.path.exists(outputpath) ):
+    os.makedirs(outputpath)
+
+fhrlist=list(np.arange(0,fhmax+.1,fhint))
+if pltvar[:3]=='S00':
+   cnlvs=np.array((0,100,200,300,400,500,600,700,800,900,1000,1100,1200))
 #cnlvs=np.array((0., 0.05, 0.1, 0.15, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 2.5))
-#clridx=np.array((0,2,4,7,8,9,10,12,14,15,16,17,18))
-#clrmap=setup_cmap('precip3_16lev',clridx)
-#aer_norm = mpcrs.BoundaryNorm(cnlvs,len(clridx),extend='both')
-#cblb='Analysis AOD'
+clridx=np.array((0,2,4,7,8,9,10,12,14,15,16,17,18))
+clrmap=setup_cmap('precip3_16lev',clridx)
+clrnorm = mpcrs.BoundaryNorm(cnlvs,len(clridx),extend='both')
+cblb='Net radiation flux at surface W/m^2'
 
 # Constant configuration
 proj=ccrs.PlateCarree()
@@ -60,12 +76,11 @@ cornerll=[minlat,maxlat,minlon,maxlon]
 
 date1=pd.to_datetime(sdate,format="%Y%m%d%H")
 date2=pd.to_datetime(edate,format="%Y%m%d%H")
-delta = timedelta(hours=hint)
+delta = timedelta(hours=cycint)
 dates = pd.date_range(start=date1, end=date2, freq=delta)
 
 lat,lon=define_latlon(jcap=383)
-
-sys.exit(0)
+lon=(lon+180)%360-180
 
 tnum=0
 dlist=[]
@@ -73,59 +88,89 @@ cdate=sdate
 while (cdate<=edate):
     dlist.append(str(cdate))
     tnum=tnum+1
-    cdate=ndate(hint,cdate)
+    cdate=ndate(cycint,cdate)
 
 dates_count=0
 for date in dlist:
     yy=date[:4] ; mm=date[4:6] ; dd=date[6:8] ; hh=date[8:10]
-    pdy=date[:8]
-    if (yy=='2020' and mm=='09'):
-       m2ind='401'
+    dtg=date[2:10]
+
+    eidx=0
+    for exp in expdms:
+        dtgdir=exp+dtg+dmstag
+        inputpath=dmspath+'/'+dtgdir
+        fidx=0
+        for fhr in fhrlist:
+            fhrdir='%s%.6i' %(date,fhr)
+            keyfile='%s%s%s' %(pltvar,keytag,grdtag)
+            indmskey=inputpath+'/'+fhrdir+'/'+keyfile
+            tmp=read_dms(indmskey).reshape(lat.size,lon.size)
+            tmpds=xa.Dataset({'pltvar':(['lat','lon'],tmp)},coords={'lat':lat,'lon':lon})
+            tmpds=tmpds.sortby('lon')
+            if fidx==0:
+               fhrds=tmpds
+            else:
+               fhrds=xa.concat((fhrds,tmpds),dim='fhr')
+            fidx+=1
+        if eidx==0:
+           expds=fhrds
+        else:
+           expds=xa.concat((expds,fhrds),dim='exp')
+        eidx+=1
+    if dates_count==0:
+       allds=expds
     else:
-       m2ind='400'
-# MERRA2_401.inst3_3d_aer_Nv.20200916_12Z.nc4
-    infile=inputpath+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'_'+hh+'Z.nc4'
-    ds=xa.open_dataset(infile)
-    tmpvar=ds[pltvar]
-    if (area!='Glb'):
-       tmpvar=tmpvar.sel(lon=slice(minlon,maxlon),lat=slice(minlat,maxlat))
-
-    outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
-    
-    pltdata=tmpvar.sel(time=ds.time[0])
-    fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-    set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-    cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-    ax.set_title(date,loc='left')
-    plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-                 fraction=0.045,aspect=40,pad=0.08,label=cblb)
-    if (area=='NAmer'):
-       ax.add_feature(cft.STATES,zorder=2)
-    print(outname)
-    fig.savefig(outname,dpi=quality)
-    plt.close()
-
-    if (pltave):
-       if (dates_count==0):
-          var=tmpvar
-       else:
-          var=xa.concat((var,tmpvar),dim='time')
-
-       if (date==str(edate)):
-          outname='%s/%s_%s.mean.%s_%s.png' %(outputpath,area,pltvar,sdate,edate)
-          title_str='%s-%s'%(sdate,edate)
-
-          pltdata=var.mean(dim='time')
-          fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-          set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-          cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-          ax.set_title(title_str,loc='left')
-          plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-                       fraction=0.045,aspect=40,pad=0.08,label=cblb)
-          if (area=='NAmer'):
-             ax.add_feature(cft.STATES,zorder=2)
-          print(outname)
-          fig.savefig(outname,dpi=quality)
-          plt.close()
- 
+       allds=xa.concat((allds,expds),dim='time')
     dates_count+=1
+
+allds=allds.assign_coords({'exp':expdms,'fhr':fhrlist,'time':dlist})
+if area!='Glb':
+   tmpds=allds.sel(lon=slice(minlon,maxlon),lat=slice(minlat,maxlat))
+
+for date in dlist:
+    for fhr in fhrlist:
+        pltdata=allds.sel(time=date,fhr=fhr)
+        for exp in expdms:
+            plttmp=pltdata.sel(exp=exp)
+            outname='%s/%s_%s_%s.%s_f%.3i.png' %(outputpath,area,exp,pltvar,date,fhr)
+
+            fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+            set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+            cn=ax.contourf(plttmp.lon,plttmp.lat,plttmp.pltvar.data,levels=cnlvs,norm=clrnorm,cmap=clrmap,extend='both')
+            #cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
+            ax.set_title(date,loc='left')
+            plt.colorbar(cn,ax=ax,orientation='horizontal', #ticks=cnlvs[::tkfreq],
+                         fraction=0.045,aspect=40,pad=0.08,label=cblb)
+            if (area=='NAmer'):
+               ax.add_feature(cft.STATES,zorder=2)
+            print(outname,flush=1)
+            fig.savefig(outname,dpi=quality)
+            plt.close()
+
+diff=pltdata.diff('exp').sel(exp=pltdata.exp[1])
+
+
+#
+#    if (pltave):
+#       if (dates_count==0):
+#          var=tmpvar
+#       else:
+#          var=xa.concat((var,tmpvar),dim='time')
+#
+#       if (date==str(edate)):
+#          outname='%s/%s_%s.mean.%s_%s.png' %(outputpath,area,pltvar,sdate,edate)
+#          title_str='%s-%s'%(sdate,edate)
+#
+#          pltdata=var.mean(dim='time')
+#          fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+#          set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+#          cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
+#          ax.set_title(title_str,loc='left')
+#          plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
+#                       fraction=0.045,aspect=40,pad=0.08,label=cblb)
+#          if (area=='NAmer'):
+#             ax.add_feature(cft.STATES,zorder=2)
+#          print(outname)
+#          fig.savefig(outname,dpi=quality)
+#          plt.close()
+ 
