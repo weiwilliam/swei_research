@@ -1,22 +1,16 @@
 import sys, os, platform
-os_name=platform.system()
-if (os_name=='Darwin'):
+machine='S4'
+if (machine=='MBP'):
     rootpath='/Users/weiwilliam'
     rootarch='/Volumes/WD2TB/ResearchData'
-elif (os_name=='Windows'):
+elif (machine=='Desktop'):
     rootpath='F:\GoogleDrive_NCU\Albany'
     rootarch='F:\ResearchData'
     rootgit='F:\GitHub\swei_research'
-elif (os_name=='Linux'):
-    if (os.path.exists('/scratch1')):
-        rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/home/Shih-wei.Wei/research'
-    elif (os.path.exists('/glade')):
-        rootpath='/glade/work/swei/output/images'
-        rootarch='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei/ResearchData'
-        rootgit='/glade/u/home/swei/research'
-sys.path.append(rootgit+'/pyscripts/functions')
+elif (machine=='S4'):
+    rootarch='/data/users/swei/ResearchData/Prospectus/AeroObsStats/nc_diag'
+    rootpath='/data/users/swei/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
+    rootgit='/home/swei/research'
 from utils import setup_cmap, ndate
 from plot_utils import setupax_2dmap,set_size
 import setuparea as setarea
@@ -45,10 +39,10 @@ outputpath=rootpath+'/Dataset/MERRA-2/2dmap/AOD'
 if ( not os.path.exists(outputpath) ):
     os.makedirs(outputpath)
 
-sdate=2020082200
-edate=2020082218
+sdate=2020061000
+edate=2020061018
 hint=6
-pltvar='DUEXTTAU'
+pltvar='TOTEXTTAU'
 area='Glb'
 pltall=0 # 0: total only 1: sub species included
 #m2tag='inst3_2d_gas_Nx' #Total AOD
@@ -107,27 +101,33 @@ for date in dlist:
     if (pdy!=p_pdy):
        p_pdy=pdy 
        in_url=m2_url+'/'+yy+'/'+mm+'/MERRA2_'+m2ind+'.'+m2tag+'.'+pdy+'.nc4'
-       session = setup_session('username', 'password', check_url=in_url)
-       store = xa.backends.PydapDataStore.open(in_url, session=session)
-       ds=xa.open_dataset(store)
+       #session = setup_session('username', 'password', check_url=in_url)
+       #store = xa.backends.PydapDataStore.open(in_url, session=session)
+       ds=xa.open_dataset(in_url) #,engine='zarr')
        print('Succeed accessing MERRA2 OPeNDAP dataset')
-    nc_cdate = np.datetime64('%s-%s-%sT%s:30:00'%(yy,mm,dd,hh))
-    ds=ds.sel(time=nc_cdate)
-
+    #nc_cdate = np.datetime64('%s-%s-%sT%s:30:00'%(yy,mm,dd,hh))
+    #ds=ds.sel(time=nc_cdate)
+    
     if (area!='Glb'):
        ds=ds.sel(lat=slice(minlat,maxlat),lon=slice(minlon,maxlon))
 
-    outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
-    
-    pltdata=ds[pltvar]
-    fig,ax=setupax_2dmap(cornerll,area,proj,lbsize=16.)
-    set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
-    cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-    ax.set_title(date,loc='left')
-    plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
-                 fraction=0.045,aspect=40,pad=0.08,label=cblb)
-    print(outname)
-    fig.savefig(outname,dpi=quality)
-    plt.close()
+    if dates_count==0:
+       pltds=ds
+    else:
+       pltds=xa.concat((pltds,ds),dim='time')
 
     dates_count+=1
+
+outname='%s/%s_%s.%s.png' %(outputpath,area,pltvar,date)
+
+pltdata=pltds[pltvar].mean(dim='time')
+fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=16.)
+set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
+ax.set_title(date,loc='left')
+plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
+             fraction=0.045,aspect=40,pad=0.08,label=cblb)
+print(outname,flush=1)
+fig.savefig(outname,dpi=quality)
+plt.close()
+

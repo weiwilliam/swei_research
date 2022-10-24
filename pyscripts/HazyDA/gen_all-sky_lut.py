@@ -37,7 +37,7 @@ import pandas as pd
 # Plotting setup
 sensor='iasi_metop-a'
 lutfmt='csv'
-ver='v5'
+ver='v6'
 nchs=616
 
 # Data path setup
@@ -54,9 +54,9 @@ filter = (lutdf.Aer_sen==1.)&(lutdf.iuse==1.)
 nrows=lutdf.shape[0]
 #lutdf['ich']=np.arange(1,nrows+1)
 
-tmpdf=lutdf[['ich','Aeff_1','Aeff_2','SD_max']]
+tmpdf=lutdf[['ich','Aeff_1','Aeff_2','SD_max','Slope','Intercept']]
 tmpdf=tmpdf.loc[filter,:]
 #tmpdf=tmpdf.set_index('nuchan')
 outputfile=lutpath+'/Ae_dep_SD.'+ver+'.txt'
-np.savetxt(outputfile,tmpdf.values,fmt='%5i  %6.3f  %6.3f  %6.3f')
+np.savetxt(outputfile,tmpdf.values,fmt='%5i  %6.3f  %6.3f  %6.3f  %6.3f  %6.3f')
         

@@ -115,9 +115,6 @@ delta = timedelta(hours=hint)
 
 dates = pd.date_range(start=date1, end=date2, freq=delta)
 
-xdate2= date2+delta
-xdates= mdates.drange(date1, xdate2, delta)
-
 outpath=rootpath+'/archive/HazyDA/gridded_diag'
 archdir0=rootarch+'/'+explist[0]
 

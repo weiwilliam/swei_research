@@ -52,16 +52,19 @@ axe_w=6 ; axe_h=3 ; quality=300
 
 # Plotting setup
 sdate=2020061000
-edate=2020061018
+edate=2020071018
 aertype='Dust'
 hint=6
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
 sensor='iasi_metop-a'
-spectral_range=slice(700,1300)
-loop='ges' #ges,anl
+spectral_range=slice(750,1300)
+loop='anl' #ges,anl
 usebc=1
-pltbx=1 # plot 2d histogram
+useqc=-1
+usemsk=-1
+plt_sp=1 # plot spectrum
+fill_std=0
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -76,10 +79,41 @@ else:
     bcflg='nobc'
 
 if (loop=='ges'):
-   ylb='OMB [K]'
+   ylb='OMFs [K]'
 else:
-   ylb='OMA [K]'
-xlb='Wavenumber [$cm^{-1}$]'
+   ylb='OMAs [K]'
+
+if (usebc):
+    bcflg='bc'
+    bc_ylbstr='w/ BC'
+else:
+    bcflg='nobc'
+    bc_ylbstr='w/o BC'
+
+if (useqc==-2):
+    qcflg='noqc'
+elif (useqc==-1):
+    qcflg='qc'
+else:
+    qcflg='qc%s'%(useqc)
+
+rmflier=1
+wateronly=0
+if (wateronly):
+    waterflg='water'
+else:
+    waterflg='all'
+if (usemsk==-1):
+    mskflg='omsk'
+elif (usemsk==0):
+    mskflg='msk0'
+elif (usemsk==1):
+    mskflg='msk1'
+elif (usemsk==2):
+    mskflg='imsk'
+elif (usemsk==3):
+    mskflg='iaer'
+
 
 # Data path setup
 lutpath=rootpath+'/AlbanyWork/Prospectus/Experiments/AeroObsStats/SD_LUT'
@@ -87,9 +121,9 @@ outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/rad
 archdir0=rootarch+'/'+explist[0]
 archdir1=rootarch+'/'+explist[1]
 
-savedir=outpath+'/boxplot/'+area
-if ( not os.path.exists(savedir) ):
-    os.makedirs(savedir)
+imgsavpath=outpath+'/spectrum/innov/'+area
+if ( not os.path.exists(imgsavpath) ):
+    os.makedirs(imgsavpath)
 
 syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
 sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
@@ -118,17 +152,16 @@ for date in dlist:
 
     if (os.path.exists(infile0) and 
         os.path.exists(infile1)):
-        print('Processing Radfile: %s' %(raddfile1))
+        print('Processing Radfile: %s' %(raddfile1),flush=1)
         if (dates_count==0):
            ds0=xa.open_dataset(infile0)
            ds0=ds0.swap_dims({"nchans":"wavenumber"})
            chkwvn_list=ds0.wavenumber.sel(wavenumber=spectral_range)[ds0.use_flag.sel(wavenumber=spectral_range)==1]
         dates_count+=1
     else:
-        print('%s is not existing'%(raddfile1))
+        print('%s is not existing'%(raddfile1),flush=1)
         continue
 
-    # Observation lat/lon from exp 0 (baseline)
     tmpds0=read_rad_ncdiag(infile0,chkwvn=chkwvn_list)
     tmpds1=read_rad_ncdiag(infile1,chkwvn=chkwvn_list)
       
@@ -139,8 +172,10 @@ for date in dlist:
         ds_all0=xa.concat((ds_all0,tmpds0),dim='obsloc')
         ds_all1=xa.concat((ds_all1,tmpds1),dim='obsloc')
 
-total_obscounts=ds_all1.obsloc.size
-ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
+cnts0=ds_all0.obsloc.size
+cnts1=ds_all1.obsloc.size
+ds_all0=ds_all0.assign_coords(obsloc=np.arange(cnts0))
+ds_all1=ds_all1.assign_coords(obsloc=np.arange(cnts1))
 
 if (usebc):
     omb0=ds_all0.omb_bc
@@ -149,84 +184,81 @@ else:
     omb0=ds_all0.omb_nbc
     omb1=ds_all1.omb_nbc
 
-good_msk0  =(ds_all0.qcflag==0.)
-gross_msk0 =(ds_all0.qcflag==3.)
-cld_msk0   =(ds_all0.qcflag==7.)
-tzr_msk0   =(ds_all0.qcflag==10.)
-sfcir_msk0 =(ds_all0.qcflag==53.)
-passed_msk0=(good_msk0)
-# ori_msk=(good_msk)|(aer_msk)|(bust_msk)|(tzr_msk)
+mask0=~np.isnan(ds_all0.rlon)
+mask1=~np.isnan(ds_all1.rlon)
 
-good_msk1  =(ds_all1.qcflag==0.)
-gross_msk1 =(ds_all1.qcflag==3.)
-cld_msk1   =(ds_all1.qcflag==7.)
-tzr_msk1   =(ds_all1.qcflag==10.)
-aer_msk1   =(ds_all1.qcflag==13.)
-sfcir_msk1 =(ds_all1.qcflag==53.)
-bust_msk1  =(ds_all1.qcflag==55.)
-passed_msk1=(good_msk1)|(aer_msk1)
-# ori_msk=(good_msk)|(aer_msk)|(bust_msk)|(tzr_msk)
+if (useqc==-2):
+    pass
+elif (useqc==-1):
+    mask0=(mask0)&((ds_all0.qcflag==0)|(ds_all0.qcflag==13))
+    mask1=(mask1)&((ds_all1.qcflag==0)|(ds_all1.qcflag==13))
+else:
+    mask0=(mask0)&((ds_all0.qcflag==useqc))
+    mask1=(mask1)&((ds_all1.qcflag==useqc))
 
-pltmsk0=passed_msk0
-pltmsk1=passed_msk1
+if (usemsk==-1):
+    pltmsk0=mask0
+    pltmsk1=mask1
+elif (usemsk==0):
+    pltmsk0=mask0
+    pltmsk1=mask0
+elif (usemsk==1):
+    pltmsk0=mask1
+    pltmsk1=mask1
+elif (usemsk==2):
+    pltmsk0=mask0&mask1
+    pltmsk1=mask0&mask1
+elif (usemsk==3):
+    pltmsk0=mask0&mask1&(ds_all1.qcflag==13)
+    pltmsk1=mask0&mask1&(ds_all1.qcflag==13)
 
-if (pltbx):            
-    pltda_x0=xa.where(pltmsk0,omb0,np.nan)
-    pltda_x0=pltda_x0.assign_coords(exp=expnlist[0])
-    pltda_x1=xa.where(pltmsk1,omb1,np.nan)
-    pltda_x1=pltda_x1.assign_coords(exp=expnlist[1])
+print('plot counts: %s, %s' %(np.count_nonzero(pltmsk0),np.count_nonzero(pltmsk1)))
 
-    chnlsize=pltda_x0.wavenumber.size
-    if ( chnlsize > 30 ):
-       chxint=6
-       chnlseg=5
-       chidxlist=np.ceil(np.linspace(0,chnlsize,chnlseg+1))
+wvn=ds_all0.wavenumber.data
+wvl=1e4/wvn
+wvnlb='Wavenumber [$cm^{-1}$]'
+wvllb='Wavelength [µm]'
+prop_dict={'color'     :['b','r'],
+           'line_style':[' ',' '],
+           'line_width':[1.5,1.5],
+           'marker'    :['o','v'],
+           'mark_size' :[5.,5.],
+           'fillstyle' :['none','none'],
+           'legend'    :expnlist,
+           }
+tistr=''
 
-       for s in np.arange(chnlseg):
-           sidx=int(chidxlist[s]); eidx=int(chidxlist[s+1])
-           tmpda_x0=pltda_x0.sel(wavenumber=pltda_x0.wavenumber.data[sidx:eidx])
-           tmpda_x1=pltda_x1.sel(wavenumber=pltda_x1.wavenumber.data[sidx:eidx])
+if (plt_sp):            
+   pltda_x0=xa.where(pltmsk0,omb0,np.nan)
+   pltda_x1=xa.where(pltmsk1,omb1,np.nan)
 
-           pltdf_x0=tmpda_x0.to_dataframe(ylb)
-           pltdf_x1=tmpda_x1.to_dataframe(ylb)
-    
-           boxda=pd.concat((pltdf_x0,pltdf_x1))
-           boxda=boxda.reset_index(level='wavenumber')
-           boxda=boxda.rename(columns={'wavenumber':xlb})
-           
-           fig,ax=plt.subplots()
-           set_size(axe_w,axe_h,b=0.18)
-           ax=sb.boxplot(x=xlb,y=ylb,data=boxda,hue='exp',showfliers=False,whis=[5,95])
-           ax.xaxis.set_ticks(np.arange(0,tmpda_x0.wavenumber.size,chxint))
-           ax.xaxis.set_ticklabels(tmpda_x0.wavenumber.data[::chxint])
-           ax.hlines(0,0,1,transform=ax.get_yaxis_transform(),colors='grey',linewidth=0.4)
-           
-           if (fsave):
-               fname=('%s/BOX_%s_%s_%s.seg%s.%s'
-                       %(savedir,sensor,loop,bcflg,s,ffmt))
-               print(fname)
-               fig.savefig(fname,dpi=quality)
-               plt.close()
-    else:
-       chxint=5
-       pltdf_x0=pltda_x0.to_dataframe(ylb)
-       pltdf_x1=pltda_x1.to_dataframe(ylb)
+   mean0=pltda_x0.mean(dim='obsloc',skipna=1)
+   mean1=pltda_x1.mean(dim='obsloc',skipna=1)
 
-       boxda=pd.concat((pltdf_x0,pltdf_x1))
-       boxda=boxda.reset_index(level='wavenumber')
-       boxda=boxda.rename({'wavenumber':xlb})
+   stdv0=pltda_x0.std(dim='obsloc',skipna=1)
+   stdv1=pltda_x1.std(dim='obsloc',skipna=1)
+   
+   rmse0=np.sqrt((pltda_x0*pltda_x0).mean(dim='obsloc',skipna=1))
+   rmse1=np.sqrt((pltda_x1*pltda_x1).mean(dim='obsloc',skipna=1))
 
+   for stat_type in ['Mean','RMS']:
        fig,ax=plt.subplots()
-       set_size(axe_w,axe_h,b=0.18)
-       ax=sb.boxplot(x=xlb,y=ylb,data=boxda,hue='exp',showfliers=False,whis=[5,95])
-       ax.xaxis.set_ticks(np.arange(0,pltda_x0.wavenumber.size,chxint))
-       ax.xaxis.set_ticklabels(pltda_x0.wavenumber.data[::chxint])
-       ax.hlines(0,0,1,transform=ax.get_yaxis_transform(),colors='grey',linewidth=0.4)
+       set_size(axe_w,axe_h,ax=ax,b=0.25,r=0.9)
+       yaxlb='%s %s' %(stat_type,ylb)
 
+       if stat_type=='Mean':
+          pltds=xa.Dataset({'pltdata':(['exps','channels'],xa.concat((mean0,mean1),dim='exps').data),
+                            'pltstdv':(['exps','channels'],xa.concat((stdv0,stdv1),dim='exps').data),
+                            },coords={'exps':explist,'channels':chkwvn_list.data})
+          plt_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],fill_std=fill_std,ax=ax)
+       elif stat_type=='RMS':
+          pltds=xa.Dataset({'pltdata':(['exps','channels'],xa.concat((rmse0,rmse1),dim='exps').data),
+                            },coords={'exps':explist,'channels':chkwvn_list.data})
+          plt_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],plot_diff=1,ax=ax)
+   
        if (fsave):
-           fname=('%s/BOX_%s_%s_%s.allchnl.%s'
-                   %(savedir,sensor,loop,bcflg,ffmt))
-           print(fname)
-           fig.savefig(fname,dpi=quality)
-           plt.close()
+          outname='%s/%s_%s_%s_%s_%s.%s_%s.%s' %(imgsavpath,stat_type,sensor,loop,qcflg,mskflg,sdate,edate,ffmt)
+          print(outname,flush=1)
+          fig.savefig(outname,dpi=quality)
+          plt.close()
 

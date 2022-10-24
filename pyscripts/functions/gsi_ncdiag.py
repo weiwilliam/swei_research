@@ -92,10 +92,11 @@ def read_rad_ncdiag(infile,**kwargs):
 
     tmpds=xa.Dataset(data_dict,coords=coords_dict)
     
-    if (type(select_wavenumber)==list or
-        type(select_wavenumber)==float or 
-        select_wavenumber.size>0):
-        tmpds=tmpds.sel(wavenumber=select_wavenumber)
+    if select_wavenumber is not None: 
+       if (type(select_wavenumber)==list or
+           type(select_wavenumber)==float or 
+           select_wavenumber.size>0):
+          tmpds=tmpds.sel(wavenumber=select_wavenumber)
 
     return tmpds
 

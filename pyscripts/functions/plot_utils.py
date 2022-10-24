@@ -2,6 +2,7 @@ __all__=['set_size','pltprof','plthist','plt_x2y','setupax_2dmap','plt_x2cf','pl
 
 import matplotlib.pyplot as plt
 import numpy as np
+minussign=u'\u2212'
 
 def set_size(w,h, ax=None, l=None, r=None, t=None, b=None):
     """ w, h: width, height in inches """
@@ -82,10 +83,25 @@ def setupax_2dmap(cornerlatlon,area,proj,lbsize=None):
 
     return fig,ax,gl
 
-def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,fig=None,ax=None,lgloc=None):
+def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,**kwargs):
+    fig=kwargs.get('fig',None)
+    ax=kwargs.get('ax',None)
     if not fig: fig=plt.gcf()
     if not ax: ax=plt.gca()
-    if not lgloc: lgloc=0
+
+    lgloc=kwargs.get('lgloc',0)
+    fill_std=kwargs.get('fill_std',False)
+    if 'pltstdv' not in yval.keys() and fill_std:
+       print('stdv is not available',flush=1)
+       fill_std=False
+    plot_diff=kwargs.get('plot_diff',False)
+
+    pltdata=yval.pltdata.data.swapaxes(0,1)
+    if plot_diff:
+       datadiff=pltdata[:,1]-pltdata[:,0]
+    if fill_std:
+       pltstdv=yval.pltstdv.data.swapaxes(0,1)
+
     xaxis=np.arange(x1val.size)
     if (yinvert):
        ax.invert_yaxis()
@@ -95,15 +111,24 @@ def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,fig=Non
     mrker_list=prop_dict['marker']
     mksiz_list=prop_dict['mark_size']
     lgend_list=prop_dict['legend']
-    ax.set_prop_cycle(color=color_list,linestyle=lnsty_list,linewidth=lnwid_list,marker=mrker_list,markersize=mksiz_list)
+    flsty_list=prop_dict['fillstyle']
+    ax.set_prop_cycle(color=color_list,linestyle=lnsty_list,linewidth=lnwid_list,
+                      marker=mrker_list,markersize=mksiz_list,fillstyle=flsty_list)
+
     ax.set_xlabel(x1lb)
     ax.set_ylabel(ylb)
     ax.set_title(title,loc='left')
     ax.set_xlim(xaxis[0],xaxis[-1])
-    ax.grid()
-    ax.plot(xaxis,yval)
+    ax.grid(axis='x')
+    ax.plot(xaxis,pltdata)
+    if fill_std:
+       for i in np.arange(pltdata.shape[1]):
+           tmpdata=pltdata[:,i]; tmpstdv=pltstdv[:,i]
+           ax.fill_between(xaxis,tmpdata-1*tmpstdv,tmpdata+1*tmpstdv,color=color_list[i],alpha=0.2)
+
     if (len(xrefs)!=0):
        ax.vlines(xrefs,0,1,transform=ax.get_xaxis_transform(),linestyle='dashed',linewidth=1.)
+
     xtickspos=ax.get_xticks()
     x1labels=[]
     for n in xtickspos:
@@ -125,6 +150,13 @@ def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,fig=Non
     ax2.xaxis.set_label_position('bottom')
     ax2.spines['bottom'].set_position(('outward', 48))
     ax2.set_xlabel(x2lb)
+
+    if plot_diff:
+       ax3=ax.twinx()
+       ax3.plot(xaxis,datadiff,'--k')
+       ax3.set_xlabel('%s%s%s' %(lgend_list[1],minussign,lgend_list[0]))
+       ax3.hlines(0.,0,1,transform=ax3.get_yaxis_transform(),colors='grey',linewidth=0.4,linestyle='dashed')
+
     return fig,ax,ax2
 
 def plt_x2cf(zval,yval,ylb,x1val,x1lb,x2val,x2lb,cnlvs,clrmap,cnnorm,cbasp,cblb,title,outname,yinvert,fig=None,ax=None):

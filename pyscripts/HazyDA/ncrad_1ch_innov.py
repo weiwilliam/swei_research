@@ -30,6 +30,7 @@ sys.path.append(rootgit+'/pyscripts/functions')
 import setuparea as setarea
 from utils import ndate 
 from plot_utils import set_size
+from gsi_ncdiag import read_rad_ncdiag
 from datetime import datetime
 from datetime import timedelta
 import matplotlib as mpl
@@ -59,7 +60,7 @@ expnlist=['CTL','AER']
 sensor='iasi_metop-a'
 units='K'
 
-sdate=2020060106
+sdate=2020061000
 edate=2020071018
 hint=6
 chkwvn=962.5
@@ -70,9 +71,10 @@ print(area,minlat,maxlat,minlon,maxlon,crosszero,cyclic)
 
 loop='ges' #ges,anl
 usebc=1
-useqc=0
+# -2: no qc, -1: qc, other: flag
+useqc=-1
 # -1: exp self msk, 0: use first exp msk, 1: use second exp msk 2: intersection of both exp (useqc=0)
-usemsk=2 
+usemsk=3
 
 if loop=='anl':
    lpstr='OMA'
@@ -107,8 +109,10 @@ elif (usemsk==1):
     mskflg='msk1'
 elif (usemsk==2):
     mskflg='imsk'
+elif (usemsk==3):
+    mskflg='iaer'
 
-imgsavpath=outputpath+'/DiagFiles/rad/1ch_innov/'+area
+imgsavpath=outputpath+'/DiagFiles/rad/1ch/omb/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
     
@@ -122,9 +126,6 @@ date2 = datetime(eyy,emm,edd,ehh)
 delta = timedelta(hours=hint)
 
 dates = pd.date_range(start=date1, end=date2, freq=delta)
-
-xdate2= date2+delta
-xdates= mdates.drange(date1, xdate2, delta)
 
 rule = rrulewrapper(DAILY, byhour=6, interval=5)
 loc = RRuleLocator(rule)
@@ -148,70 +149,20 @@ for date in dlist:
         os.path.exists(infile1) ):
         print('Processing Radfile: %s' %(raddfile),flush=1)
         ds0=xa.open_dataset(infile0)
-        ds1=xa.open_dataset(infile1)
-        # npts0=ds0.obsloc.size
         npts0=int(ds0.nobs.size/ds0.nchans.size)
-        npts1=int(ds1.nobs.size/ds1.nchans.size)
         nchs0=ds0.nchans.size
-        nchs1=ds1.nchans.size
         if (idx==0):
-           pltdates=dates[idx]
+           avaldates=dates[idx]
         else:
-           pltdates=np.append(pltdates,dates[idx])
+           avaldates=np.append(avaldates,dates[idx])
         idx+=1
     else:
         print('%s is not existing'%(raddfile),flush=1)
         idx+=1
         continue
 
-
-    # Observation lat/lon from exp 0 (baseline)
-    rlat0=np.reshape(ds0.Latitude.values,(npts0,nchs0))
-    rlon0=np.reshape(ds0.Longitude.values,(npts0,nchs0))
-    qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
-    #obs0=np.reshape(ds0.Observation.values,(npts0,nchs0))
-    sim0=np.reshape(ds0.Simulated_Tb.values,(npts0,nchs0))
-    clr0=np.reshape(ds0.Clearsky_Tb.values,(npts0,nchs0))
-    varinv0=np.reshape(ds0.Inverse_Observation_Error.values,(npts0,nchs0))
-    sim_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
-    sim_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
-    obs0=sim_nbc0+sim0
-    tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0[:,0]),
-                      'rlat':(['obsloc'],rlat0[:,0]),
-                      'qcflag':(['obsloc','wavenumber'],qcflags0),
-                       'tb_obs':(['obsloc','wavenumber'],obs0),
-                       'tb_sim':(['obsloc','wavenumber'],sim0),
-                       'tb_clr':(['obsloc','wavenumber'],clr0),
-                      'varinv':(['obsloc','wavenumber'],varinv0),
-                      'omb_bc':(['obsloc','wavenumber'],sim_bc0),
-                      'omb_nbc':(['obsloc','wavenumber'],sim_nbc0)},
-                      coords={'obsloc':np.arange(npts0),
-                             'wavenumber':ds0.wavenumber.values})
-    tmpds0=tmpds0.sel(wavenumber=chkwvn)
-
-    # Observation lat/lon from exp 1 (test)
-    rlat1=np.reshape(ds1.Latitude.values,(npts1,nchs1))
-    rlon1=np.reshape(ds1.Longitude.values,(npts1,nchs1))
-    qcflags1=np.reshape(ds1.QC_Flag.values,(npts1,nchs1))
-    #obs1=np.reshape(ds1.Observation.values,(npts1,nchs1))
-    sim1=np.reshape(ds1.Simulated_Tb.values,(npts1,nchs1))
-    clr1=np.reshape(ds1.Clearsky_Tb.values,(npts1,nchs1))
-    varinv1=np.reshape(ds1.Inverse_Observation_Error.values,(npts1,nchs1))
-    sim_bc1=np.reshape(ds1.Obs_Minus_Forecast_adjusted.values,(npts1,nchs1))
-    sim_nbc1=np.reshape(ds1.Obs_Minus_Forecast_unadjusted.values,(npts1,nchs1))
-    obs1=sim_nbc1+sim1
-    tmpds1=xa.Dataset({'rlon':(['obsloc'],rlon1[:,0]),
-                      'rlat':(['obsloc'],rlat1[:,0]),
-                      'qcflag':(['obsloc','wavenumber'],qcflags1),
-                       'tb_obs':(['obsloc','wavenumber'],obs1),
-                       'tb_sim':(['obsloc','wavenumber'],sim1),
-                       'tb_clr':(['obsloc','wavenumber'],clr1),
-                      'varinv':(['obsloc','wavenumber'],varinv1),
-                      'omb_bc':(['obsloc','wavenumber'],sim_bc1),
-                      'omb_nbc':(['obsloc','wavenumber'],sim_nbc1)},
-                      coords={'obsloc':np.arange(npts1),
-                             'wavenumber':ds1.wavenumber.values})
-    tmpds1=tmpds1.sel(wavenumber=chkwvn)
+    tmpds0=read_rad_ncdiag(infile0,chkwvn=chkwvn)
+    tmpds1=read_rad_ncdiag(infile1,chkwvn=chkwvn)
 #
     if (date==str(sdate)):
         ds_all0=tmpds0
@@ -219,7 +170,10 @@ for date in dlist:
     else:
         ds_all0=xa.concat((ds_all0,tmpds0),dim='time')
         ds_all1=xa.concat((ds_all1,tmpds1),dim='time')
+ds_all0.assign_coords({'time':avaldates})
+ds_all1.assign_coords({'time':avaldates})
 #
+
 total_obscounts=ds_all0.obsloc.size
 ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
 ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
@@ -259,6 +213,9 @@ elif (usemsk==1):
 elif (usemsk==2):
     pltmsk0=mask0&mask1
     pltmsk1=mask0&mask1
+elif (usemsk==3):
+    pltmsk0=mask0&mask1&(ds_all1.qcflag==13)
+    pltmsk1=mask0&mask1&(ds_all1.qcflag==13)
 
 print('plot counts: %s, %s' %(np.count_nonzero(pltmsk0),np.count_nonzero(pltmsk1)))
 
@@ -282,11 +239,11 @@ for a in np.arange(2):
     ax[a].set_prop_cycle(color=['blue','red'])
     ax[a].grid(axis='x')
 
-ax[1].plot_date(pltdates,pltmean,'-o',ms=2)
+ax[1].plot_date(avaldates,pltmean,'-o',ms=2)
 ax[0].xaxis.set_major_locator(loc)
 ax[0].xaxis.set_major_formatter(formatter)
 ax[0].xaxis.set_tick_params(rotation=30, labelsize=10)
-ax[0].plot_date(pltdates,pltrms,'-o',ms=2)
+ax[0].plot_date(avaldates,pltrms,'-o',ms=2)
 ax[0].set_ylabel('RMS %s [%s]' %(lpstr,units))
 ax[1].set_ylabel('Mean %s [%s]'%(lpstr,units))
 lglist=np.zeros((2,2),dtype='<U30')

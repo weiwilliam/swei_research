@@ -57,8 +57,8 @@ sfctype_list=['180','181','182','183','187']
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/biasrms'
 inputpath=rootarch
 
-varlist=['q'] #['ps','sst','gps','q','t','uv','tcp']
-unitlist=['g/kg'] #['mb','K','%','g/kg','K','m/s','mb']
+varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
+unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
 bufrtype='all' # SST: 181-199
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
