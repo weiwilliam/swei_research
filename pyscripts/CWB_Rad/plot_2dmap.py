@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# @author: Shih-Wei Wei
+#
 import sys, os, platform
 import numpy as np
 import pandas as pd
@@ -10,7 +12,7 @@ import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 import cartopy.feature as cft
 
-from utils import setup_cmap, ndate
+from utils import setup_cmap, ndate, find_cnlvs
 from plot_utils import setupax_2dmap,set_size
 from TCo_latlon_def import define_latlon
 from read_dms import read_dms
@@ -24,6 +26,7 @@ mpl.rc('ytick',labelsize=12)
 mpl.rc('legend',fontsize='large')
 axe_w=6; axe_h=4
 quality=300
+minussign=u'\u2212'
 
 rootpath='/nwpr/gfs/xa30/data'
 dmspath=rootpath+'/dmsdb/TCo383L72.ufs'
@@ -53,7 +56,8 @@ if ( not os.path.exists(outputpath) ):
 
 fhrlist=list(np.arange(0,fhmax+.1,fhint))
 if pltvar[:3]=='S00':
-   cnlvs=np.array((0,100,200,300,400,500,600,700,800,900,1000,1100,1200))
+   cnlvs=np.array((0,100,200,300,400,500,600,700,800,900,1000,1100))
+   
 #cnlvs=np.array((0., 0.05, 0.1, 0.15, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 2.5))
 clridx=np.array((0,2,4,7,8,9,10,12,14,15,16,17,18))
 clrmap=setup_cmap('precip3_16lev',clridx)
@@ -132,14 +136,14 @@ for date in dlist:
         pltdata=allds.sel(time=date,fhr=fhr)
         for exp in expdms:
             plttmp=pltdata.sel(exp=exp)
-            outname='%s/%s_%s_%s.%s_f%.3i.png' %(outputpath,area,exp,pltvar,date,fhr)
+            tistr='%s %s_f%.3i' %(exp,date,fhr) 
+            outname='%s/%s_%s.%s_f%.3i.png' %(outputpath,exp,pltvar,date,fhr)
 
             fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
-            set_size(axe_w,axe_h,b=0.13,l=0.05,r=0.95,t=0.95)
+            set_size(axe_w,axe_h,b=0.13,l=0.1,r=0.95,t=0.95)
             cn=ax.contourf(plttmp.lon,plttmp.lat,plttmp.pltvar.data,levels=cnlvs,norm=clrnorm,cmap=clrmap,extend='both')
-            #cn=ax.contourf(pltdata.lon,pltdata.lat,pltdata,levels=cnlvs,cmap=clrmap,norm=aer_norm,extend='both')
-            ax.set_title(date,loc='left')
-            plt.colorbar(cn,ax=ax,orientation='horizontal', #ticks=cnlvs[::tkfreq],
+            ax.set_title(tistr,loc='left')
+            plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
                          fraction=0.045,aspect=40,pad=0.08,label=cblb)
             if (area=='NAmer'):
                ax.add_feature(cft.STATES,zorder=2)
@@ -147,9 +151,31 @@ for date in dlist:
             fig.savefig(outname,dpi=quality)
             plt.close()
 
-diff=pltdata.diff('exp').sel(exp=pltdata.exp[1])
+diff=allds.diff(dim='exp').sel(exp=expdms[1])
+difflvs=find_cnlvs(diff.pltvar.data,ntcks=21,eqside=1)
+clridx=[]
+for idx in np.linspace(2,254,difflvs.size):
+    clridx.append(int(idx))
+diffcmap=setup_cmap('BlueYellowRed',clridx)
+diffnorm = mpcrs.BoundaryNorm(difflvs,len(clridx)+1,extend='both')
 
+for date in dlist:
+    for fhr in fhrlist:
+        plttmp=diff.sel(time=date,fhr=fhr)
+        tistr='%s%s%s %s_f%.3i' %(expdms[1],minussign,expdms[0],date,fhr) 
+        outname='%s/Diff_%s-%s_%s.%s_f%.3i.png' %(outputpath,expdms[1],expdms[0],pltvar,date,fhr)
 
+        fig,ax,gl=setupax_2dmap(cornerll,area,proj,lbsize=txsize)
+        set_size(axe_w,axe_h,b=0.13,l=0.1,r=0.95,t=0.95)
+        cn=ax.contourf(plttmp.lon,plttmp.lat,plttmp.pltvar.data,levels=difflvs,norm=diffnorm,cmap=diffcmap,extend='both')
+        ax.set_title(tistr,loc='left')
+        plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=difflvs[::2],
+                     fraction=0.045,aspect=40,pad=0.08,label=cblb)
+        if (area=='NAmer'):
+           ax.add_feature(cft.STATES,zorder=2)
+        print(outname,flush=1)
+        fig.savefig(outname,dpi=quality)
+        plt.close()
 #
 #    if (pltave):
 #       if (dates_count==0):
