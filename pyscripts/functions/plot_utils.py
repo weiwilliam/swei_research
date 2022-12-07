@@ -1,6 +1,7 @@
-__all__=['set_size','pltprof','plthist','plt_x2y','setupax_2dmap','plt_x2cf','plt_scatter']
+__all__=['set_size','pltprof','plthist','plt_2exps_x2y','plt_1exp_x2y','setupax_2dmap','plt_x2cf','plt_scatter']
 
 import matplotlib.pyplot as plt
+import xarray as xa
 import numpy as np
 minussign=u'\u2212'
 
@@ -83,7 +84,124 @@ def setupax_2dmap(cornerlatlon,area,proj,lbsize=None):
 
     return fig,ax,gl
 
-def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,**kwargs):
+def plt_2exps_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,**kwargs):
+    fig=kwargs.get('fig',None)
+    ax=kwargs.get('ax',None)
+    if not fig: fig=plt.gcf()
+    if not ax: ax=plt.gca()
+
+    lgloc=kwargs.get('lgloc',0)
+    fill_std=kwargs.get('fill_std',False)
+    plot_diff=kwargs.get('plot_diff',0)
+    stat_type=kwargs.get('stat_type','Mean')
+    quantile_bar=kwargs.get('quantile_bar',0)
+
+    if stat_type=='Mean':
+       mean0=yval.exp0.mean(dim='nloc0',skipna=1)
+       mean1=yval.exp1.mean(dim='nloc1',skipna=1)
+       pltdata=xa.concat((mean0,mean1),dim='exps')
+       #pltdata=pltdata.data.swapaxes(0,1)
+       if fill_std:
+          stdv0=yval.exp0.std(dim='nloc0',skipna=1)
+          stdv1=yval.exp1.std(dim='nloc1',skipna=1)
+          pltstdv=xa.concat((stdv0,stdv1),dim='exps')
+          pltstdv=pltstdv.data.swapaxes(0,1)
+       if quantile_bar:
+          lower0=mean0-yval.exp0.quantile(0.1,dim='nloc0')
+          lower1=mean1-yval.exp1.quantile(0.1,dim='nloc1')
+          upper0=yval.exp0.quantile(0.9,dim='nloc0')-mean0
+          upper1=yval.exp1.quantile(0.9,dim='nloc1')-mean1
+          yerr0=xa.concat((lower0,upper0),dim='errb')
+          yerr1=xa.concat((lower1,upper1),dim='errb')
+
+    if stat_type=='RMS':  
+       rmse0=np.sqrt((yval.exp0*yval.exp0).mean(dim='nloc0',skipna=1))
+       rmse1=np.sqrt((yval.exp1*yval.exp1).mean(dim='nloc1',skipna=1))
+       pltdata=xa.concat((rmse0,rmse1),dim='exps')
+       #pltdata=pltdata.data.swapaxes(0,1)
+
+    if stat_type=='VALUE':
+       val0=yval.exp0
+       val1=yval.exp1
+       pltdata=xa.concat((val0,val1),dim='exps')
+
+    pltdata=pltdata.data.swapaxes(0,1)
+
+    if plot_diff==1:
+       datadiff=pltdata[:,1]-pltdata[:,0]
+    elif plot_diff==2:
+       datadiff=(pltdata[:,1]-pltdata[:,0])/pltdata[:,0]*100.
+
+    xaxis=np.arange(x1val.size)
+    if (yinvert):
+       ax.invert_yaxis()
+    color_list=prop_dict['color']
+    lnsty_list=prop_dict['line_style']
+    lnwid_list=prop_dict['line_width']
+    mrker_list=prop_dict['marker']
+    mksiz_list=prop_dict['mark_size']
+    lgend_list=prop_dict['legend']
+    flsty_list=prop_dict['fillstyle']
+
+    ax.set_xlabel(x1lb)
+    ax.set_ylabel(ylb)
+    ax.set_title(title,loc='left')
+    ax.set_xlim(xaxis[0]-0.5,xaxis[-1]+0.5)
+    ax.grid(axis='x')
+
+    if quantile_bar:
+       eb0=ax.errorbar(xaxis,mean0,yerr=yerr0,c=color_list[0],marker=mrker_list[0],ls=lnsty_list[0],
+                   fillstyle=flsty_list[0])
+       eb0[-1][0].set_linestyle(':')
+       eb1=ax.errorbar(xaxis,mean1,yerr=yerr1,c=color_list[1],marker=mrker_list[1],ls=lnsty_list[1],
+                   fillstyle=flsty_list[1])
+       eb1[-1][0].set_linestyle(':')
+    else:
+       ax.set_prop_cycle(color=color_list,linestyle=lnsty_list,linewidth=lnwid_list,
+                         marker=mrker_list,markersize=mksiz_list,fillstyle=flsty_list)
+       ax.plot(xaxis,pltdata)
+       if fill_std:
+          for i in np.arange(pltdata.shape[1]):
+              tmpdata=pltdata[:,i]; tmpstdv=pltstdv[:,i]
+              ax.fill_between(xaxis,tmpdata-1*tmpstdv,tmpdata+1*tmpstdv,color=color_list[i],alpha=0.2)
+
+    if (len(xrefs)!=0):
+       ax.vlines(xrefs,0,1,transform=ax.get_xaxis_transform(),linestyle='dashed',linewidth=1.)
+
+    xtickspos=ax.get_xticks()
+    x1labels=[]
+    for n in xtickspos:
+        if (n>x1val.size):
+           n=x1val.size-n
+        x1labels.append('%.2f'%(x1val[int(n)]))   
+    ax.legend(lgend_list,loc=lgloc)
+    ax.set_xticklabels(x1labels)
+    x2labels=[]
+    for n in xtickspos:
+        if (n>x1val.size):
+           n=x1val.size-n
+        x2labels.append('%.2f'%(x2val[int(n)]))
+    ax2=ax.twiny()
+    ax2.set_xticks(xtickspos)
+    ax2.set_xticklabels(x2labels)
+    ax2.set_xlim(xaxis[0]-0.5,xaxis[-1]+0.5)
+    ax2.xaxis.set_ticks_position('bottom')
+    ax2.xaxis.set_label_position('bottom')
+    ax2.spines['bottom'].set_position(('outward', 48))
+    ax2.set_xlabel(x2lb)
+
+    if plot_diff>0:
+       ax3=ax.twinx()
+       ax3.plot(xaxis,datadiff,'--k')
+       ax3.hlines(0.,0,1,transform=ax3.get_yaxis_transform(),colors='grey',linewidth=1.5,linestyle='dashed')
+       if plot_diff==1:
+          ax3.set_ylabel('%s%s%s' %(lgend_list[1],minussign,lgend_list[0]))
+       elif plot_diff==2:
+          ax3.set_ylabel('%s%s%s [%%]' %(lgend_list[1],minussign,lgend_list[0]))
+
+    return fig,ax,ax2
+
+def plt_1exp_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,**kwargs):
     fig=kwargs.get('fig',None)
     ax=kwargs.get('ax',None)
     if not fig: fig=plt.gcf()
@@ -94,13 +212,10 @@ def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,**kwarg
     if 'pltstdv' not in yval.keys() and fill_std:
        print('stdv is not available',flush=1)
        fill_std=False
-    plot_diff=kwargs.get('plot_diff',False)
 
-    pltdata=yval.pltdata.data.swapaxes(0,1)
-    if plot_diff:
-       datadiff=pltdata[:,1]-pltdata[:,0]
+    pltdata=yval.pltdata.data
     if fill_std:
-       pltstdv=yval.pltstdv.data.swapaxes(0,1)
+       pltstdv=yval.pltstdv.data
 
     xaxis=np.arange(x1val.size)
     if (yinvert):
@@ -150,12 +265,6 @@ def plt_x2y(yval,ylb,x1val,x1lb,x2val,x2lb,prop_dict,title,yinvert,xrefs,**kwarg
     ax2.xaxis.set_label_position('bottom')
     ax2.spines['bottom'].set_position(('outward', 48))
     ax2.set_xlabel(x2lb)
-
-    if plot_diff:
-       ax3=ax.twinx()
-       ax3.plot(xaxis,datadiff,'--k')
-       ax3.set_xlabel('%s%s%s' %(lgend_list[1],minussign,lgend_list[0]))
-       ax3.hlines(0.,0,1,transform=ax3.get_yaxis_transform(),colors='grey',linewidth=0.4,linestyle='dashed')
 
     return fig,ax,ax2
 

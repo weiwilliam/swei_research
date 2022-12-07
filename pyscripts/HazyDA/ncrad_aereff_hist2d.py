@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Jun 29 16:06:23 2021
@@ -18,7 +19,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/data/users/swei/ResearchData/Prospectus/AeroObsStats/nc_diag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -35,7 +36,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 from gsi_ncdiag import read_rad_ncdiag
@@ -53,8 +54,9 @@ minussign=u'\u2212'
 sdate=2020061000
 edate=2020092118
 hint=6
-exp='observer_v2qc'
-saved_suffix='v1qc'
+exp='hazyda_aerov6'
+exptype='exp' #exp,observer
+saved_suffix='v3qc'
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
@@ -85,7 +87,7 @@ else:
 # Data path setup
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir=rootarch+'/'+exp
-savedir=outpath+'/DiagFiles/rad/observer/hist2d_'+saved_suffix
+savedir=outpath+'/DiagFiles/rad/'+exptype+'/hist2d_'+saved_suffix
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 

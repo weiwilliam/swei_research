@@ -18,7 +18,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, plt_2exps_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 from matplotlib.dates import (DAILY, DateFormatter,
@@ -49,7 +49,7 @@ mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
 mpl.rc('legend',fontsize='large')
 fsave=1 ; ffmt='png' ; ptsize=4
-axe_w=8 ; axe_h=3 ; quality=300
+axe_w=6 ; axe_h=3 ; quality=300
 minussign=u'\u2212'
 
 # Projection setting
@@ -58,12 +58,11 @@ proj=ccrs.PlateCarree(globe=None)
 # Plotting setup
 sdate=2020061000
 edate=2020071018
-aertag='Dust'
 hint=6
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
 sensor='iasi_metop-a'
-spectral_range=slice(700,1300)
+spectral_range=slice(750,1200)
 loop='ges' #ges,anl
 #if loop=='anl':
 #    tlstr='OMA'
@@ -202,7 +201,7 @@ colorlst=['b','r']
 lstylelst=[' ',' ']
 mrklst=['o','^']
 lglst=expnlist
-cntsyaxlb='Number of observations'
+cntsyaxlb='Counts'
 aerpyaxlb='Aerosol-affected [%]'
 tistr=''
 prop_dict={'color'     :['b','r'],
@@ -210,21 +209,19 @@ prop_dict={'color'     :['b','r'],
            'line_width':[1.5,1.5],
            'marker'    :['o','^'],
            'mark_size' :[5.,5.],
+           'fillstyle' :['none','none'],
            'legend'    :expnlist,
            }
 
 used0_mean=usedcnts_all.exp0cnts.mean(dim='dates')
 used1_mean=usedcnts_all.exp1cnts.mean(dim='dates')
-pltda=xa.concat((used0_mean,used1_mean),dim='lines').T
+pltds=xa.Dataset({'exp0':(['channels'],used0_mean.data),
+                  'exp1':(['channels'],used1_mean.data),
+                  },coords={'channels':chkwvn_list.data})
 
 fig,ax=plt.subplots()
 set_size(axe_w,axe_h,ax=ax,b=0.25)
-fig,ax,ax2=plt_x2y(pltda,cntsyaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],ax=ax,lgloc=3)
-pltdiff=(used1_mean-used0_mean)/used0_mean*100.
-ax3=ax.twinx()
-ax3.set_ylabel('Counts Differences [%]')
-ax3.plot(pltdiff,'k',zorder=0)
-ax3.legend(['%s%s%s'%(expnlist[1],minussign,expnlist[0])],loc=1)
+plt_2exps_x2y(pltds,cntsyaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],plot_diff=2,stat_type='VALUE')
 
 fname=('%s/Spec_%s_%s_cnts.%s-%s.%s' %(sp_savedir,area,sensor,spectral_range.start,spectral_range.stop,ffmt))
 if (fsave):
@@ -234,11 +231,13 @@ if (fsave):
 
 aerp0_mean=usedcnts_all.exp0aerp.mean(dim='dates')*100.
 aerp1_mean=usedcnts_all.exp1aerp.mean(dim='dates')*100.
-pltda=xa.concat((aerp0_mean,aerp1_mean),dim='lines').T
+pltds=xa.Dataset({'exp0':(['channels'],aerp0_mean.data),
+                  'exp1':(['channels'],aerp1_mean.data),
+                  },coords={'channels':chkwvn_list.data})
         
 fig,ax=plt.subplots()
 set_size(axe_w,axe_h,ax=ax,b=0.25)
-plt_x2y(pltda,aerpyaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],ax=ax)
+plt_2exps_x2y(pltds,aerpyaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],stat_type='VALUE')
 
 fname=('%s/Spec_%s_%s_aerp.%s-%s.%s' %(sp_savedir,area,sensor,spectral_range.start,spectral_range.stop,ffmt))
 if (fsave):

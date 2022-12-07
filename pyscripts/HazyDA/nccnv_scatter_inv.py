@@ -54,7 +54,7 @@ mpl.rc('legend',fontsize='x-large')
 fsave=1; ffmt='png'; quality=300
 
 sfctype_list=['180','181','182','183','187']
-varlist=['t'] #['ps','sst','gps','q','t','uv','tcp']
+varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
 colorlist=['b','b']
 markerlist=['o','o']
@@ -65,10 +65,10 @@ expnlist=['CTL','AER']
 sdate=2020061000
 edate=2020071018
 hint=6
-bufrlist=['181','187']
+bufrlist=['all']
 loop='ges' #ges,anl
 useqc=0
-area='NAfr'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
+area='r2o1'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
 
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles'
 inputpath=rootarch

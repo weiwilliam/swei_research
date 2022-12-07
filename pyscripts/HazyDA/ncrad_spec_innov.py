@@ -18,7 +18,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -38,15 +38,15 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, plt_2exps_x2y, set_size
 from utils import ndate,setup_cmap
 from gsi_ncdiag import read_rad_ncdiag
 
-tlsize=12 ; lbsize=10
+tlsize=12 ; lbsize=12
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
 mpl.rc('xtick',labelsize=lbsize)
 mpl.rc('ytick',labelsize=lbsize)
-mpl.rc('legend',fontsize='small')
+mpl.rc('legend',fontsize='large')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=6 ; axe_h=3 ; quality=300
 
@@ -58,12 +58,13 @@ hint=6
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
 sensor='iasi_metop-a'
-spectral_range=slice(750,1300)
-loop='anl' #ges,anl
+spectral_range=slice(750,1200)
+units='K'
+loop='ges' #ges,anl
 usebc=1
-useqc=-1
-usemsk=-1
-plt_sp=1 # plot spectrum
+useqc=-1  # -2: noqc, -1: qc, others: qc results
+usemsk=-1  # -1: omsk, 0: msk0, 1: msk1, 2: imsk, 3: iaer
+plt_sp=1  # plot spectrum
 fill_std=0
 
 area='Glb'
@@ -79,9 +80,9 @@ else:
     bcflg='nobc'
 
 if (loop=='ges'):
-   ylb='OMFs [K]'
+   ylb='OMFs'
 else:
-   ylb='OMAs [K]'
+   ylb='OMAs'
 
 if (usebc):
     bcflg='bc'
@@ -231,33 +232,26 @@ tistr=''
 if (plt_sp):            
    pltda_x0=xa.where(pltmsk0,omb0,np.nan)
    pltda_x1=xa.where(pltmsk1,omb1,np.nan)
-
-   mean0=pltda_x0.mean(dim='obsloc',skipna=1)
-   mean1=pltda_x1.mean(dim='obsloc',skipna=1)
-
-   stdv0=pltda_x0.std(dim='obsloc',skipna=1)
-   stdv1=pltda_x1.std(dim='obsloc',skipna=1)
    
-   rmse0=np.sqrt((pltda_x0*pltda_x0).mean(dim='obsloc',skipna=1))
-   rmse1=np.sqrt((pltda_x1*pltda_x1).mean(dim='obsloc',skipna=1))
-
    for stat_type in ['Mean','RMS']:
        fig,ax=plt.subplots()
        set_size(axe_w,axe_h,ax=ax,b=0.25,r=0.9)
-       yaxlb='%s %s' %(stat_type,ylb)
+       yaxlb='%s %s %s [%s]' %(stat_type,ylb,bc_ylbstr,units)
 
+       pltds=xa.Dataset({'exp0':(['nloc0','channels'],pltda_x0.data),
+                         'exp1':(['nloc1','channels'],pltda_x1.data),
+                         },coords={'nloc0':pltda_x0.obsloc.data,
+                                   'nloc1':pltda_x1.obsloc.data,
+                                   'channels':chkwvn_list.data})
        if stat_type=='Mean':
-          pltds=xa.Dataset({'pltdata':(['exps','channels'],xa.concat((mean0,mean1),dim='exps').data),
-                            'pltstdv':(['exps','channels'],xa.concat((stdv0,stdv1),dim='exps').data),
-                            },coords={'exps':explist,'channels':chkwvn_list.data})
-          plt_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],fill_std=fill_std,ax=ax)
+          plt_2exps_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],
+                        stat_type=stat_type,fill_std=fill_std,quantile_bar=0,ax=ax)
        elif stat_type=='RMS':
-          pltds=xa.Dataset({'pltdata':(['exps','channels'],xa.concat((rmse0,rmse1),dim='exps').data),
-                            },coords={'exps':explist,'channels':chkwvn_list.data})
-          plt_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],plot_diff=1,ax=ax)
+          plt_2exps_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],
+                        stat_type=stat_type,plot_diff=1,ax=ax)
    
        if (fsave):
-          outname='%s/%s_%s_%s_%s_%s.%s_%s.%s' %(imgsavpath,stat_type,sensor,loop,qcflg,mskflg,sdate,edate,ffmt)
+          outname='%s/%s_%s_%s_%s_%s_%s.%s_%s.%s' %(imgsavpath,stat_type,sensor,loop,bcflg,qcflg,mskflg,sdate,edate,ffmt)
           print(outname,flush=1)
           fig.savefig(outname,dpi=quality)
           plt.close()

@@ -40,6 +40,7 @@ from plot_utils import setupax_2dmap, plt_x2y, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 import scipy.stats
+from gsi_ncdiag import read_rad_ncdiag
 
 tlsize=12 ; lbsize=10
 mpl.rc('axes', titlesize=tlsize,labelsize=lbsize)
@@ -57,11 +58,12 @@ exp='hazyda_aero'
 expname='AER'
 sensor='iasi_metop-a'
 spectral_range=slice(600,1300)
+chkwvn_list=[962.5]
 loop='ges' #ges,anl
-#if loop=='anl':
-#    tlstr='OMA'
-#elif loop=='ges':
-#    tlstr='OMF'
+if loop=='anl':
+    tlstr='OMA'
+elif loop=='ges':
+    tlstr='OMF'
 plthist=1 # plot 2d histogram
 
 area='Glb'
@@ -83,7 +85,7 @@ elif (cbori=='horizontal'):
 # Data path setup
 outpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images'
 archdir0=rootarch+'/'+exp
-savedir=outpath+'/DiagFiles/rad/pdf/'+area+'/'+expname
+savedir=outpath+'/DiagFiles/rad/pdf/'+area
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
 
@@ -109,69 +111,46 @@ dates_count=0
 for date in dlist:
     raddfile0='diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
     infile0=archdir0+'/'+str(date)+'/'+raddfile0
+    infile1=archdir1+'/'+str(date)+'/'+raddfile1
 
     if ( os.path.exists(infile0) ): 
         print('Processing Radfile: %s' %(raddfile0),flush=1)
-        ds0=xa.open_dataset(infile0)
-        npts0=int(ds0.nobs.size/ds0.nchans.size)
-        nchs0=ds0.nchans.size
-        ds0=ds0.assign_coords(nuchan=('wavenumber',ds0.wavenumber.data))
-        ds0=ds0.swap_dims({"nchans":"wavenumber"})
-        wavelength=1e+04/ds0.wavenumber
-        chkwvn_list=ds0.wavenumber[ds0.use_flag==1]
         dates_count+=1
     else:
         print('%s is not existing'%(raddfile0),flush=1)
         continue
     
     # Observation lat/lon from exp 0 (baseline)
-    rlat0=np.reshape(ds0.Latitude.values,(npts0,nchs0))
-    rlon0=np.reshape(ds0.Longitude.values,(npts0,nchs0))
-    qcflags0=np.reshape(ds0.QC_Flag.values,(npts0,nchs0))
-    #obs0=np.reshape(ds0.Observation.values,(npts0,nchs0))
-    sim0=np.reshape(ds0.Simulated_Tb.values,(npts0,nchs0))
-    clr0=np.reshape(ds0.Clearsky_Tb.values,(npts0,nchs0))
-    varinv0=np.reshape(ds0.Inverse_Observation_Error.values,(npts0,nchs0))
-    sim_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
-    sim_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
-    obs0=sim_nbc0+sim0
-    tmpds0=xa.Dataset({'rlon':(['obsloc'],rlon0[:,0]),
-                      'rlat':(['obsloc'],rlat0[:,0]),
-                      'qcflag':(['obsloc','wavenumber'],qcflags0),
-                      'tb_obs':(['obsloc','wavenumber'],obs0),
-                      'tb_sim':(['obsloc','wavenumber'],sim0),
-                      'tb_clr':(['obsloc','wavenumber'],clr0),
-                      'varinv':(['obsloc','wavenumber'],varinv0),
-                      'omb_bc':(['obsloc','wavenumber'],sim_bc0),
-                      'omb_nbc':(['obsloc','wavenumber'],sim_nbc0)},
-                      coords={'obsloc':np.arange(npts0),
-                             'wavenumber':ds0.wavenumber.values})
-    tmpds0=tmpds0.sel(wavenumber=chkwvn_list)
+    tmpds0=read_rad_ncdiag(chkwvn=chkwvn_list)
+    tmpds1=read_rad_ncdiag(chkwvn=chkwvn_list)
     
     if (date==str(sdate)):
         ds_all0=tmpds0
+        ds_all1=tmpds0
     else:
         ds_all0=xa.concat((ds_all0,tmpds0),dim='obsloc')
+        ds_all1=xa.concat((ds_all1,tmpds0),dim='obsloc')
 
 total_obscounts=ds_all0.obsloc.size
 ds_all0=ds_all0.assign_coords(obsloc=np.arange(total_obscounts))
+ds_all1=ds_all1.assign_coords(obsloc=np.arange(total_obscounts))
 
 binsize=0.1
 halfbin=0.5*binsize
 hist_x_edge=np.arange(-10,10.+binsize,binsize)
 bin_center=(hist_x_edge+halfbin)[:-1]
 
-# for chkwvn in [652.0]:
-for chkwvn in [962.5]:
-#for chkwvn in chkwvn_list:
+if type(chkwvn_list)==slice:
+   chkwvn_list=ds_all0.wavenumber
+
+for chkwvn in chkwvn_list:
     ds_chk0=ds_all0.sel(wavenumber=chkwvn)
-    tb_sim0=ds_chk0.tb_sim
-    tb_clr0=ds_chk0.tb_clr
-    tb_obs0=ds_chk0.tb_obs
+    ds_chk1=ds_all1.sel(wavenumber=chkwvn)
+
     omb_bc0=ds_chk0.omb_bc
     omb_nbc0=ds_chk0.omb_nbc
-    varinv0=ds_chk0.varinv
-    qcflg0=ds_chk0.qcflag
+    omb_bc1=ds_chk1.omb_bc
+    omb_nbc1=ds_chk1.omb_nbc
     
     good_msk0=(ds_chk0.qcflag==0.)
     gross_msk0=(ds_chk0.qcflag==3.)
@@ -180,8 +159,19 @@ for chkwvn in [962.5]:
     aer_msk0=(ds_chk0.qcflag==13.)
     sfcir_msk0=(ds_chk0.qcflag==53.)
     bust_msk0=(ds_chk0.qcflag==55.)
-    passed_msk0=(good_msk0)|(aer_msk0)
-    ori_msk0=(good_msk0)|(aer_msk0)|(bust_msk0)|(tzr_msk0)|(gross_msk0)
+    aercld_msk0=(ds_chk0.qcflag==57.)
+
+    good_msk1=(ds_chk1.qcflag==0.)
+    gross_msk1=(ds_chk1.qcflag==3.)
+    cld_msk1=(ds_chk1.qcflag==7.)
+    tzr_msk1=(ds_chk1.qcflag==10.)
+    aer_msk1=(ds_chk1.qcflag==13.)
+    sfcir_msk1=(ds_chk1.qcflag==53.)
+    bust_msk1=(ds_chk1.qcflag==55.)
+    aercld_msk1=(ds_chk1.qcflag==57.)
+
+    passed_msk0=(good_msk0)
+    passed_msk1=(good_msk1)|(aer_msk1)
     
     if (plthist):            
         bcflg1='bc'

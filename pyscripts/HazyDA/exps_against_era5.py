@@ -30,7 +30,7 @@ import matplotlib.dates as mdates
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, set_size
 from utils import ndate,setup_cmap,find_cnlvs
 from datetime import datetime, timedelta
 import cartopy.crs as ccrs
@@ -57,9 +57,9 @@ expsarch=rootarch+'/archive'
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
 pres_list=[600] #850,700,500,200]
-plt_prof=0
-plt_ts=1
-plt_2d=1
+plt_prof=1
+plt_ts=0
+plt_2d=0
 
 sdate=2020061000
 edate=2020071018
@@ -70,10 +70,10 @@ units_lst=['m','g/kg','K','m/s','m/s']  # m,'K','%','g/kg','K','m/s','mb'
 grav=9.80665e+0
 pres_lv_slice=slice(1000,100)
 
-area='Glb'
+area='TRO'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
-if (area=='Glb'):
+if cyclic:
    minlon=-180. ; maxlon=180.
 else:
    minlon=(minlon+180)%360-180
@@ -147,9 +147,9 @@ for date in dlist:
     tmpexp1=tmpexp1.sortby(tmpexp1.longitude)
 
     if (area!='Glb'):
-       tmpera=tmpera.sel(latitude=slice(minlat,maxlat),longitude=slice(minlon,maxlon))
-       tmpexp0=tmpexp0.sel(latitude=slice(minlat,maxlat),longitude=slice(minlon,maxlon))
-       tmpexp1=tmpexp1.sel(latitude=slice(minlat,maxlat),longitude=slice(minlon,maxlon))
+       tmpera=tmpera.sel(latitude=slice(maxlat,minlat),longitude=slice(minlon,maxlon))
+       tmpexp0=tmpexp0.sel(latitude=slice(maxlat,minlat),longitude=slice(minlon,maxlon))
+       tmpexp1=tmpexp1.sel(latitude=slice(maxlat,minlat),longitude=slice(minlon,maxlon))
 
     exp0_tmperr=tmpexp0-tmpera
     exp1_tmperr=tmpexp1-tmpera

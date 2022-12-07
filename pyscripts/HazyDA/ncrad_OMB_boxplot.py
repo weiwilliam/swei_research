@@ -18,7 +18,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, set_size
 from utils import ndate,setup_cmap
 from gsi_ncdiag import read_rad_ncdiag
 
@@ -52,7 +52,7 @@ axe_w=6 ; axe_h=3 ; quality=300
 
 # Plotting setup
 sdate=2020061000
-edate=2020061018
+edate=2020071018
 aertype='Dust'
 hint=6
 explist=['hazyda_ctrl','hazyda_aero']
@@ -60,7 +60,7 @@ expnlist=['CTL','AER']
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
-usebc=1
+usebc=0
 pltbx=1 # plot 2d histogram
 
 area='Glb'

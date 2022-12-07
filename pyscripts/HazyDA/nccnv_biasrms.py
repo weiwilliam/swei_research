@@ -16,7 +16,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -37,7 +37,7 @@ import matplotlib.dates as mdates
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
 import scipy.stats
@@ -62,13 +62,18 @@ unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
 bufrtype='all' # SST: 181-199
 explist=np.array(['hazyda_ctrl','hazyda_aero'])
 expnlist=['CTL','AER']
+nexp=explist.size
+exps_fname_str=''
+for exp in expnlist:
+    exps_fname_str += exp+'_'
+exps_fname_str=exps_fname_str[:-1]
 
 sdate=2020061000
 edate=2020071018
 hint=6
 
-loop='ges' #ges,anl
-area='Glb'
+loop='anl' #ges,anl
+area='TRO'
 useqc=1
 
 if (loop=='ges'):
@@ -239,7 +244,7 @@ for var in varlist:
         fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
         fig.subplots_adjust(hspace=0.1)
         for a in np.arange(2):
-            ax[a].set_prop_cycle(color=['blue','red'])
+            ax[a].set_prop_cycle(color=['blue','red','green'])
             ax[a].grid()
         
         ax[1].plot_date(xdates,omg_mean,'-o',lw=1,ms=1.5)
@@ -251,13 +256,13 @@ for var in varlist:
         ax[0].set_ylabel('RMS %s [%s]' %(lpstr,unitlist[uidx]))
         ax[1].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
         lglist=np.zeros((2,2),dtype='<U30')
-        for ex in np.arange(2):
+        for ex in np.arange(nexp):
             lglist[0,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_rmsq[:,ex]))
             lglist[1,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_mean[:,ex]))
         ax[0].legend(lglist[0,:])
         ax[1].legend(lglist[1,:])
         if (fsave):
-            fname='%s/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'%(imgsavpath,area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate)
+            fname='%s/%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'%(imgsavpath,area,loop,var,exps_fname_str,qcflg,bufrtype,sdate,edate)
             print(fname,flush=1)
             fig.savefig(fname, dpi=quality)
             plt.close()
@@ -291,8 +296,8 @@ for var in varlist:
         ax[1].grid()
         ax[2].grid()
         if (fsave):
-            fname=('%s/%s_%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'
-                   %(imgsavpath,area,loop,var,expnlist[0],expnlist[1],qcflg,bufrtype,sdate,edate))
+            fname=('%s/%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'
+                   %(imgsavpath,area,loop,var,exps_fname_str,qcflg,bufrtype,sdate,edate))
             print(fname,flush=1)
             fig.savefig(fname, dpi=quality)
             plt.close()
@@ -313,15 +318,15 @@ for var in varlist:
             ax[0].set_ylabel('RMS %s [%s]'%(lpstr,unitlist[uidx]))
             ax[1].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
             lglist=np.zeros((2,2),dtype='<U30')
-            for ex in np.arange(2):
+            for ex in np.arange(nexp):
                lglist[0,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_rmsq[:,z,ex]))
                lglist[1,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_mean[:,z,ex]))
             ax[0].legend(lglist[0,:])
             ax[1].legend(lglist[1,:])
             
             if (fsave):
-               fname=('%s/%s_%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
-                      %(imgsavpath,area,loop,var,expnlist[0],expnlist[1],pbot[z],qcflg,bufrtype,sdate,edate))
+               fname=('%s/%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
+                      %(imgsavpath,area,loop,var,exps_fname_str,pbot[z],qcflg,bufrtype,sdate,edate))
                print(fname,flush=1)
                fig.savefig(fname, dpi=quality)
                plt.close()

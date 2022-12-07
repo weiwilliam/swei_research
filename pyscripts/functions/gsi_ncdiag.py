@@ -95,6 +95,7 @@ def read_rad_ncdiag(infile,**kwargs):
     if select_wavenumber is not None: 
        if (type(select_wavenumber)==list or
            type(select_wavenumber)==float or 
+           type(select_wavenumber)==slice or 
            select_wavenumber.size>0):
           tmpds=tmpds.sel(wavenumber=select_wavenumber)
 

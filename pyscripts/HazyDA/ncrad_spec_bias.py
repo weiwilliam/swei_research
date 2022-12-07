@@ -38,7 +38,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import cartopy.crs as ccrs
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, plt_2exps_x2y, set_size
 from utils import ndate,setup_cmap
 from gsi_ncdiag import read_rad_ncdiag
 
@@ -229,7 +229,7 @@ if (plt_sp):
    pltds=xa.Dataset({'pltdata':(['exps','channels'],xa.concat((mean0,mean1),dim='exps').data),
                      'pltstdv':(['exps','channels'],xa.concat((stdv0,stdv1),dim='exps').data),
                      },coords={'exps':explist,'channels':chkwvn_list.data})
-   plt_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],fill_std=fill_std,plot_diff=1,ax=ax)
+   plt_2exps_x2y(pltds,yaxlb,wvn,wvnlb,wvl,wvllb,prop_dict,tistr,0,[],fill_std=fill_std,plot_diff=1,ax=ax)
    
    if (fsave):
       outname='%s/%s_%s_%s_%s.%s_%s.%s' %(imgsavpath,sensor,loop,qcflg,mskflg,sdate,edate,ffmt)

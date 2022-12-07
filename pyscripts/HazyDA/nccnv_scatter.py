@@ -16,7 +16,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -62,14 +62,14 @@ markerlist=['*','o']
 explist=['hazyda_ctrl','hazyda_aero']
 expnlist=['CTL','AER']
 
-sdate=2020062200
-edate=2020062418
+sdate=2020062100
+edate=2020062518
 hint=6
 bufrtype='all'
 loop='ges' #ges,anl
 useqc=1
 usebc=0
-area='TRO'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
+area='r2o7'# Glb, NPO, NML, TRO, SML, SPO, EAsia, NAfr
 
 inputpath=rootarch
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/scatter'
@@ -88,11 +88,12 @@ else:
 
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero, cyclic)
-if (crosszero):
-    minlon=minlon-360.
 if (cyclic):
     minlon=-180.
     maxlon=180.
+else:
+    minlon=(minlon+180)%360-180
+    maxlon=(maxlon+180)%360-180
 
 def scatterplot_x2y2(xdata1,xdata2,xlb,ydata1,ydata2,ylb,stat1,stat2,lglst,clrlst,mkrlst,title,fname,fig=None,ax=None):
     from utils import gen_eqs_by_stats

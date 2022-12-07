@@ -39,7 +39,7 @@ mpl.rc('ytick',labelsize=txsize)
 mpl.rc('legend',fontsize='small')
 fsave=1 ; ffmt='png' ; ptsize=4
 axe_w=6 ; axe_h=3 ; quality=300
-tkfreq=2
+tkfreq=1
 minussign=u'\u2212'
 
 # Projection setting
@@ -48,8 +48,8 @@ proj=ccrs.PlateCarree(globe=None)
 viirs_aod_path='/data/users/swei/Dataset/VIIRS_NPP/AOD_daily_1by1'
 viirs_1x1_file='AERDB_D3_VIIRS_SNPP.A2020192.011.2021099192750.nc'
 
-sdate='2020061000'
-edate='2020071000'
+sdate='2020082200'
+edate='2020092100'
 hint=24
 var='Aerosol_Optical_Thickness_550_Land_Ocean_Mean'
 area='Glb'
@@ -64,7 +64,7 @@ else:
 cornerll=[minlat,maxlat,minlon,maxlon]
 
 outputpath=rootpath
-imgsavpath=outputpath+'/VIIRS/L3AOD_2d/'+area
+imgsavpath=outputpath+'/Dataset/VIIRS_L3AOD/2dmap/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
@@ -107,8 +107,8 @@ set_size(axe_w,axe_h,b=0.15,l=0.05,r=0.95,t=0.95)
 pltdata=aod.mean(dim='time',skipna=1)
 cn=ax.contourf(pltdata.Longitude_1D,pltdata.Latitude_1D,pltdata,levels=cnlvs,
                cmap=clrmap,norm=aer_norm,extend='both')
-plt.colorbar(cn,orientation=cbori,fraction=cb_frac,
-             pad=cb_pad,ticks=cnlvs[::tkfreq],aspect=40,label=cblb)
+plt.colorbar(cn,ax=ax,orientation='horizontal',ticks=cnlvs[::tkfreq],
+             fraction=0.045,aspect=40,pad=0.08,label=cblb)
 outname='%s/VIIRS_L3_AOD550.1x1.%s_%s.%s' %(imgsavpath,sdate,edate,ffmt)
 if (fsave):
    print(outname,flush=1)

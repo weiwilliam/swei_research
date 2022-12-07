@@ -132,93 +132,117 @@ for date in dlist:
    
     all_msk=(~np.isnan(tmpds.obsloc))
     good_msk=(tmpds.qcflag==0.)
+    gross_msk=(tmpds.qcflag==3.)
     hazy_msk=(tb_sim!=tb_clr)
-    #cld_msk=(tmpds.qcflag==7.)
+    cld_msk=(tmpds.qcflag==7.)
+    tzr_msk=(tmpds.qcflag==10.)
     aer_msk=(tmpds.qcflag==13.)
-    aergrs_msk=(tmpds.qcflag==55.)
+    sfcir_msk=(tmpds.qcflag==53.)
+    bust_msk=(tmpds.qcflag==55.)
     aercld_msk=(tmpds.qcflag==57.)
+    passed_msk=(good_msk)|(aer_msk)
+
 
     #pltmask=all_msk
-    #pltmask=(good_msk)|(aer_msk)|(aergrs_msk)|(aercld_msk)             
+    #pltmask=(good_msk)|(aer_msk)|(bust_msk)|(aercld_msk)             
     pltmask=(good_msk)|(hazy_msk)
     
     if (plt2d_ae):
         savedir=outpath+'/2d_Ae'
         if ( not os.path.exists(savedir) ):
             os.makedirs(savedir)
+        for plttype in ['All','Bust','Final','Clr','Aer','Tzr','Gross','Cld','NCld']:
+            if (plttype=='All'):
+                pltmask=all_msk
+            elif (plttype=='Clr'):
+                pltmask=good_msk
+            elif (plttype=='Aer'):
+                pltmask=aer_msk
+            elif (plttype=='Tzr'):
+                pltmask=tzr_msk
+            elif (plttype=='Bust'):
+                pltmask=bust_msk
+            elif (plttype=='Final'):
+                pltmask=passed_msk
+            elif (plttype=='Gross'):
+                pltmask=gross_msk
+            elif (plttype=='Cld'):
+                pltmask=cld_msk
+            elif (plttype=='NCld'):
+                pltmask=~cld_msk
         
-        cbtcks=np.arange(0,11,0.5)
-        lvs=cbtcks
-        clridx=[0]
-        for idx in np.linspace(64,128,cbtcks.size-1):
-            clridx.append(int(idx))
-        clrmap=setup_cmap('MPL_jet',clridx)
-        norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
-        
-        pltda=aereff[pltmask==1]
-        cblabel='Aerosol effect [K]'
-       
-        tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
-        
-        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
-        set_size(axe_w,axe_h)
-        ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
-                   s=ptsize,cmap=clrmap,norm=norm)
-        plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
-                     pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
-        
-        if (fsave):
-            fname=('%s/%s_%s_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
-            print(fname)
-            fig.savefig(fname,dpi=quality)
-            plt.close()
+            cbtcks=np.arange(0,11,0.5)
+            lvs=cbtcks
+            clridx=[0]
+            for idx in np.linspace(64,128,cbtcks.size-1):
+                clridx.append(int(idx))
+            clrmap=setup_cmap('MPL_jet',clridx)
+            norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
+            
+            pltda=aereff[pltmask==1]
+            cblabel='Aerosol effect [K]'
+            
+            tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
+            
+            fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
+            set_size(axe_w,axe_h)
+            ax.set_title(tistr,loc='left')
+            sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
+                       s=ptsize,cmap=clrmap,norm=norm)
+            plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
+                         pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
+            
+            if (fsave):
+                fname=('%s/%s_%s_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+                print(fname)
+                fig.savefig(fname,dpi=quality)
+                plt.close()
 
-        cbtcks=np.arange(-10,11,1)
-        lvs=cbtcks
-        clridx=[]
-        for idx in np.linspace(2,254,cbtcks.size):
-            clridx.append(int(idx))
-        clrmap=setup_cmap('BlueYellowRed',clridx)
-        norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
+            cbtcks=np.arange(-10,11,1)
+            lvs=cbtcks
+            clridx=[]
+            for idx in np.linspace(2,254,cbtcks.size):
+                clridx.append(int(idx))
+            clrmap=setup_cmap('BlueYellowRed',clridx)
+            norm = mpcrs.BoundaryNorm(lvs,len(clridx)+1,extend='both')
 
-        pltda=aereff_fg[pltmask==1]
-        cblabel='Aerosol effect FG [K]'
+            pltda=aereff_fg[pltmask==1]
+            cblabel='Aerosol effect FG [K]'
 
-        tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
+            tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
 
-        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
-        set_size(axe_w,axe_h)
-        ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
-                   s=ptsize,cmap=clrmap,norm=norm)
-        plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
-                     pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
+            fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
+            set_size(axe_w,axe_h)
+            ax.set_title(tistr,loc='left')
+            sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
+                       s=ptsize,cmap=clrmap,norm=norm)
+            plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
+                         pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
 
-        if (fsave):
-            fname=('%s/%s_%s_AeFG_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
-            print(fname)
-            fig.savefig(fname,dpi=quality)
-            plt.close()
+            if (fsave):
+                fname=('%s/%s_%s_AeFG_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+                print(fname)
+                fig.savefig(fname,dpi=quality)
+                plt.close()
 
-        pltda=aereff_obs[pltmask==1]
-        cblabel='Aerosol effect OBS [K]'
+            pltda=aereff_obs[pltmask==1]
+            cblabel='Aerosol effect OBS [K]'
 
-        tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
+            tistr=('%s (%.2f $cm^{-1}$)' %(sensor,chkwvn))
 
-        fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
-        set_size(axe_w,axe_h)
-        ax.set_title(tistr,loc='left')
-        sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
-                   s=ptsize,cmap=clrmap,norm=norm)
-        plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
-                     pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
+            fig,ax,gl=setupax_2dmap(cornll,area,proj,12)
+            set_size(axe_w,axe_h)
+            ax.set_title(tistr,loc='left')
+            sc=ax.scatter(tmpds.rlon[pltmask],tmpds.rlat[pltmask],c=pltda,
+                       s=ptsize,cmap=clrmap,norm=norm)
+            plt.colorbar(sc,orientation=cbori,fraction=cb_frac,
+                         pad=cb_pad,ticks=lvs[::2],aspect=40,label=cblabel)
 
-        if (fsave):
-            fname=('%s/%s_%s_AeOBS_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
-            print(fname)
-            fig.savefig(fname,dpi=quality)
-            plt.close()
+            if (fsave):
+                fname=('%s/%s_%s_AeOBS_%.2f.%s.%s' %(savedir,area,sensor,chkwvn,str(date),ffmt))
+                print(fname)
+                fig.savefig(fname,dpi=quality)
+                plt.close()
 
     if (plt2d_omb):
         savedir=outpath+'/2d_OMB'

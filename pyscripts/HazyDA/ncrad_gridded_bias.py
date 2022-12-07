@@ -16,7 +16,7 @@ elif (machine=='Desktop'):
     rootgit='F:\GitHub\swei_research'
 elif (machine=='S4'):
     rootpath='/data/users/swei'
-    rootarch='/scratch/users/swei/ncdiag'
+    rootarch='/data/users/swei/archive/nc_DiagFiles'
     rootgit='/home/swei/research'
 elif (machine=='Hera'):
     rootpath='/scratch2/BMC/gsd-fv3-dev/Shih-wei.Wei'
@@ -49,7 +49,9 @@ sensorlist=['airs_aqua','amsua_aqua','amsua_metop-a','amsua_n15','amsua_n18',
 #lsensor2list=['sndrd1_g15','sndrd2_g15','sndrd3_g15','sndrd4_g15']
 #lsensor3list=['avhrr_metop-a','avhrr_n18','seviri_m08','seviri_m10']
 
-def get_bc_terms(ds):
+def get_bc_terms(ds,**kwargs):
+    get_aerbc=kwargs.get('get_aerbc',False)
+
     biastermname=['BC_Total',
                   'BC_angord',
                   #'BC_Cloud_Liquid_Water',
@@ -61,6 +63,7 @@ def get_bc_terms(ds):
                   'BC_Lapse_Rate_Squared',
                   #'BC_Scan_Angle',
                   #'BC_Sine_Latitude',
+                  'BC_Aerosol_Effect',
                   ]
     bctermlst=[]
     for bcidx in np.arange(len(biastermname)):
@@ -71,6 +74,14 @@ def get_bc_terms(ds):
            bctermlst.append(biastermname[bcidx])
            if (biastermname[bcidx]=='BC_angord'):
               bctmpds=xa.concat((bctmpds,ds[biastermname[bcidx]].sum(dim='BC_angord_arr_dim')),dim='bcterm')
+           elif (biastermname[bcidx]=='BC_Aerosol_Effect'):
+              if (get_aerbc):
+                 if bcidx!=len(biastermname)-1:
+                    print('Error: bcidx should be the last number')
+                    sys.exit(1)
+                 else:
+                    tmpbc=bctmpds.sel(bcterm=0)-bctmpds.sel(bcterm=np.arange(1,bcidx)).sum(dim='bcterm')
+                    bctmpds=xa.concat((bctmpds,tmpbc),dim='bcterm')
            else:
               bctmpds=xa.concat((bctmpds,ds[biastermname[bcidx]]),dim='bcterm')
     return bctmpds, bctermlst
@@ -79,8 +90,8 @@ def get_bc_terms(ds):
 degres=2.5
 #degres=1
 
-explist=['hazyda_ctrl']
-leglist=['CTL']
+explist=['hazyda_aerov6']
+leglist=['AERv2']
 
 sensor='iasi_metop-a'
 
@@ -163,7 +174,7 @@ for date in dlist:
     omb_bc0=np.reshape(ds0.Obs_Minus_Forecast_adjusted.values,(npts0,nchs0))
     omb_nbc0=np.reshape(ds0.Obs_Minus_Forecast_unadjusted.values,(npts0,nchs0))
 
-    bctmpds,bctermlst=get_bc_terms(ds0)
+    bctmpds,bctermlst=get_bc_terms(ds0,get_aerbc=1)
     nbcterm=len(bctermlst)
     bcterm0=np.reshape(bctmpds.values,(nbcterm,npts0,nchs0))
 

@@ -34,12 +34,13 @@ from datetime import timedelta
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
-from matplotlib.dates import DateFormatter
+from matplotlib.dates import (DAILY, DateFormatter,
+                              rrulewrapper, RRuleLocator)
 import xarray as xa
 import pandas as pd
 
 import setuparea as setarea
-from plot_utils import setupax_2dmap, plt_x2y, set_size
+from plot_utils import setupax_2dmap, set_size
 from utils import setup_cmap,find_cnlvs
 
 tlsize=12 ; txsize=10
@@ -54,6 +55,8 @@ minussign=u'\u2212'
 
 pltcolor=['blue', 'red', 'black', 'grey']
 pltstyle= ['-','-','-','-']
+rule = rrulewrapper(DAILY, byhour=6, interval=5)
+loc = RRuleLocator(rule)
 date_fmt= DateFormatter('%Y %h %n %d %Hz')
 
 
@@ -74,10 +77,12 @@ sensor='iasi_metop-a'
 sdate=2020060106
 edate=2020071018
 hint=6
-chkwvn=962.5
-nterm=6
+chkwvn=slice(750,1200)
+nterm=0
 pltvar='bcterm_mean'
 units='K'
+ts1d=0
+ts2d=1
 
 area='Glb'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
@@ -103,11 +108,22 @@ if loop=='anl':
 elif loop=='ges':
     tlstr='OMF'
 
+cbori='vertical' #vertical, horizontal
+if (cbori=='vertical'):
+   cb_frac=0.05
+   cb_pad=0.02
+elif (cbori=='horizontal'):
+   cb_frac=0.04
+   cb_pad=0.1
+
 inpath=rootarch+'/archive/HazyDA/gridded_diag'
 outputpath=rootpath+'/DiagFiles/gridded_rad'
-imgsavpath=outputpath+'/1ch/bcterm'
-if ( not os.path.exists(imgsavpath) ):
-   os.makedirs(imgsavpath)
+ts1dsavpath=outputpath+'/1ch/bcterm'
+if ( not os.path.exists(ts1dsavpath) ):
+   os.makedirs(ts1dsavpath)
+ts2dsavpath=outputpath+'/spectrum/bcterm'
+if ( not os.path.exists(ts2dsavpath) ):
+   os.makedirs(ts2dsavpath)
 
 grdfile0='%s/%s_%s_%s_%s_bcterm_%.1fx%.1f.time.%s_%s.nc' %(inpath,expnlist[0],sensor,loop,qcflg,degres,degres,sdate,edate)
 grdfile1='%s/%s_%s_%s_%s_bcterm_%.1fx%.1f.time.%s_%s.nc' %(inpath,expnlist[1],sensor,loop,qcflg,degres,degres,sdate,edate)
@@ -116,27 +132,122 @@ ds0=xa.open_dataset(grdfile0)
 ds1=xa.open_dataset(grdfile1)
 bctermname=ds0.nbcterm.data[nterm]
 
-pltda0=ds0[pltvar].sel(nbcterm=bctermname,wavenumber=chkwvn)
-pltda1=ds1[pltvar].sel(nbcterm=bctermname,wavenumber=chkwvn)
+pltda0=ds0.sel(nbcterm=bctermname,wavenumber=chkwvn)
+pltda1=ds1.sel(nbcterm=bctermname,wavenumber=chkwvn)
+sum_dims=['lat','lon']
+mean0=(pltda0['bcterm_mean']*pltda0['bcterm_count']).sum(dim=sum_dims)/(pltda0['bcterm_count'].sum(dim=sum_dims))
+mean1=(pltda1['bcterm_mean']*pltda1['bcterm_count']).sum(dim=sum_dims)/(pltda1['bcterm_count'].sum(dim=sum_dims))
 
-df0=pltda0.mean(dim=('lat','lon')).to_dataframe().rename(columns={pltvar:expnlist[0]})
-df1=pltda1.mean(dim=('lat','lon')).to_dataframe().rename(columns={pltvar:expnlist[1]})
+if ts1d:
+   for wvn in tmpda0.wavenumber.data:
+       df0=mean0.sel(wavenumber=wvn).to_dataframe(name=expnlist[0])
+       df1=mean1.sel(wavenumber=wvn).to_dataframe(name=expnlist[1])
+       
+       tmpdf=pd.concat((df0,df1),axis=1)[expnlist]
+       
+       fig,ax=plt.subplots()
+       set_size(axe_w,axe_h,b=0.12)
+       ax.set_prop_cycle(color=pltcolor, linestyle=pltstyle)
+       tmpdf.plot(ax=ax,marker='o',ms=4)
+       ax.xaxis.set_major_formatter(date_fmt)
+       ax.grid(axis='x')
+       tistr='%s %.2f $\mathrm{cm^{-1}}$'%(sensor,wvn)
+       ax.set_title(tistr,loc='left')
+       ax.set_ylabel('%s [%s]'%(bctermname.replace('_',' '),units))
+       ax.set_xlabel('')
+       
+       if (fsave):
+          outname='%s/%s_%s_%s_%s_%.2f.png' %(ts1dsavpath,sensor,bctermname,expnlist[0],expnlist[1],wvn)
+          print(outname,flush=1)
+          fig.savefig(outname,dpi=quality)
+          plt.close()
 
-tmpdf=pd.concat((df0,df1),axis=1)[expnlist]
+if ts2d:
+   # exp1 
+   tmpds=xa.concat((mean0,mean1),dim='exps')
+   cnlvs=find_cnlvs(tmpds,ntcks=21,eqside=1)
+   clridx=[]
+   for idx in np.linspace(2,254,cnlvs.size):
+       clridx.append(int(idx))
+   clrmap=setup_cmap('BlueYellowRed',clridx)
+   norm = mpcrs.BoundaryNorm(cnlvs,len(clridx)+1,extend='both')
 
-fig,ax=plt.subplots()
-set_size(axe_w,axe_h,b=0.12)
-ax.set_prop_cycle(color=pltcolor, linestyle=pltstyle)
-tmpdf.plot(ax=ax,marker='o',ms=4)
-ax.xaxis.set_major_formatter(date_fmt)
-ax.grid(axis='x')
-tistr='%s %.2f $\mathrm{cm^{-1}}$'%(sensor,chkwvn)
-ax.set_title(tistr,loc='left')
-ax.set_ylabel('%s [%s]'%(bctermname.replace('_',' '),units))
-ax.set_xlabel('')
+   x=mean0.time.data
+   y=np.arange(mean0.wavenumber.size)
+   yticks=mean0.wavenumber.data[::10]
+   z=mean0.data.swapaxes(0,1)
+   x_label='Date'
+   y_label='Wavenumber [$cm^{-1}$]'
+   titlestr=expnlist[0]
+   cblabel='%s [%s]'%(bctermname.replace('_',' '),units)
 
-if (fsave):
-   outname='%s/%s_%s_%s_%s_%.2f.png' %(imgsavpath,sensor,bctermname,expnlist[0],expnlist[1],chkwvn)
-   print(outname,flush=1)
-   fig.savefig(outname,dpi=quality)
-   plt.close()
+   fig,ax=plt.subplots()
+   set_size(axe_w,axe_h,b=0.12)
+   ax.xaxis.set_major_locator(loc)
+   ax.xaxis.set_major_formatter(date_fmt)
+   pm=ax.pcolormesh(x,y,z,cmap=clrmap,norm=norm)
+   ax.set_title(titlestr,loc='left')
+   ax.set_ylabel(y_label)
+   ax.set_yticks(y[::10])
+   ax.set_yticklabels(yticks)
+   plt.colorbar(pm,orientation=cbori,fraction=cb_frac,
+                pad=cb_pad,aspect=20,label=cblabel)
+  
+   if (fsave):
+      outname='%s/%s_%s_%s.png' %(ts2dsavpath,sensor,bctermname,expnlist[0])
+      print(outname,flush=1)
+      fig.savefig(outname,dpi=quality)
+      plt.close()
+
+   # exp2
+   z=mean1.data.swapaxes(0,1)
+   titlestr=expnlist[1]
+
+   fig,ax=plt.subplots()
+   set_size(axe_w,axe_h,b=0.12)
+   ax.xaxis.set_major_locator(loc)
+   ax.xaxis.set_major_formatter(date_fmt)
+   pm=ax.pcolormesh(x,y,z,cmap=clrmap,norm=norm)
+   ax.set_title(titlestr,loc='left')
+   ax.set_ylabel(y_label)
+   ax.set_yticks(y[::10])
+   ax.set_yticklabels(yticks)
+   plt.colorbar(pm,orientation=cbori,fraction=cb_frac,
+                pad=cb_pad,aspect=20,label=cblabel)
+  
+   if (fsave):
+      outname='%s/%s_%s_%s.png' %(ts2dsavpath,sensor,bctermname,expnlist[1])
+      print(outname,flush=1)
+      fig.savefig(outname,dpi=quality)
+      plt.close()
+
+   # absolute diff
+   absdiff=(abs(mean1)-abs(mean0))
+   titlestr='|%s|%s|%s|'%(expnlist[1],minussign,expnlist[0])
+   z=absdiff.data.swapaxes(0,1)
+
+   cnlvs=find_cnlvs(absdiff,ntcks=21,eqside=1)
+   clridx=[]
+   for idx in np.linspace(2,254,cnlvs.size):
+       clridx.append(int(idx))
+   clrmap=setup_cmap('BlueYellowRed',clridx)
+   norm = mpcrs.BoundaryNorm(cnlvs,len(clridx)+1,extend='both')
+  
+   fig,ax=plt.subplots()
+   set_size(axe_w,axe_h,b=0.12)
+   ax.xaxis.set_major_locator(loc)
+   ax.xaxis.set_major_formatter(date_fmt)
+   pm=ax.pcolormesh(x,y,z,cmap=clrmap,norm=norm)
+   ax.set_title(titlestr,loc='left')
+   ax.set_ylabel(y_label)
+   ax.set_yticks(y[::10])
+   ax.set_yticklabels(yticks)
+   plt.colorbar(pm,orientation=cbori,fraction=cb_frac,
+                pad=cb_pad,aspect=20,label=cblabel)
+  
+   if (fsave):
+      outname='%s/%s_%s_%s-%s.png' %(ts2dsavpath,sensor,bctermname,expnlist[1],expnlist[0])
+      print(outname,flush=1)
+      fig.savefig(outname,dpi=quality)
+      plt.close()
+
