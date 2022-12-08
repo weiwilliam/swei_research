@@ -1,0 +1,3 @@
+[submodule "pyscripts/pylibs"]
+	path = pyscripts/pylibs
+	url = https://github.com/weiwilliam/swei_pylibs.git
