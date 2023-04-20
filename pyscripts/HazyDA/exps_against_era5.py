@@ -70,14 +70,9 @@ units_lst=['m','g/kg','K','m/s','m/s']  # m,'K','%','g/kg','K','m/s','mb'
 grav=9.80665e+0
 pres_lv_slice=slice(1000,100)
 
-area='TRO'
+area='r2o9'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
-if cyclic:
-   minlon=-180. ; maxlon=180.
-else:
-   minlon=(minlon+180)%360-180
-   maxlon=(maxlon+180)%360-180
 cornerll=[minlat,maxlat,minlon,maxlon]
 
 map_imgsavpath=outputpath+'/2dmap/'+area

@@ -88,12 +88,6 @@ else:
 
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(minlat,maxlat,minlon,maxlon,crosszero, cyclic)
-if (cyclic):
-    minlon=-180.
-    maxlon=180.
-else:
-    minlon=(minlon+180)%360-180
-    maxlon=(maxlon+180)%360-180
 
 def scatterplot_x2y2(xdata1,xdata2,xlb,ydata1,ydata2,ylb,stat1,stat2,lglst,clrlst,mkrlst,title,fname,fig=None,ax=None):
     from utils import gen_eqs_by_stats

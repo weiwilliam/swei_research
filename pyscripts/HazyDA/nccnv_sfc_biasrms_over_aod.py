@@ -56,6 +56,7 @@ minussign=u'\u2212'
 sfctype_list=['180','181','182','183','187']
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/biasrms'
 inputpath=rootarch
+viirs_aod_path='/data/users/swei/Dataset/VIIRS_NPP/AOD_daily_1by1'
 
 varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
@@ -93,13 +94,8 @@ imgsavpath=outputpath+'/'+area
 if ( not os.path.exists(imgsavpath) ):
    os.makedirs(imgsavpath)
 
-syy=int(str(sdate)[:4]); smm=int(str(sdate)[4:6])
-sdd=int(str(sdate)[6:8]); shh=int(str(sdate)[8:10])
-eyy=int(str(edate)[:4]); emm=int(str(edate)[4:6])
-edd=int(str(edate)[6:8]); ehh=int(str(edate)[8:10])
-
-date1 = datetime(syy,smm,sdd,shh)
-date2 = datetime(eyy,emm,edd,ehh)
+date1 = pd.to_datetime(sdate,format='%Y%m%d%H')
+date2 = pd.to_datetime(edate,format='%Y%m%d%H')
 delta = timedelta(hours=6)
 dates = pd.date_range(start=date1, end=date2, freq=delta)
 
@@ -139,10 +135,12 @@ for var in varlist:
     else:
         icount=np.zeros((tnum,znum,2))
     d=0
-    for date in dlist:
-        cnvdfile='diag_conv_'+var+'_'+loop+'.'+date+'.'+diagsuffix
-        infile1=inputpath+'/'+explist[0]+'/'+date+'/'+cnvdfile
-        infile2=inputpath+'/'+explist[1]+'/'+date+'/'+cnvdfile
+    for date in dates:
+        jdaystr=date.to_strftime('%Y%j') 
+        datestr=date.to_strftime('%Y%m%d%H') 
+        cnvdfile='diag_conv_'+var+'_'+loop+'.'+datestr+'.'+diagsuffix
+        infile1=inputpath+'/'+explist[0]+'/'+datestr+'/'+cnvdfile
+        infile2=inputpath+'/'+explist[1]+'/'+datestr+'/'+cnvdfile
         if (os.path.exists(infile1) and os.path.exists(infile2)):
             print('Processing Cnvfile: %s' %(cnvdfile))
             ds1=xa.open_dataset(infile1)
