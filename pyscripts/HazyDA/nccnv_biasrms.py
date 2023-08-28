@@ -60,8 +60,8 @@ inputpath=rootarch
 varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
 bufrtype='all' # SST: 181-199
-explist=np.array(['hazyda_ctrl','hazyda_aero'])
-expnlist=['CTL','AER']
+explist=np.array(['hazyda_ctrl','hazyda_aerov6'])
+expnlist=['CTL','AERv2']
 nexp=explist.size
 exps_fname_str=''
 for exp in expnlist:
@@ -74,7 +74,7 @@ hint=6
 
 loop='ges' #ges,anl
 area='r2o10'
-useqc=1
+useqc=0
 
 if (loop=='ges'):
    lpstr='OMF'

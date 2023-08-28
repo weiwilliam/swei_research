@@ -7,3 +7,8 @@ Git useful information
    git checkout master
    git merge upstream/master
    git push origin master
+
+2. Update access token
+   git config --global --unset credential.helper
+   git config --global credential.helper store
+   git fetch, ask for credential

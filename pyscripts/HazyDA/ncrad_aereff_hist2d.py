@@ -52,15 +52,18 @@ minussign=u'\u2212'
 
 # Plotting setup
 sdate=2020061000
-edate=2020092118
+edate=2020071018
 hint=6
-exp='hazyda_aerov6'
+exp='hazyda_aero'
 exptype='exp' #exp,observer
-saved_suffix='v3qc'
+saved_suffix='v1qc'
+# v1qc: no cldqc and bc with clr-sky only, expname: aero 
+# v2qc: cldqc and bc with clr-sky only, expname: aero
+# v3qc: no cldqc and bc with Ae expname: aerov6
 sensor='iasi_metop-a'
 spectral_range=slice(700,1300)
 loop='ges' #ges,anl
-usebc=0
+usebc=1
 plthist2d=1 # plot 2d histogram
 chkwvn_list=[906.25,943.25,962.5,1096.0,]
 
@@ -158,7 +161,7 @@ for chkwvn in chkwvn_list:
     if (saved_suffix=='v1qc'):
        bustqc=(abs(omb)>3.)&(abs(omb)>1.8*ds_chk.Ae)
        tmpmsk=(aercld_msk)&(~bustqc)
-       omb=xa.where(tmpmsk,omb_clr,omb)
+       omb=xa.where(tmpmsk,omb,omb_clr)
        aer_msk=(ds_chk.qcflag==13.)|(tmpmsk)
     else:
        aer_msk=(ds_chk.qcflag==13.)

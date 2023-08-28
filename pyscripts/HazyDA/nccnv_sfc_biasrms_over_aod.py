@@ -40,6 +40,7 @@ import setuparea as setarea
 from plot_utils import setupax_2dmap, set_size
 from utils import ndate,setup_cmap
 from datetime import datetime, timedelta
+from opendap_m2 import opendap_m2_aod
 import scipy.stats
 
 tlsize=12 ; lbsize=10
@@ -56,7 +57,6 @@ minussign=u'\u2212'
 sfctype_list=['180','181','182','183','187']
 outputpath=rootpath+'/AlbanyWork/Prospectus/Experiments/HazyDA/Images/DiagFiles/conv/biasrms'
 inputpath=rootarch
-viirs_aod_path='/data/users/swei/Dataset/VIIRS_NPP/AOD_daily_1by1'
 
 varlist=['sst'] #['ps','sst','gps','q','t','uv','tcp']
 unitlist=['K'] #['mb','K','%','g/kg','K','m/s','mb']
@@ -68,6 +68,10 @@ exps_fname_str=''
 for exp in expnlist:
     exps_fname_str += exp+'_'
 exps_fname_str=exps_fname_str[:-1]
+
+sensor = 'iasi_metop-a'
+chkwvn = 962.5
+sel_radqc = 13
 
 sdate=2020061000
 edate=2020071018
@@ -87,6 +91,7 @@ else:
     qcflg='noqc'
 minlon, maxlon, minlat, maxlat, crosszero, cyclic=setarea.setarea(area)
 print(area,minlat,maxlat,minlon,maxlon,crosszero)
+cornerll = [minlat, maxlat, minlon, maxlon]
 
 zpltlst=[0,1,2,3,4,5,6,7,8]
 
@@ -98,23 +103,12 @@ date1 = pd.to_datetime(sdate,format='%Y%m%d%H')
 date2 = pd.to_datetime(edate,format='%Y%m%d%H')
 delta = timedelta(hours=6)
 dates = pd.date_range(start=date1, end=date2, freq=delta)
-
-xdate2= date2+delta
-xdates= mdates.drange(date1, xdate2, delta)
+tnum = dates.size
 
 rule = rrulewrapper(DAILY, byhour=6, interval=5)
 loc = RRuleLocator(rule)
 formatter = DateFormatter('%Y %h %n %d %Hz')
 
-# Calculate how many cases are going to do statistic.
-tnum=0
-dlist=[]
-cdate=sdate
-while (cdate<=edate):
-    dlist.append(str(cdate))
-    tnum=tnum+1
-    cdate=ndate(hint,cdate)
-    
 print('Total cases number is %d' % tnum )
 
 ptop=np.array((1000.,900.,800.,600.,400.,300.,250.,200.,150.,100.,50.,0.))
@@ -136,19 +130,21 @@ for var in varlist:
         icount=np.zeros((tnum,znum,2))
     d=0
     for date in dates:
-        jdaystr=date.to_strftime('%Y%j') 
-        datestr=date.to_strftime('%Y%m%d%H') 
+        datestr=date.strftime('%Y%m%d%H') 
         cnvdfile='diag_conv_'+var+'_'+loop+'.'+datestr+'.'+diagsuffix
         infile1=inputpath+'/'+explist[0]+'/'+datestr+'/'+cnvdfile
         infile2=inputpath+'/'+explist[1]+'/'+datestr+'/'+cnvdfile
+        radfile=inputpath+'/'+explist[1]+'/'+datestr+'/diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
         if (os.path.exists(infile1) and os.path.exists(infile2)):
             print('Processing Cnvfile: %s' %(cnvdfile))
-            ds1=xa.open_dataset(infile1)
-            ds2=xa.open_dataset(infile2)
+            ds1=read_cnv_ncdiag(infile1,useqc=useqc,sel_bufr=bufrtype,is_sfc=sfcflag,area=area,cornerll=cornerll)
+            ds2=read_cnv_ncdiag(infile2,useqc=useqc,sel_bufr=bufrtype,is_sfc=sfcflag,area=area,cornerll=cornerll)
+            ds3=read_rad_ncdiag(radfile,chkwvn=chkwvn,sel_qc=sel_radqc,area=area,cornerll=cornerll)
             #print('Load Data Elapsed: %f [s]' %(end-start))
             try:
                 omg_mean
             except NameError:
+                rad_qccnt[:]=np.nan
                 if (sfcflag):
                     omg_mean=np.zeros((tnum,2),dtype='float')
                     omg_rmsq=np.zeros_like(omg_mean)
@@ -164,44 +160,14 @@ for var in varlist:
             d=d+1
             continue
         
-        rlat1=ds1.Latitude.data
-        rlat2=ds2.Latitude.data
-        rlon1=(ds1.Longitude.data+180)%360-180
-        rlon2=(ds2.Longitude.data+180)%360-180
-        
-        if (not sfcflag):
-           pres1=ds1.Pressure
-           pres2=ds2.Pressure
-
-        iuse1=ds1.Analysis_Use_Flag
-        iuse2=ds2.Analysis_Use_Flag
-        type1=ds1.Observation_Type
-        type2=ds2.Observation_Type
-        
-        mask1=(~np.isnan(ds1.nobs))
-        mask2=(~np.isnan(ds2.nobs))
-        
-        if (area!='Glb'):
-            mask1=(mask1)&((rlon1<maxlon)&(rlon1>minlon)&(rlat1>minlat)&(rlat1<maxlat))
-            mask2=(mask2)&((rlon2<maxlon)&(rlon2>minlon)&(rlat2>minlat)&(rlat2<maxlat))
-        
-        if (useqc):
-            mask1=(mask1)&(iuse1==1)
-            mask2=(mask2)&(iuse2==1)
-
-        if (bufrtype!='all'):
-            mask1=(mask1)&(type1==int(bufrtype))
-            mask2=(mask2)&(type2==int(bufrtype))
-        
+        rad_qccnt[d]=ds3.omb.size
+            
         if (sfcflag):
-            dpar1=ds1.Obs_Minus_Forecast_adjusted
-            dpar2=ds2.Obs_Minus_Forecast_adjusted
+            dpar1=ds1.omb_nbc
+            dpar2=ds2.omb_nbc
             
-            icount[d,0]=np.count_nonzero(mask1)
-            icount[d,1]=np.count_nonzero(mask2)
-            
-            dpar1=xa.where(mask1,dpar1,np.nan)
-            dpar2=xa.where(mask2,dpar2,np.nan)
+            icount[d,0]=dpar1.size
+            icount[d,1]=dpar2.size
             
             omg_mean[d,0]=np.nanmean(dpar1)
             omg_mean[d,1]=np.nanmean(dpar2)
@@ -210,16 +176,15 @@ for var in varlist:
             omg_rmsq[d,1]=np.sqrt(np.nanmean(np.square(dpar2)))
             
         else:
-            if (var=='uv'):
-                dpar1=ds1.u_Obs_Minus_Forecast_adjusted
-                dpar2=ds2.u_Obs_Minus_Forecast_adjusted
-            else:
-                dpar1=ds1.Obs_Minus_Forecast_adjusted
-                dpar2=ds2.Obs_Minus_Forecast_adjusted
+            dpar1=ds1.omb_nbc
+            dpar2=ds2.omb_nbc
+            
+            pres1=ds1.pres
+            pres2=ds2.pres
                 
             for z in np.arange(znum):
-                zmask1=(mask1)&((pres1<pbot[z])&(pres1>ptop[z]))
-                zmask2=(mask2)&((pres2<pbot[z])&(pres2>ptop[z]))
+                zmask1=((pres1<pbot[z])&(pres1>ptop[z]))
+                zmask2=((pres2<pbot[z])&(pres2>ptop[z]))
                 
                 icount[d,z,0]=np.count_nonzero(zmask1)
                 icount[d,z,1]=np.count_nonzero(zmask2)
@@ -232,31 +197,37 @@ for var in varlist:
             
                 omg_rmsq[d,z,0]=np.sqrt(np.nanmean(np.square(zdpar1)))
                 omg_rmsq[d,z,1]=np.sqrt(np.nanmean(np.square(zdpar2)))
+
         d=d+1
+
+    aod_ts = opendap_m2_aod(sdate,edate,hint,area,cornerll=cornerll,varname='TOTEXTTAU',outfmt='ts')
+    aod_ts_data = aod_ts.data
                 
     if (sfcflag):
-        fig,ax=plt.subplots(2,1,sharex=True,figsize=(9,3.8))
+        fig,ax=plt.subplots(3,1,sharex=True,figsize=(9,5.7))
         fig.subplots_adjust(hspace=0.1)
-        for a in np.arange(2):
+        for a in np.arange(3):
             ax[a].set_prop_cycle(color=['blue','red','green'])
             ax[a].grid()
         
-        ax[1].plot_date(xdates,omg_mean,'-o',lw=1,ms=1.5)
+        ax[0].plot_date(dates,aod_ts_data,'k',lw=1)
+        ax[0].set_ylabel('MERRA-2 AOD')
         ax[0].xaxis.set_major_locator(loc)
         ax[0].xaxis.set_major_formatter(formatter)
         ax[0].xaxis.set_tick_params(labelsize=10)
         ax[0].set_title('%s %s[%s]' %(area,var.upper(),unit),loc='left')
-        ax[0].plot_date(xdates,omg_rmsq,'--o',lw=1,ms=1.5)
-        ax[0].set_ylabel('RMS %s [%s]' %(lpstr,unitlist[uidx]))
-        ax[1].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
+        ax[1].plot_date(dates,omg_rmsq,'--o',lw=1,ms=1.5)
+        ax[1].set_ylabel('RMS %s [%s]' %(lpstr,unitlist[uidx]))
+        ax[2].plot_date(dates,omg_mean,'-o',lw=1,ms=1.5)
+        ax[2].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
         lglist=np.zeros((2,2),dtype='<U30')
         for ex in np.arange(nexp):
             lglist[0,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_rmsq[:,ex]))
             lglist[1,ex]=expnlist[ex]+'(%.2f)' %(np.nanmean(omg_mean[:,ex]))
-        ax[0].legend(lglist[0,:])
-        ax[1].legend(lglist[1,:])
+        ax[1].legend(lglist[0,:])
+        ax[2].legend(lglist[1,:])
         if (fsave):
-            fname='%s/%s_%s_%s_%s_%s_bufr%s_BIASRMS.%s_%s.png'%(imgsavpath,area,loop,var,exps_fname_str,qcflg,bufrtype,sdate,edate)
+            fname='%s/%s_%s_%s_%s_%s_bufr%s_BIASRMS_AOD.%s_%s.png'%(imgsavpath,area,loop,var,exps_fname_str,qcflg,bufrtype,sdate,edate)
             print(fname,flush=1)
             fig.savefig(fname, dpi=quality)
             plt.close()
@@ -319,7 +290,7 @@ for var in varlist:
             ax[1].legend(lglist[1,:])
             
             if (fsave):
-               fname=('%s/%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS.%s_%s.png' 
+               fname=('%s/%s_%s_%s_%s_%i_%s_bufr%s_BIASRMS_AOD.%s_%s.png' 
                       %(imgsavpath,area,loop,var,exps_fname_str,pbot[z],qcflg,bufrtype,sdate,edate))
                print(fname,flush=1)
                fig.savefig(fname, dpi=quality)
