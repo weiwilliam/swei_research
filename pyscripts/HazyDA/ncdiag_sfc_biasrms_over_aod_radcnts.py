@@ -34,6 +34,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpcrs
 import matplotlib.dates as mdates
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 from matplotlib.dates import (DAILY, DateFormatter,
                               rrulewrapper, RRuleLocator)
 import setuparea as setarea
@@ -135,17 +137,17 @@ for var in varlist:
         cnvdfile='diag_conv_'+var+'_'+loop+'.'+datestr+'.'+diagsuffix
         infile1=inputpath+'/'+explist[0]+'/'+datestr+'/'+cnvdfile
         infile2=inputpath+'/'+explist[1]+'/'+datestr+'/'+cnvdfile
-        radfile=inputpath+'/'+explist[1]+'/'+datestr+'/diag_'+sensor+'_'+loop+'.'+str(date)+'.nc4'
+        radfile=inputpath+'/'+explist[1]+'/'+datestr+'/diag_'+sensor+'_'+loop+'.'+datestr+'.nc4'
         if (os.path.exists(infile1) and os.path.exists(infile2)):
             print('Processing Cnvfile: %s' %(cnvdfile))
             ds1=read_cnv_ncdiag(infile1,useqc=useqc,sel_bufr=bufrtype,is_sfc=sfcflag,area=area,cornerll=cornerll)
             ds2=read_cnv_ncdiag(infile2,useqc=useqc,sel_bufr=bufrtype,is_sfc=sfcflag,area=area,cornerll=cornerll)
-            ds3=read_rad_ncdiag(radfile,chkwvn=chkwvn,sel_qc=sel_radqc,area=area,cornerll=cornerll)
+            if (os.path.exists(radfile)): ds3=read_rad_ncdiag(radfile,chkwvn=chkwvn,area=area,cornerll=cornerll)
             #print('Load Data Elapsed: %f [s]' %(end-start))
             try:
                 omg_mean
             except NameError:
-                rad_qccnt[:]=np.nan
+                rad_qccnt=np.zeros(tnum,dtype='int')
                 if (sfcflag):
                     omg_mean=np.zeros((tnum,2),dtype='float')
                     omg_rmsq=np.zeros_like(omg_mean)
@@ -160,8 +162,9 @@ for var in varlist:
             print('%s is not existing'%(cnvdfile))
             d=d+1
             continue
-        
-        rad_qccnt[d]=ds3.omb.size
+       
+        qcmask = ds3.qcflag == sel_radqc 
+        rad_qccnt[d] = np.count_nonzero(qcmask)
             
         if (sfcflag):
             dpar1=ds1.omb_nbc
@@ -211,15 +214,24 @@ for var in varlist:
             ax[a].set_prop_cycle(color=['blue','red','green'])
             ax[a].grid()
         
-        ax[0].plot_date(dates,aod_ts_data,'k',lw=1)
+        ax[0].plot(dates,aod_ts_data,'k',lw=1,zorder=2)
         ax[0].set_ylabel('MERRA-2 AOD')
         ax[0].xaxis.set_major_locator(loc)
         ax[0].xaxis.set_major_formatter(formatter)
         ax[0].xaxis.set_tick_params(labelsize=10)
         ax[0].set_title('%s %s[%s]' %(area,var.upper(),unit),loc='left')
-        ax[1].plot_date(dates,omg_rmsq,'--o',lw=1,ms=1.5)
+        tax = ax[0].twinx()
+        taxcolor = 'tab:blue'
+        tax.bar(dates,rad_qccnt,color=taxcolor,width=0.5,alpha=0.6,zorder=1)
+        tax.set_ylabel('Counts',color=taxcolor)
+        tax.tick_params(axis='y', labelcolor=taxcolor)
+        lg_element = [Line2D([0], [0], color='k', lw=2, label='MERRA-2 AOD'),
+                      Patch(facecolor=taxcolor, label='hazy-sky')]
+        ax[0].legend(handles=lg_element)
+         
+        ax[1].plot(dates,omg_rmsq,'--o',lw=1,ms=1.5)
         ax[1].set_ylabel('RMS %s [%s]' %(lpstr,unitlist[uidx]))
-        ax[2].plot_date(dates,omg_mean,'-o',lw=1,ms=1.5)
+        ax[2].plot(dates,omg_mean,'-o',lw=1,ms=1.5)
         ax[2].set_ylabel('Mean %s [%s]'%(lpstr,unitlist[uidx]))
         lglist=np.zeros((2,2),dtype='<U30')
         for ex in np.arange(nexp):
@@ -228,7 +240,7 @@ for var in varlist:
         ax[1].legend(lglist[0,:])
         ax[2].legend(lglist[1,:])
         if (fsave):
-            fname='%s/%s_%s_%s_%s_%s_bufr%s_BIASRMS_AOD.%s_%s.png'%(imgsavpath,area,loop,var,exps_fname_str,qcflg,bufrtype,sdate,edate)
+            fname='%s/%s_%s_%s_%s_%s_bufr%s_BIASRMS_AOD_Aercnt.%s_%s.png'%(imgsavpath,area,loop,var,exps_fname_str,qcflg,bufrtype,sdate,edate)
             print(fname,flush=1)
             fig.savefig(fname, dpi=quality)
             plt.close()
