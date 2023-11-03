@@ -81,7 +81,7 @@ edate=2020071018
 hint=6
 
 loop='ges' #ges,anl
-area='r2o10'
+area='r2o9'
 useqc=1
 
 if (loop=='ges'):
@@ -226,7 +226,7 @@ for var in varlist:
         tax.set_ylabel('Counts',color=taxcolor)
         tax.tick_params(axis='y', labelcolor=taxcolor)
         lg_element = [Line2D([0], [0], color='k', lw=2, label='MERRA-2 AOD'),
-                      Patch(facecolor=taxcolor, label='hazy-sky')]
+                      Patch(facecolor=taxcolor, label='Hazy-sky cnts.')]
         ax[0].legend(handles=lg_element)
          
         ax[1].plot(dates,omg_rmsq,'--o',lw=1,ms=1.5)
