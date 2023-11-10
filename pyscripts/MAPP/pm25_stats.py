@@ -27,24 +27,19 @@ elif (cbori=='horizontal'):
 
 #
 work_year=2016
-work_mons=[1,2,3,4,5,6,7,8,9,10,11,12]
+work_mons=[5,6,7,8,9,10,11,12]
 arealist=['Glb'] #,'NAmer','Asia','EUR']
 hint=6
 
-explist=['noda','anal']
-obtype='AOD20'
-outpath='/data/users/swei/MAPP/'
-aeronetdir='/data/users/swei/MAPP/aeronet_550'
+outpath='/data/users/swei/MAPP'
+naradir='/data/users/swei/MAPP/pm25_hofx/anal_pm25'
 camsdir = '/data/users/swei/MAPP/model/cams_pm25'
-naradir = '/data/users/swei/MAPP/'
 
 m2type = 'M2T1NXAER'
 m2_url = 'https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2/%s.5.12.4' %(m2type)
 m2tag = 'tavg1_2d_aer_Nx'
 m2ind = 400
-savedir=outpath+'/aod550_stats'
-wave0 = 550
-small = 0.1
+savedir=outpath+'/pm25_stats'
 
 if ( not os.path.exists(savedir) ):
     os.makedirs(savedir)
@@ -73,11 +68,8 @@ work_dates=pd.to_datetime(work_dates,format='%Y%m%d%H')
 ntime=len(work_dates)
 
 def hofx_dict(ncd,ds,modelname):
-    speed_light = 2.99792458E8 * 1.e9
-    wavelengths = ncd.groups['MetaData'].variables['sensorCentralWavelength'][:]
-    ichan_wave0 = np.where( abs(wavelengths*1e3 - wave0) < small )[0][0]
-    lats = ncd.groups['MetaData'].variables['latitude' ][:]
-    lons = ncd.groups['MetaData'].variables['longitude'][:]
+    lats = ncd.groups['MetaData'].variables['latitude' ][:].data
+    lons = ncd.groups['MetaData'].variables['longitude'][:].data
     stid = ncd.groups['MetaData'].variables['stationIdentification'][:]
     time = ncd.groups['MetaData'].variables['dateTime'][:].data
     ordinal = np.datetime64('1970-01-01T00:00:00')
@@ -90,25 +82,27 @@ def hofx_dict(ncd,ds,modelname):
     st_time = xa.DataArray(datetime,coords=[stid],dims="station")
 
     # test using select or interp
-    if modelname=='nara' or modelname=='merra2':
-       hofx = ds.interp(lat=st_lats,lon=st_lons,time=st_time)
+    if modelname=='nara':
+        hofx = ncd.groups['hofx'].variables['pm25'][:].data
     elif modelname=='cams':
-       hofx = ds.interp(latitude=st_lats,longitude=st_lons,time=st_time)
+        hofx = ds.interp(latitude=st_lats,longitude=st_lons,time=st_time)
+    elif modelname=='merra2':
+        hofx = ds.interp(lat=st_lats,lon=st_lons,time=st_time)
 
     outdict = {
                'lats':   lats,
                'lons':   lons,
-               'obs':    ncd.groups['ObsValue'].variables['aerosolOpticalDepth'][:,ichan_wave0],
+               'obs':    ncd.groups['ObsValue'].variables['pm25'][:].data,
                'hofx':   hofx,
+               'effqc':  ncd.groups['EffectiveQC'].variables['pm25'][:],
                }
     return outdict
 
-def process_aod(in_dict):
+def process_pm25(in_dict):
     tmpdf = pd.DataFrame.from_dict(in_dict)
-    dfout = tmpdf[['hofx','obs','lats','lons']]
-    nanfilter = (dfout['hofx'].isna()|dfout['obs'].isna())
-    dfout = dfout.loc[~nanfilter,:]
-
+    dfout = tmpdf[['hofx','obs','lats','lons','effqc']]
+    effqcfilter = (dfout['effqc']==0)
+    dfout = dfout.loc[effqcfilter,:]
     return dfout
 
 def calculate_stats(df_in):
@@ -137,67 +131,53 @@ def datestr(indate):
     ymstr = indate.strftime('%Y%m')
     return datestr, pdystr, ymstr
 
+cams_ds = xa.open_dataset('%s/cams_pm25.2016.nc' %(camsdir) )
+cams_ds = cams_ds.assign_coords(longitude=(((cams_ds.longitude + 180) % 360) - 180))
+cams_ds = cams_ds['pm2p5']*1e9
+
 for d in range(ntime):
     cdate = work_dates[d]
-    c_date, c_pdy, c_yms = datestr(cdate)
+    c_date, c_pdy, c_ym = datestr(cdate)
     print('Processing: %s' %(c_date))
     if d>=1:
         pdate = work_dates[d-1]
-        p_date, p_pdy, p_yms = datestr(pdate)
+        p_date, p_pdy, p_ym = datestr(pdate)
     if d<ntime-1:
         ndate = work_dates[d+1]
-        n_date, n_pdy, n_yms = datestr(ndate)
+        n_date, n_pdy, n_ym = datestr(ndate)
   
-    aeronetfile = '%s/aeronet_aod.%s.nc' %(aeronetdir,c_date)
-    if not os.path.exists(aeronetfile):
+    narafile = '%s/%s/openaq_pm25_hofx.%s.nc4' %(naradir,c_ym,c_date)
+    if not os.path.exists(narafile):
         print('Skipping %s' %c_date, flush=1)
         continue
 
-    aeronet_ncd = nc.Dataset(aeronetfile)
-    # CAMS dataset
-    if  c_date[-2:]=='00' and d>=1:
-        camsfilelist = ['%s/cams_aods_%s.nc' %(camsdir,p_pdy),'%s/cams_aods_%s.nc' %(camsdir,c_pdy)]
-    elif c_date[-2:]=='18' and d>=1 and d!=ntime-1:
-        camsfilelist = ['%s/cams_aods_%s.nc' %(camsdir,c_pdy),'%s/cams_aods_%s.nc' %(camsdir,n_pdy)]
-    else:
-        camsfilelist = ['%s/cams_aods_%s.nc' %(camsdir,c_pdy)]
-    cams_ds = xa.open_mfdataset(camsfilelist)
-    cams_ds = cams_ds['aod550']
+    nara_ncd = nc.Dataset(narafile)
     
-    # NARA dataset
-    if d == 0:
-        narafilelist = ['%s/NARA-1.0_AOD_%s.nc4' %(naradir,c_date),'%s/NARA-1.0_AOD_%s.nc4' %(naradir,n_date)]
-    elif d == ntime-1:
-        narafilelist = ['%s/NARA-1.0_AOD_%s.nc4' %(naradir,p_date),'%s/NARA-1.0_AOD_%s.nc4' %(naradir,c_date)]
-    else:
-        narafilelist = ['%s/NARA-1.0_AOD_%s.nc4' %(naradir,p_date), \
-                    '%s/NARA-1.0_AOD_%s.nc4' %(naradir,c_date), \
-                    '%s/NARA-1.0_AOD_%s.nc4' %(naradir,n_date)]
-    nara_ds = xa.open_mfdataset(narafilelist)
-    nara_ds = nara_ds['AOD'].sel(channel=0)
-
     # MERRA-2 dataset
     if  c_date[-2:]=='00' and d>=1:
-        m2filelist = ['%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,p_yms[:4],p_yms[-2:],m2ind,m2tag,p_pdy), \
-                      '%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,c_yms[:4],c_yms[-2:],m2ind,m2tag,c_pdy), \
+        m2filelist = ['%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,p_ym[:4],p_ym[-2:],m2ind,m2tag,p_pdy), \
+                      '%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,c_ym[:4],c_ym[-2:],m2ind,m2tag,c_pdy), \
                      ]
     elif c_date[-2:]=='18' and d>=1 and d!=ntime-1:
-        m2filelist = ['%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,c_yms[:4],c_yms[-2:],m2ind,m2tag,c_pdy), \
-                      '%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,n_yms[:4],n_yms[-2:],m2ind,m2tag,n_pdy), \
+        m2filelist = ['%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,c_ym[:4],c_ym[-2:],m2ind,m2tag,c_pdy), \
+                      '%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,n_ym[:4],n_ym[-2:],m2ind,m2tag,n_pdy), \
                      ]
     else:
-        m2filelist = ['%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,c_yms[:4],c_yms[-2:],m2ind,m2tag,c_pdy)]
+        m2filelist = ['%s/%s/%s/MERRA2_%s.%s.%s.nc4' %(m2_url,c_ym[:4],c_ym[-2:],m2ind,m2tag,c_pdy)]
     mer2_ds = xa.open_mfdataset(m2filelist)
-    mer2_ds = mer2_ds['AODANA']
+    mer2_ds = mer2_ds.assign(pm25=(mer2_ds['DUSMASS25']+mer2_ds['OCSMASS']\
+                                 +mer2_ds['BCSMASS']+mer2_ds['SSSMASS25']\
+                                 +mer2_ds['SO4SMASS']*(132.14/96.06))*1e9)
+    mer2_ds = mer2_ds['pm25']
 
     # Dictionary
-    cams_dict = hofx_dict(aeronet_ncd,cams_ds,'cams')
-    nara_dict = hofx_dict(aeronet_ncd,nara_ds,'nara')
-    mer2_dict = hofx_dict(aeronet_ncd,mer2_ds,'merra2')
+    cams_dict = hofx_dict(nara_ncd,cams_ds,'cams')
+    nara_dict = hofx_dict(nara_ncd,mer2_ds,'nara')
+    mer2_dict = hofx_dict(nara_ncd,mer2_ds,'merra2')
 
-    cams_df = process_aod(cams_dict)
-    nara_df = process_aod(nara_dict)
-    mer2_df = process_aod(mer2_dict)
+    cams_df = process_pm25(cams_dict)
+    nara_df = process_pm25(nara_dict)
+    mer2_df = process_pm25(mer2_dict)
 
     if d == 0:
        camsdf_all = cams_df
