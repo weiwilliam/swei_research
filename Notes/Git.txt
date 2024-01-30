@@ -11,4 +11,6 @@ Git useful information
 2. Update access token
    git config --global --unset credential.helper
    git config --global credential.helper store
+     or 
+   git config --global credential.helper 'cache --timeout=28800' 
    git fetch, ask for credential
