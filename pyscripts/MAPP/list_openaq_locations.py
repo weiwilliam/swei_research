@@ -5,7 +5,7 @@ from openaq import OpenAQ
 import time
 import requests
 import pandas as pd
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from utils import get_dates
 import boto3
 from httpx import ReadTimeout
@@ -16,6 +16,7 @@ locationstopath = '/work2/noaa/jcsda/shihwei/data/OpenAQ'
 if not os.path.exists(locationstopath):
     os.makedirs(locationstopath)
 
+check_location_dtinfo = True
 period_sdate = '2018010100'
 period_edate = '2022123118'
 cycle_interv = 6
@@ -58,23 +59,31 @@ while True:
     else:
         break
 
-def keep_available_locations(location, period_start, period_end):
-    if location.datetime_first is None or location.datetime_last is None:
-        return
-    else:
-        name = location.name
-        id = location.id
-        lat = location.coordinates.latitude
-        lon = location.coordinates.longitude
+def list_locations(location, check_locdt, period_start, period_end):
+    if check_locdt:
+        if location.datetime_first is None or location.datetime_last is None:
+            return
         loc_dt_start = pd.to_datetime(location.datetime_first.utc)
         loc_dt_end = pd.to_datetime(location.datetime_last.utc)
         overlapped = (period_end > loc_dt_start) | (loc_dt_end > period_start)
-        if overlapped:
-            for sensor in location.sensors:
-                if 'pm25' in sensor.name:
-                    sensor_id = sensor.id
-                else:
-                    return
+        if not overlapped:
+            return
+
+    name = location.name
+    id = location.id
+    lat = location.coordinates.latitude
+    lon = location.coordinates.longitude
+
+    found_pm25 = False
+    for sensor in location.sensors:
+        if 'pm25' in sensor.name:
+            sensor_id = sensor.id
+            found_pm25 = True
+        else:
+            continue
+
+    if not found_pm25:
+        return
 
     return pd.DataFrame({
         'location': [name],
@@ -84,8 +93,8 @@ def keep_available_locations(location, period_start, period_end):
         'sensorID': [sensor_id],
     })
 
-results = [keep_available_locations(location, period_start, period_end) for location in locations]
+results = [list_locations(location, check_location_dtinfo, period_start, period_end) for location in locations]
 locations_df = pd.concat(results).reset_index(drop=True)
 print(locations_df.head(), flush=True)
 
-locations_df.to_csv(f'{locationstopath}/tmp.openaq.locations.csv', index=False)
+locations_df.to_csv(f'{locationstopath}/{datetime.now(timezone.utc).strftime("%Y%m%d")}.openaq.locations.csv', index=False)

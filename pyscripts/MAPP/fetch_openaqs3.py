@@ -9,9 +9,9 @@ from httpx import ReadTimeout
 from collections import defaultdict
 
 savetopath = '/work2/noaa/jcsda/shihwei/data/OpenAQ'
-
-period_sdate = '2019010100'
-period_edate = '2022123118'
+stationlist = '20250919.openaq.locations.csv'
+period_sdate = '2022030100'
+period_edate = '2022073118'
 cycle_interv = 6
 window_length = 1
 halfwindow = timedelta(hours=window_length/2)
@@ -20,7 +20,7 @@ cycle_dates = get_dates(period_sdate, period_edate, cycle_interv)
 period_start = pd.to_datetime(period_sdate, format='%Y%m%d%H').tz_localize('UTC') - halfwindow
 period_end = pd.to_datetime(period_edate, format='%Y%m%d%H').tz_localize('UTC') + halfwindow
 
-locationcsvfile = f'{savetopath}/tmp.openaq.locations.csv'
+locationcsvfile = f'{savetopath}/{stationlist}'
 locations_df = pd.read_csv(locationcsvfile)
 print(locations_df.head(), flush=True)
 
@@ -46,7 +46,16 @@ for (year, month) in sorted(groups):
         for obj in available_files.get('Contents', []):
             key = obj['Key']
             file = os.path.basename(key)
+            remote_size = obj['Size']
             local_file = f'{savepath}/{file}'
+            if os.path.exists(local_file):
+                local_size = os.path.getsize(local_file)
+                if local_size == remote_size:
+                    print(f"{local_file} exists and size matches ({local_size} bytes). Skipping download.")
+                    continue
+                else:
+                    print(f"{local_file} exists but size differs (local={local_size}, remote={remote_size}). Re-downloading...")
+
             s3.download_file(bucket_name, key, local_file)
             print(f"[{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')}] Downloaded:", local_file, flush=True)
         

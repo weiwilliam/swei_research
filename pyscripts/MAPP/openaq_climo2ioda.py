@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import netCDF4 as nc
 from datetime import datetime, timedelta, timezone
+from openaq import OpenAQ
 
 import pyiodaconv.ioda_conv_engines as iconv
 import pyiodaconv.ioda_conv_ncio as iconio
@@ -17,11 +18,12 @@ from pyiodaconv.def_jedi_utils import iso8601_string, epoch
 
 os.environ["TZ"] = "UTC"
 
+openaq_api_key = '68e3a778022b500e2a88fe70a39bfb33979fcb081b2566788ef8da93af82bea8'
 openaq_csv_path = '/work2/noaa/jcsda/shihwei/data/OpenAQ'
 availcsv = '20250919.openaq.locations.csv'
 outbase = '/work2/noaa/jcsda/shihwei/data/jedi-data/input/obs/openaq_pm25'
-period_sdate = '2022122618'
-period_edate = '2022122618'
+period_sdate = '2019010106'
+period_edate = '2019013118'
 cycle_interv = 6
 window_length = 1
 
@@ -123,8 +125,6 @@ class openaq_pm25(object):
         obsval = self.in_data['value'].values
         missing_msk = (np.isnan(obsval) | (obsval < 0.))
         obsval = np.where(missing_msk, float_missing_value, obsval)
-        qcflag = np.zeros_like(obsval, dtype=np.int32)
-        qcflag = np.where(missing_msk, 1, qcflag)
 
         self.outdata[('dateTime', 'MetaData')] = np.array(obstime, dtype=np.int64)
         self.outdata[('latitude', 'MetaData')] = np.array(self.in_data['lat'].values, dtype=np.float32)
@@ -134,8 +134,8 @@ class openaq_pm25(object):
 
         for iodavar in obsvars:
             self.outdata[self.varDict[iodavar]['valKey']] = np.array(obsval, dtype=np.float32)
-            self.outdata[self.varDict[iodavar]['errKey']] = np.zeros(nloc, dtype=np.float32)
-            self.outdata[self.varDict[iodavar]['qcKey']] = qcflag
+            self.outdata[self.varDict[iodavar]['errKey']] = np.zeros(nloc,dtype=np.float32)
+            self.outdata[self.varDict[iodavar]['qcKey']] = np.zeros(nloc,dtype=np.int32)
 
         DimDict['Location'] = nloc
     
@@ -191,6 +191,101 @@ class openaq_pm25(object):
         else:
             return None
 
+def get_month_start_end(year, month):
+    # Start of the month
+    start = datetime(year, month, 1)
+    
+    # Find the start of next month
+    if month == 12:
+        next_month = datetime(year + 1, 1, 1)
+    else:
+        next_month = datetime(year, month + 1, 1)
+    
+    # End of this month = 1 second before next month's start
+    end = next_month - timedelta(seconds=1)
+    
+    return start, end
+
+def generate_year_month_list(start_year, start_month, end_year, end_month):
+    year_months = []
+    year, month = start_year, start_month
+
+    while (year < end_year) or (year == end_year and month <= end_month):
+        year_months.append((year, month))
+        # Move to next month
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+    return year_months
+
+# 
+months=range(1,13)
+hours=['00', '06', '12', '18']
+client = OpenAQ(api_key=openaq_api_key)
+stations = openaq_pm25.setStations(locationcsv)
+
+num_stations = len(stations)
+print(num_stations)
+
+for row in stations[['locationID', 'sensorID']].itertuples(index=False):
+    climo_holder = df.DataFrame()
+    locinfo = client.locations.get(locations_id=row.locationID).results[0]
+    loc_first_dt = pd.to_datetime(locinfo.datetime_first.utc)
+    loc_last_dt = pd.to_datetime(locinfo.datetime_last.utc)
+
+    year_month_list = generate_year_month_list(
+        loc_first_dt.year,
+        loc_first_dt.month,
+        loc_last_dt.year,
+        loc_last_dt.month,
+    )
+   
+    meanval = []
+    expected_count = []
+    observed_count = []
+    avail_yearmonth_list = []
+    for year, month in year_month_list:
+        dt_from, dt_to = get_month_start_end(year, month)
+        measurement = client.measurements.list(
+            sensors_id=row.sensorID,
+            data="hours",
+            rollup="hourofday",
+            datetime_from=dt_from,
+            datetime_to=dt_to,
+            limit=1000,
+        )
+        if measurement.meta.found != 0:
+            avail_yearmonth_list.append((year, month))
+            for hourly_mean in measurement.results[0:24:6]:
+                meanval.append(hourly_mean.value)
+                expected_count.append(hourly_mean.coverage.expected_count)
+                observed_count.append(hourly_mean.coverage.observed_count)
+
+        if measurement.headers.x_ratelimit_remaining == 0:
+            slp_secs = response.headers.x_ratelimit_reset + 1
+            print(f"Wait {slp_secs} seconds for limit reset", flush=True)
+            time.sleep(slp_secs)
+
+
+    expanded = []
+    for (y, m) in avail_yearmonth_list:
+        for h in hours:
+            expanded.append((y, m, h))
+
+    df = pd.DataFrame(expanded, columns=["year", "month", "hour"])
+    df['meanval'] = meanval
+    df['expected_count'] = expected_count
+    df['observed_count'] = observed_count
+
+    station_climatology = df.groupby(["month", "hour"], as_index=False).agg(
+        meanval=('meanval', 'mean'),
+        expected_count=('expected_count', 'sum'),
+        observed_count=('observed_count', 'sum'),
+    )
+    station_climatology['coverage'] = station_climatology['observed_count'] / station_climatology['expected_count']
+
+sys.exit()
 
 ###
 period_dt_start = pd.to_datetime(period_sdate, format='%Y%m%d%H')
@@ -204,7 +299,6 @@ for cdate, (window_beg, window_end) in zip(cycle_dates, setup_windows(cycle_date
         date_list = [cdate - timedelta(days=1), cdate]
     else:
         date_list = [cdate]
-    cdate_utc = cdate.tz_localize(timezone.utc)
 
     df = openaq_pm25.load_openaq_data(openaq_csv_path, date_list)
     df['datetime_no_offset'] = df['datetime'].str[:19]
@@ -213,19 +307,12 @@ for cdate, (window_beg, window_end) in zip(cycle_dates, setup_windows(cycle_date
     window_filter = (df['datetime_utc'] >= window_beg) & (df['datetime_utc'] <= window_end)
     tmpdf = df.loc[window_filter & parameter_filter].reset_index(drop=True)
     tmpdf['totalseconds'] = (tmpdf['datetime_utc'] - epoch).dt.total_seconds().astype(np.int64)
-    tmpdf['deltaseconds'] = ((tmpdf['datetime_utc'] - cdate_utc).dt.total_seconds().astype(np.int64)).abs()
-    ## Some stations report data every minute, may use group to get average, or select the closest one to the cdate
-    grpidx = tmpdf.groupby('location_id')['deltaseconds'].idxmin()
-    grpdf = tmpdf.iloc[grpidx].reset_index(drop=True)
 
     stations = openaq_pm25.setStations(locationcsv)
     stations = stations.rename(columns={'locationID':'location_id'})
-    outdf = pd.merge(stations, grpdf[['location_id', 'parameter', 'units', 'value', 'datetime_utc', 'totalseconds']],
+    outdf = pd.merge(stations, tmpdf[['location_id', 'parameter', 'units', 'value', 'datetime_utc', 'totalseconds']],
                      on="location_id", how='left')
- 
-    print(len(df), len(tmpdf), len(grpdf), len(stations), len(outdf))
 
-    sys.exit()
     outdir = f'{outbase}/{cdate.year}/{cdate.month:02d}'
     if ( not os.path.exists(outdir) ):
         os.makedirs(outdir)
